@@ -1,0 +1,288 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use Getopt::Long;
+use IO::Socket;
+use File::Spec;
+use Try::Tiny;
+use FindBin;
+use lib "$FindBin::Bin/../lib";
+use PlSense::Logger;
+use PlSense::SocketClient;
+use PlSense::Builtin;
+use PlSense::ModuleKeeper;
+use PlSense::AddressRouter;
+use PlSense::SubstituteKeeper;
+use PlSense::SubstituteBuilder;
+use PlSense::ModuleBuilder::PPIBuilder;
+
+my %function_of = (status    => \&get_status,
+                   remove    => \&remove,
+                   removeall => \&remove_all,
+                   onproj    => \&set_currentproject,
+                   codeadd   => \&add_source,
+                   load      => \&load,
+                   resolve   => \&resolve,
+                   built     => \&setup_built_module,
+                   );
+
+my $usage = <<EOF;
+Usage: 
+EOF
+
+my ($cachedir, $port1, $port2, $port3, $loglvl, $logfile);
+GetOptions ('help'       => sub { print $usage; exit 0; },
+            'cachedir=s' => \$cachedir,
+            'port1=i' => \$port1,
+            'port2=i'  => \$port2,
+            'port3=i'  => \$port3,
+            'loglevel=s' => \$loglvl,
+            'logfile=s'  => \$logfile,
+            );
+
+setup_logger($loglvl, $logfile);
+if ( ! $cachedir || ! -d $cachedir ) {
+    logger->fatal("Not exist cache directory [$cachedir]");
+    exit 1;
+}
+
+my $cli = PlSense::SocketClient->new({ mainport => $port1,
+                                       workport => $port2,
+                                       resolveport => $port3,
+                                       retryinterval => 0.2,
+                                       maxretry => 100 });
+
+my $sock = IO::Socket::INET->new(LocalAddr => "localhost",
+                                 LocalPort => $cli->get_resolveport,
+                                 Proto => "tcp",
+                                 Listen => 1,
+                                 ReUse => 1,
+                                 );
+if ( ! $sock ) {
+    logger->fatal("Can't create socket : $!");
+    exit 1;
+}
+if ( ! $sock->listen ) {
+    logger->fatal("Can't listening port [$port3] : $!");
+    exit 1;
+}
+
+my $builtin = PlSense::Builtin->new({ cachedir => $cachedir });
+my $mdlkeeper = PlSense::ModuleKeeper->new({ cachedir => $cachedir });
+my $addrrouter = PlSense::AddressRouter->new({ cachedir => $cachedir,
+                                               mdlkeeper => $mdlkeeper,
+                                               with_build => 1 });
+my $substkeeper = PlSense::SubstituteKeeper->new({ cachedir => $cachedir,
+                                                   mdlkeeper => $mdlkeeper,
+                                                   addrrouter => $addrrouter, });
+my $substbuilder = PlSense::SubstituteBuilder->new({ builtin => $builtin,
+                                                     mdlkeeper => $mdlkeeper,
+                                                     substkeeper => $substkeeper });
+my $ppibuilder = PlSense::ModuleBuilder::PPIBuilder->new({ builtin => $builtin,
+                                                           mdlkeeper => $mdlkeeper,
+                                                           substkeeper => $substkeeper,
+                                                           substbuilder => $substbuilder,
+                                                           libpath => "", });
+my $currprojnm = "";
+
+logger->info("Starting resolve server");
+ACCEPT_CLIENT:
+while ( my $cli = $sock->accept ) {
+    logger->debug("Waiting client ...");
+
+    my $line = $cli->getline || "";
+    chomp $line;
+    logger->info("Receive request : $line");
+    my $cmdnm = $line =~ s{ ^ \s* ([a-z]+) }{}xms ? $1 : "";
+    if ( $cmdnm eq "quit" ) {
+        $cli->close;
+        next ACCEPT_CLIENT;
+    }
+    elsif ( $cmdnm eq "stop" ) {
+        $cli->close;
+        last ACCEPT_CLIENT;
+    }
+    elsif ( exists $function_of{$cmdnm} ) {
+        try {
+            my $fnc = $function_of{$cmdnm};
+            my $ret = &$fnc($line) || "";
+            $cli->print($ret);
+            $cli->flush;
+        }
+        catch {
+            my $e = shift;
+            logger->error("Failed do $cmdnm : $e");
+        };
+    }
+    else {
+        logger->error("Unknown command [$cmdnm]");
+    }
+    $cli->close;
+
+}
+$sock->close;
+
+logger->info("Stopping resolve server");
+exit 0;
+
+
+sub get_status {
+    return "Running\n";
+}
+
+sub remove {
+    my $mdl_or_files = shift || "";
+    my @mdl_or_files = split m{ \| }xms, $mdl_or_files;
+    update_project_info();
+    ENTRY:
+    foreach my $mdl_or_file ( @mdl_or_files ) {
+        $mdl_or_file =~ s{ ^\s+ }{}xms;
+        $mdl_or_file =~ s{ \s+$ }{}xms;
+        if ( ! $mdl_or_file ) { next ENTRY; }
+        my ($mdlnm, $filepath) = ("", "");
+        if ( -f $mdl_or_file ) {
+            $mdlnm = "main";
+            $filepath = File::Spec->rel2abs($mdl_or_file);
+        }
+        else {
+            $mdlnm = $mdl_or_file;
+        }
+        my $mdl = $mdlkeeper->get_module($mdlnm, $filepath) or next ENTRY;
+        $substkeeper->remove($mdl->get_name, $mdl->get_filepath, $mdl->get_projectnm);
+    }
+    return "Done\n";
+}
+
+sub remove_all {
+    $substkeeper->remove_all;
+    return "Done\n";
+}
+
+# sub remove_project_all {
+#     $mdlkeeper->remove_project_all_module;
+#     $substkeeper->remove_project_all;
+#     return;
+# }
+
+sub set_currentproject {
+    my $projnm = shift || "";
+    $projnm =~ s{ ^\s+ }{}xms;
+    $projnm =~ s{ \s+$ }{}xms;
+    $currprojnm = $projnm;
+    return "Done\n";
+}
+
+sub add_source {
+    my $code = shift || "";
+    my $loc = $cli->get_main_server_response("location") or return;
+    my $currfilepath = $loc =~ m{ ^ File: \s+ ([^\n]*?) $ }xms ? $1 : "";
+    my $currmdlnm = $loc =~ m{ ^ Module: \s+ ([^\n]*?) $ }xms ? $1 : "";
+    my $currmtdnm = $loc =~ m{ ^ Sub: \s+ ([^\n]*?) $ }xms ? $1 : "";
+
+    if ( update_project_info() ) {
+        $substkeeper->resolve_substitute;
+        $substkeeper->resolve_unknown_argument;
+    }
+    my $mdl = $mdlkeeper->get_module($currmdlnm, $currfilepath);
+    if ( ! $mdl ) {
+        if ( ! $currmdlnm ) {
+            logger->error("Not yet set current file/module by onfile/onmod command");
+        }
+        else {
+            logger->error("Not yet exist [$currmdlnm] of [$currfilepath]");
+            logger->error("Check the module status is not 'Nothing' by ready command.");
+        }
+        return;
+    }
+    my $mtd = $currmtdnm ? $mdl->get_method($currmtdnm) : undef;
+
+    $ppibuilder->build_source($mdl, $mtd, $code);
+    $mdlkeeper->store_module($mdl);
+    $addrrouter->store_current_project;
+    my $mdlkey = $mdl->get_name eq "main" ? $mdl->get_filepath : $mdl->get_name;
+    $cli->request_main_server("built $mdlkey");
+    $cli->request_main_server("resolved");
+
+    my @extmdls = get_needbuild_extmodules($mdl);
+    if ( $#extmdls >= 0 ) {
+        $cli->request_work_server("buildr ".join("|", @extmdls));
+    }
+    return;
+}
+
+sub load {
+    $builtin->load;
+    return;
+}
+
+sub resolve {
+    $substkeeper->resolve_substitute;
+    $substkeeper->resolve_unknown_argument;
+    $addrrouter->store_current_project;
+    $cli->request_main_server("resolved");
+    return;
+}
+
+sub setup_built_module {
+    my $mdl_or_files = shift || "";
+    my @mdl_or_files = split m{ \| }xms, $mdl_or_files;
+    my $projupdated = update_project_info();
+
+    ENTRY:
+    foreach my $mdl_or_file ( @mdl_or_files ) {
+        $mdl_or_file =~ s{ ^\s+ }{}xms;
+        $mdl_or_file =~ s{ \s+$ }{}xms;
+        if ( ! $mdl_or_file ) { next ENTRY; }
+        my ($mdlnm, $filepath) = ("", "");
+        if ( -f $mdl_or_file ) {
+            $mdlnm = "main";
+            $filepath = $mdl_or_file;
+        }
+        else {
+            $mdlnm = $mdl_or_file;
+        }
+        my $mdl = $mdlkeeper->load_module($mdlnm, $filepath) or next ENTRY;
+        $substkeeper->load($mdl->get_name, $mdl->get_filepath, $mdl->get_projectnm);
+        logger->notice("Finished reload module of '$mdl_or_file'");
+    }
+
+    $substkeeper->resolve_substitute;
+    $substkeeper->resolve_unknown_argument;
+    $addrrouter->store_current_project;
+    $cli->request_main_server("resolved");
+    return;
+}
+
+
+sub get_needbuild_extmodules {
+    my $mdl = shift;
+
+    my @ret;
+    PARENT:
+    for my $i ( 1..$mdl->count_parent ) {
+        my $parent = $mdl->get_parent($i);
+        my $m = $mdlkeeper->get_module($parent->get_name);
+        if ( $m->is_initialized ) { next PARENT; }
+        push @ret, $parent->get_name;
+    }
+    USINGMODULE:
+    for my $i ( 1..$mdl->count_usingmdl ) {
+        my $usingmdl = $mdl->get_usingmdl($i);
+        my $m = $mdlkeeper->get_module($usingmdl->get_name);
+        if ( $m->is_initialized ) { next USINGMODULE; }
+        push @ret, $usingmdl->get_name;
+    }
+
+    return @ret;
+}
+
+sub update_project_info {
+    if ( $currprojnm eq $mdlkeeper->get_project ) { return; }
+    if ( ! $currprojnm ) { $currprojnm = $mdlkeeper->get_default_project_name; }
+    $mdlkeeper->set_project($currprojnm);
+    $mdlkeeper->reset;
+    $substkeeper->switch_project($currprojnm, 1);
+    return 1;
+}
+

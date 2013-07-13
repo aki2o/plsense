@@ -1,0 +1,332 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use Getopt::Long;
+use IO::Socket;
+use File::Spec;
+use Time::Piece;
+use Try::Tiny;
+use FindBin;
+use lib "$FindBin::Bin/../lib";
+use PlSense::Logger;
+use PlSense::SocketClient;
+
+my %function_of = (status        => \&get_status,
+                   init          => \&initialize,
+                   build         => \&build,
+                   buildr        => \&build_recursive,
+                   buildf        => \&build_force,
+                   buildrf       => \&build_recursive_force,
+                   buildfr       => \&build_recursive_force,
+                   rebuildall    => \&rebuild_all,
+                   onproj        => \&set_currentproject,
+                   findlib       => \&find_project_library,
+                   ps            => \&get_process_list,
+                   queue         => \&get_task_queue,
+                   finfind       => \&finish_find,
+                   finbuild      => \&finish_build,
+                   );
+
+my $usage = <<EOF;
+Usage: 
+EOF
+
+my ($cachedir, $port1, $port2, $port3, $maxtasks, $loglvl, $logfile);
+GetOptions ('help'       => sub { print $usage; exit 0; },
+            'cachedir=s' => \$cachedir,
+            'port1=i' => \$port1,
+            'port2=i'  => \$port2,
+            'port3=i'  => \$port3,
+            'maxtasks=i'  => \$maxtasks,
+            'loglevel=s' => \$loglvl,
+            'logfile=s'  => \$logfile,
+            );
+
+setup_logger($loglvl, $logfile);
+if ( ! $cachedir || ! -d $cachedir ) {
+    logger->fatal("Not exist cache directory [$cachedir]");
+    exit 1;
+}
+if ( ! $loglvl ) { $loglvl = ''; }
+if ( ! $logfile ) { $logfile = ''; }
+if ( ! $maxtasks || $maxtasks !~ m{ ^\d+$ }xms ) { $maxtasks = 20; }
+
+my $cli = PlSense::SocketClient->new({ mainport => $port1,
+                                       workport => $port2,
+                                       resolveport => $port3,
+                                       retryinterval => 0.5,
+                                       maxretry => 10 });
+
+my $sock = IO::Socket::INET->new(LocalAddr => "localhost",
+                                 LocalPort => $cli->get_workport,
+                                 Proto => "tcp",
+                                 Listen => 1,
+                                 ReUse => 1,
+                                 );
+if ( ! $sock ) {
+    logger->fatal("Can't create socket : $!");
+    exit 1;
+}
+if ( ! $sock->listen ) {
+    logger->fatal("Can't listening port [$port2] : $!");
+    exit 1;
+}
+
+my %tasklimit_of;
+my @taskqueue;
+my $currprojnm = "";
+my $currprojlib = "";
+
+logger->info("Starting work server");
+ACCEPT_CLIENT:
+while ( my $cli = $sock->accept ) {
+    logger->debug("Waiting client ...");
+
+    my $line = $cli->getline || "";
+    chomp $line;
+    logger->info("Receive request : $line");
+    my $cmdnm = $line =~ s{ ^ \s* ([a-z]+) }{}xms ? $1 : "";
+    if ( $cmdnm eq "quit" ) {
+        $cli->close;
+        next ACCEPT_CLIENT;
+    }
+    elsif ( $cmdnm eq "stop" ) {
+        $cli->close;
+        last ACCEPT_CLIENT;
+    }
+    elsif ( exists $function_of{$cmdnm} ) {
+        try {
+            my $fnc = $function_of{$cmdnm};
+            my $ret = &$fnc($line) || "";
+            $cli->print($ret);
+            $cli->flush;
+            run_task();
+        }
+        catch {
+            my $e = shift;
+            logger->error("Failed do $cmdnm : $e");
+        };
+    }
+    else {
+        logger->error("Unknown command [$cmdnm]");
+    }
+    $cli->close;
+
+}
+$sock->close;
+
+logger->info("Stopping work server");
+exit 0;
+
+
+sub run_task {
+    my $now = localtime;
+    my $taskcount = 0;
+    CHK_TIMEOUT:
+    foreach my $key ( keys %tasklimit_of ) {
+        my $limit = $tasklimit_of{$key};
+        if ( $now > $limit ) {
+            logger->notice("Timeout task : $key");
+            delete $tasklimit_of{$key};
+            if ( $key =~ m{ \A build \s+ (.+) \z }xms ) {
+                my $mdl_or_file = $1;
+                $cli->request_main_server("built $mdl_or_file");
+            }
+        }
+        else {
+            $taskcount++;
+        }
+    }
+
+    # do not run task while doing find task
+    my @findtasks = grep { $_ =~ m{ \A find \s+ }xms } keys %tasklimit_of;
+    if ( $#findtasks >= 0 ) { return; }
+
+    my $limit = $now + 60 * 10;
+    RUN_TASK:
+    while ( $taskcount < $maxtasks ) {
+        my $nexttask = shift @taskqueue or return;
+        if ( is_running($nexttask->{key}) ) { next RUN_TASK; }
+        $tasklimit_of{$nexttask->{key}} = $limit;
+        logger->info("Run task : ".$nexttask->{cmd});
+        system $nexttask->{cmd}." &";
+        $taskcount++;
+        if ( $nexttask->{key} =~ m{ \A find \s+ }xms ) { last RUN_TASK; }
+    }
+}
+
+sub add_task {
+    my ($taskkey, $cmdstr) = @_;
+    if ( ! $taskkey || ! $cmdstr ) { return; }
+    QUEUE:
+    foreach my $task ( @taskqueue ) {
+        if ( $taskkey eq $task->{key} ) { return; }
+    }
+    push @taskqueue, { key => $taskkey, cmd => $cmdstr };
+}
+
+sub finish_task {
+    my $taskkey = shift || "";
+    if ( ! $taskkey ) { return; }
+    logger->info("Finished task : $taskkey");
+    delete $tasklimit_of{$taskkey};
+}
+
+sub is_running {
+    my $taskkey = shift || "";
+    exists $tasklimit_of{$taskkey};
+}
+
+sub get_common_option {
+    my $global = shift || 0;
+    my $projnm = ! $global ? $currprojnm : "";
+    my $ret = "--cachedir '$cachedir' --loglevel '$loglvl' --logfile '$logfile' --projectnm '$projnm'";
+    $ret .= " --port1 ".$cli->get_mainport;
+    $ret .= " --port2 ".$cli->get_workport;
+    $ret .= " --port3 ".$cli->get_resolveport;
+    return $ret;
+}
+
+sub add_find_task {
+    my ($global, $tasknm, @rootdirs) = @_;
+    logger->notice("Add task find module of $tasknm");
+    my $rootdiropt = "";
+    ROOTDIR:
+    foreach my $dir ( @rootdirs ) {
+        $rootdiropt .= " --rootdir '$dir'";
+    }
+    add_task("find $tasknm", "plsense-worker-find --tasknm '$tasknm' $rootdiropt ".get_common_option($global));
+    return;
+}
+
+
+sub get_status {
+    return "Running\n";
+}
+
+sub initialize {
+    my @dirs;
+    LIBPATH:
+    foreach my $dir ( qx{ perl -e 'pop \@INC; print join("\\n", \@INC);' } ) {
+        chomp $dir;
+        if ( ! -d $dir ) { next LIBPATH; }
+        push @dirs, $dir;
+    }
+    add_find_task(1, "installed", @dirs);
+    run_task();
+    return;
+}
+
+sub build {
+    my $mdl_or_files = shift || "";
+    return build_sentinel($mdl_or_files, 0);
+}
+
+sub build_recursive {
+    my $mdl_or_files = shift || "";
+    return build_sentinel($mdl_or_files, 1);
+}
+
+sub build_force {
+    my $mdl_or_files = shift || "";
+    return build_sentinel($mdl_or_files, 0, 1);
+}
+
+sub build_recursive_force {
+    my $mdl_or_files = shift || "";
+    return build_sentinel($mdl_or_files, 1, 1);
+}
+
+sub rebuild_all {
+    my $mdl_or_files = shift || "";
+}
+
+sub build_sentinel {
+    my $mdl_or_files = shift || "";
+    my $recursive = shift;
+    my $force = shift;
+    my @mdl_or_files = split m{ \| }xms, $mdl_or_files;
+    ENTRY:
+    foreach my $mdl_or_file ( @mdl_or_files ) {
+        $mdl_or_file =~ s{ ^\s+ }{}xms;
+        $mdl_or_file =~ s{ \s+$ }{}xms;
+        if ( ! $mdl_or_file ) { next ENTRY; }
+        my ($mdlnm, $filepath, $target) = ("", "", "");
+        if ( -f $mdl_or_file ) {
+            $mdlnm = "main";
+            $filepath = File::Spec->rel2abs($mdl_or_file);
+            $target = $filepath;
+        }
+        else {
+            $mdlnm = $mdl_or_file;
+            $target = $mdlnm;
+        }
+        my $taskkey = "build ".$target;
+        if ( is_running($taskkey) ) {
+            logger->info("Quit build '$mdl_or_file'. It's now building or build already");
+            next ENTRY;
+        }
+        logger->notice("Add task build '$mdl_or_file'. recursive[$recursive]");
+        my $cmd = "plsense-worker-build --target '$target' --libpath '$currprojlib' ".get_common_option();
+        if ( $recursive ) { $cmd .= " --recursive" }
+        if ( $force ) { $cmd .= " --force" }
+        add_task($taskkey, $cmd);
+    }
+    return;
+}
+
+sub set_currentproject {
+    my $projnm = shift || "";
+    $projnm =~ s{ ^\s+ }{}xms;
+    $projnm =~ s{ \s+$ }{}xms;
+    $currprojnm = $projnm;
+    return "Done\n";
+}
+
+sub find_project_library {
+    my $libpath = shift || "";
+    $libpath =~ s{ ^\s+ }{}xms;
+    $libpath =~ s{ \s+$ }{}xms;
+    if ( ! -d $libpath ) {
+        logger->error("Not exist directory[$libpath]");
+        return "Failed\n";
+    }
+    add_find_task(0, $libpath, $libpath);
+    $currprojlib = $libpath;
+    return "Done\n";
+}
+
+sub get_process_list {
+    return join("\n", sort keys %tasklimit_of)."\n";
+}
+
+sub get_task_queue {
+    my @ret;
+    QUEUE:
+    for my $i ( 0..$#taskqueue ) {
+        push @ret, $taskqueue[$i]->{key};
+    }
+    return join("\n", @ret)."\n";
+}
+
+sub finish_find {
+    my $tasknm = shift || "";
+    $tasknm =~ s{ ^\s+ }{}xms;
+    $tasknm =~ s{ \s+$ }{}xms;
+    if ( ! $tasknm ) { return; }
+    finish_task("find $tasknm");
+    return;
+}
+
+sub finish_build {
+    my $mdl_or_file = shift || "";
+    $mdl_or_file =~ s{ ^\s+ }{}xms;
+    $mdl_or_file =~ s{ \s+$ }{}xms;
+    if ( ! $mdl_or_file ) { return; }
+    my $taskkey = "build ".$mdl_or_file;
+    finish_task($taskkey);
+    return;
+}
+
+

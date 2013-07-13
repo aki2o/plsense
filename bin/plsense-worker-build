@@ -1,0 +1,228 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use Getopt::Long;
+use IO::Socket;
+use List::AllUtils qw{ uniq };
+use Try::Tiny;
+use FindBin;
+use lib "$FindBin::Bin/../lib";
+use PlSense::Logger;
+use PlSense::SocketClient;
+use PlSense::Builtin;
+use PlSense::ModuleKeeper;
+use PlSense::AddressRouter;
+use PlSense::SubstituteKeeper;
+use PlSense::SubstituteBuilder;
+use PlSense::ModuleSrcUpdater;
+use PlSense::ModuleBuilder::XrefBuilder;
+use PlSense::ModuleBuilder::InheritBuilder;
+use PlSense::ModuleBuilder::DocBuilder;
+use PlSense::ModuleBuilder::PPIBuilder;
+
+my ($cachedir, $port1, $port2, $port3, $projectnm, $libpath, $mdl_or_file, $recursive, $force, $loglvl, $logfile);
+GetOptions ('cachedir=s' => \$cachedir,
+            'port1=i' => \$port1,
+            'port2=i'  => \$port2,
+            'port3=i'  => \$port3,
+            'projectnm=s' => \$projectnm,
+            'libpath=s' => \$libpath,
+            'target=s'   => \$mdl_or_file,
+            'recursive'  => \$recursive,
+            'force'  => \$force,
+            'loglevel=s' => \$loglvl,
+            'logfile=s'  => \$logfile,
+            );
+
+setup_logger($loglvl, $logfile);
+if ( ! -d $cachedir ) {
+    logger->crit("Not exist cache directory [$cachedir]");
+    exit 1;
+}
+
+my $cli = PlSense::SocketClient->new({ mainport => $port1,
+                                       workport => $port2,
+                                       resolveport => $port3,
+                                       retryinterval => 0.5,
+                                       maxretry => 300 });
+
+my $builtin = PlSense::Builtin->new({ cachedir => $cachedir });
+my $mdlkeeper = PlSense::ModuleKeeper->new({ cachedir => $cachedir });
+my $addrrouter = PlSense::AddressRouter->new({ cachedir => $cachedir,
+                                               mdlkeeper => $mdlkeeper,
+                                               with_build => 1, });
+my $substkeeper = PlSense::SubstituteKeeper->new({ cachedir => $cachedir,
+                                                   mdlkeeper => $mdlkeeper,
+                                                   addrrouter => $addrrouter, });
+my $substbuilder = PlSense::SubstituteBuilder->new({ builtin => $builtin,
+                                                     mdlkeeper => $mdlkeeper,
+                                                     substkeeper => $substkeeper });
+
+my $srcupdater = PlSense::ModuleSrcUpdater->new({ mdlkeeper => $mdlkeeper });
+my $xrefbuilder = PlSense::ModuleBuilder::XrefBuilder->new({ builtin => $builtin,
+                                                             mdlkeeper => $mdlkeeper,
+                                                             substkeeper => $substkeeper,
+                                                             substbuilder => $substbuilder,
+                                                             libpath => $libpath });
+my $inheritbuilder = PlSense::ModuleBuilder::InheritBuilder->new({ builtin => $builtin,
+                                                                   mdlkeeper => $mdlkeeper,
+                                                                   substkeeper => $substkeeper,
+                                                                   substbuilder => $substbuilder,
+                                                                   libpath => $libpath });
+my $docbuilder = PlSense::ModuleBuilder::DocBuilder->new({ builtin => $builtin,
+                                                           mdlkeeper => $mdlkeeper,
+                                                           substkeeper => $substkeeper,
+                                                           substbuilder => $substbuilder,
+                                                           libpath => $libpath });
+my $ppibuilder = PlSense::ModuleBuilder::PPIBuilder->new({ builtin => $builtin,
+                                                           mdlkeeper => $mdlkeeper,
+                                                           substkeeper => $substkeeper,
+                                                           substbuilder => $substbuilder,
+                                                           libpath => $libpath });
+
+my (@builtmdls, @builtmdlkeys, @extmdls);
+try {
+    if ( ! $projectnm ) { $projectnm = $mdlkeeper->get_default_project_name; }
+    $builtin->build();
+    $mdlkeeper->set_project($projectnm);
+    $addrrouter->set_project($projectnm);
+    $substkeeper->set_project($projectnm);
+
+    my ($filepath, $mdl);
+    if ( -f $mdl_or_file ) {
+        $filepath = $mdl_or_file;
+        $mdl = $mdlkeeper->get_module("main", $filepath);
+    }
+    else {
+        $mdl = $mdlkeeper->get_module($mdl_or_file);
+        if ( ! $mdl ) {
+            logger->warn("Not found module named [$mdl_or_file]");
+            finish_build();
+            exit 1;
+        }
+        $filepath = $mdl->get_filepath;
+        if ( ! $filepath || ! -f $filepath ) {
+            $mdlkeeper->remove_module($mdl->get_name, $mdl->get_filepath, $mdl->get_projectnm);
+            finish_build();
+            exit 1;
+        }
+    }
+
+    my @attr = stat $filepath;
+    my $lastmodified = $attr[9];
+
+    if ( ! $force && $mdl && $mdl->is_initialized && $lastmodified == $mdl->get_lastmodified ) {
+        logger->info("Already build [$mdl_or_file]");
+        finish_build(get_extmodules($mdl));
+        exit 0;
+    }
+
+    my $libopt = $libpath ? "-I'".$libpath."'" : "";
+    if ( system("perl $libopt -c '$filepath' 2>/dev/null") ) {
+        logger->notice("Failed compile '$filepath'");
+        finish_build();
+        exit 1;
+    }
+
+    my @mdls = $srcupdater->update_or_create_modules($filepath, $mdl ? $mdl->get_projectnm : $projectnm);
+    if ( ! -f $mdl_or_file ) { @mdls = ($mdl); }
+
+    MDL:
+    foreach my $mdl ( @mdls ) {
+
+        $mdlkeeper->store_module($mdl);
+        $substkeeper->reset;
+        logger->notice("Start build [".$mdl->get_name."] : XRef part");
+        $xrefbuilder->build($mdl);
+        logger->notice("Start build [".$mdl->get_name."] : Inherit part");
+        $inheritbuilder->build($mdl);
+        logger->notice("Start build [".$mdl->get_name."] : Perldoc part");
+        $docbuilder->build($mdl);
+        logger->notice("Start build [".$mdl->get_name."] : PPI part");
+        $ppibuilder->build($mdl);
+
+        my $mdlkey = $mdl->get_name eq "main" ? $mdl->get_filepath : $mdl->get_name;
+        if ( ! $cli->get_resolve_server_response("remove $mdlkey") ) { next MDL; }
+
+        $mdl->set_source(undef);
+        $mdl->initialized;
+        $mdlkeeper->store_module($mdl);
+        $substkeeper->resolve_unknown_argument;
+        $substkeeper->store($mdl->get_name, $mdl->get_filepath, $mdl->get_projectnm);
+        push @builtmdls, $mdl;
+        push @builtmdlkeys, $mdlkey;
+        push @extmdls, get_extmodules($mdl);
+        logger->notice("Finished build [".$mdl->get_name."]\n".$mdl->to_detail_string);
+
+    }
+}
+catch {
+    my $e = shift;
+    logger->error("Failed build '$mdl_or_file' : $e");
+};
+
+@extmdls = uniq(sort @extmdls);
+if ( $#builtmdlkeys >= 0 ) {
+    logger->notice("Request reload modules : ".join(", ", @builtmdlkeys));
+    $cli->request_main_server("built ".join("|", @builtmdlkeys));
+    if ( ! $cli->request_resolve_server("built ".join("|", @builtmdlkeys)) ) {
+        BUILTMDL:
+        foreach my $mdl ( @builtmdls ) {
+            $mdl->uninitialized;
+            $mdlkeeper->store_module($mdl);
+        }
+    }
+}
+
+finish_build(@extmdls);
+exit 0;
+
+
+sub finish_build {
+    my @extmdls = @_;
+
+    if ( $#extmdls >= 0 ) {
+        logger->notice("Request build extmodules : ".join(", ", @extmdls));
+        $cli->request_work_server("buildr ".join("|", @extmdls));
+    }
+
+    $cli->request_work_server("finbuild $mdl_or_file");
+}
+
+sub get_extmodules {
+    my ($mdl, $found_is) = @_;
+
+    my @ret;
+    if ( ! $recursive ) { return @ret; }
+    if ( ! $found_is ) { $found_is = {}; }
+    if ( $found_is->{$mdl->get_name} ) { return @ret; }
+    $found_is->{$mdl->get_name} = 1;
+
+    PARENT:
+    for my $i ( 1..$mdl->count_parent ) {
+        my $parent = $mdl->get_parent($i);
+        my $m = $mdlkeeper->get_module($parent->get_name);
+        if ( $m->is_initialized ) {
+            push @ret, get_extmodules($m, $found_is);
+        }
+        else {
+            push @ret, $parent->get_name;
+        }
+    }
+    USINGMODULE:
+    for my $i ( 1..$mdl->count_usingmdl ) {
+        my $usingmdl = $mdl->get_usingmdl($i);
+        my $m = $mdlkeeper->get_module($usingmdl->get_name);
+        if ( $m->is_initialized ) {
+            push @ret, get_extmodules($m, $found_is);
+        }
+        else {
+            push @ret, $usingmdl->get_name;
+        }
+    }
+
+    return uniq(sort @ret);
+}
+
+
