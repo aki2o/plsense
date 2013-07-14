@@ -454,7 +454,15 @@ use PlSense::Logger;
             if ( ! $mtd->is_importive ) { next IMPORTMTD; }
             if ( $mtd->is_reserved ) { next IMPORTMTD; }
             if ( exists $mtd_of{$mtdnm} ) { next IMPORTMTD; }
-            $mtd_of{$mtdnm} = $mtd;
+            USINGMDL:
+            foreach my $m ( @{$usingmdls_of{ident $self}} ) {
+                if ( ! $m->exist_method($mtdnm) ) { next USINGMDL; }
+                my $extmtd = $m->get_method($mtdnm);
+                if ( $extmtd->is_importive ) { next USINGMDL; }
+                $mtd_of{$mtdnm} = $extmtd;
+                last USINGMDL;
+            }
+            if ( ! exists $mtd_of{$mtdnm} ) { $mtd_of{$mtdnm} = $mtd; }
         }
         my @ret;
         PUSH:
@@ -471,6 +479,40 @@ use PlSense::Logger;
         foreach my $mtd ( values %{$methodh_of{ident $self}} ) {
             my $mtdnm = $mtd->get_name;
             $mtd_of{$mtdnm} = $mtd;
+        }
+        INHERITMTD:
+        foreach my $mtd ( $self->get_inherit_methods ) {
+            if ( exists $mtd_of{$mtd->get_name} ) { next INHERITMTD; }
+            $mtd_of{$mtd->get_name} = $mtd;
+        }
+        my @ret;
+        PUSH:
+        foreach my $mtdnm ( sort keys %mtd_of ) {
+            push @ret, $only_name ? $mtdnm : $mtd_of{$mtdnm};
+        }
+        return @ret;
+    }
+
+    sub get_any_original_methods {
+        my ($self, $only_name) = @_;
+        my %mtd_of;
+        METHOD:
+        foreach my $mtd ( values %{$methodh_of{ident $self}} ) {
+            my $mtdnm = $mtd->get_name;
+            if ( $mtd->is_importive ) {
+                USINGMDL:
+                foreach my $m ( @{$usingmdls_of{ident $self}} ) {
+                    if ( ! $m->exist_method($mtdnm) ) { next USINGMDL; }
+                    my $extmtd = $m->get_method($mtdnm);
+                    if ( $extmtd->is_importive ) { next USINGMDL; }
+                    $mtd_of{$mtdnm} = $extmtd;
+                    last USINGMDL;
+                }
+                if ( ! exists $mtd_of{$mtdnm} ) { $mtd_of{$mtdnm} = $mtd; }
+            }
+            else {
+                $mtd_of{$mtdnm} = $mtd;
+            }
         }
         INHERITMTD:
         foreach my $mtd ( $self->get_inherit_methods ) {
@@ -525,7 +567,7 @@ use PlSense::Logger;
             if ( $extmtd->is_importive ) { next USINGMDL; }
             return $extmtd;
         }
-        return;
+        return $mtd;
     }
 
     sub exist_instance_method {

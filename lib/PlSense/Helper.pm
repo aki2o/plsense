@@ -50,7 +50,7 @@ use PlSense::Logger;
         $doc->prune("PPI::Token::Comment");
         $doc->prune("PPI::Token::Pod");
         # $doc->prune("PPI::Token::Whitespace");
-        my $tok = $doc->last_token or return "";
+        my $tok = eval { $doc->last_token } or return "";
         if ( ! $tok->isa("PPI::Token::Word") ) { return ""; }
         my $word = "".$tok->content."";
         my $pretok = $tok->previous_sibling;
@@ -95,7 +95,7 @@ use PlSense::Logger;
         $doc->prune("PPI::Token::Comment");
         $doc->prune("PPI::Token::Pod");
         # $doc->prune("PPI::Token::Whitespace");
-        my $tok = $doc->last_token or return "";
+        my $tok = eval { $doc->last_token } or return "";
 
         my $addrfinder = $addrfinder_of{ident $self};
         if ( $tok->isa("PPI::Token::Word") ) {
@@ -174,8 +174,7 @@ use PlSense::Logger;
             else {
                 $ret = $sym->get_name." is Builtin Method.\n\n";
             }
-            $ret .= "[Definition]\n";
-            $ret .= $self->get_method_definition($sym)."\n";
+            $ret .= $self->get_method_definition($sym);
             $ret .= $sym->get_helptext ? $sym->get_helptext."\n" : "Not documented.\n";
         }
 
@@ -188,7 +187,7 @@ use PlSense::Logger;
                 $ret = $sym->get_name." is Builtin Variable.\n\n";
             }
             my $entity = $addrrouter_of{ident $self}->resolve_address($sym->get_fullnm);
-            $ret .= $self->get_entity_description($entity)."\n";
+            $ret .= $self->get_entity_description($entity);
             $ret .= $sym->get_helptext ? $sym->get_helptext."\n" : "Not documented.\n";
         }
 
@@ -254,6 +253,9 @@ use PlSense::Logger;
         }
         elsif ( $etype ne 'Unknown' ) {
             $ret .= "\nThe value maybe ...\n".$entity->to_string."\n";
+        }
+        else {
+            $ret .= "\n";
         }
 
         return $ret;

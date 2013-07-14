@@ -13,7 +13,7 @@ use PlSense::Logger;
 
         my $filepath = $mdl->get_filepath;
         my $mdlhelptext = qx{ perldoc $mdlnm 2>/dev/null } || qx{ perldoc '$filepath' 2>/dev/null };
-        if ( $mdlhelptext =~ m{ [^\s]+ }xms ) {
+        if ( $mdlhelptext ne '' ) {
             $mdl->set_helptext($mdlhelptext);
         }
         else {
@@ -44,42 +44,58 @@ use PlSense::Logger;
     sub build_from_indent_matched : PRIVATE {
         my ($self, $mdl, $text, $indent) = @_;
         my @cands = ($mdl->keys_member(), $mdl->keys_method());
-        my ($currc, $helptext, $lasttitle);
+        my ($helptext, $lasttitle);
+        my @curre;
         TITLE:
         while ( $text =~ m{ ^ \s{$indent} ([^\s] [^\n]+) $ }xms ) {
             ($text, $helptext) = ($', $`);
             my $title = $1;
-            $self->update_helptext($currc, $lasttitle, $helptext, $indent);
-            undef $currc;
-            $helptext = "";
-            $lasttitle = $title;
+
+            if ( $self->update_helptext($lasttitle, $helptext, $indent, @curre) ) {
+                @curre = ();
+                $lasttitle = "";
+            }
+
+            my $c;
             CAND:
             foreach my $cand ( @cands ) {
-                my $c = $mdl->exist_member($cand) ? $mdl->get_member($cand) : $mdl->get_method($cand);
                 my $regexp = quotemeta($cand);
-                if ( $title =~ m{ \b $regexp \b }xms ) {
-                    $currc = $c;
-                    last CAND;
-                }
+                if ( $title !~ m{ \A $regexp \b }xms ) { next CAND; }
+                $c = $mdl->exist_member($cand) ? $mdl->get_member($cand) : $mdl->get_method($cand) and last CAND;
+            }
+            if ( $c ) {
+                push @curre, $c;
+                $lasttitle .= $title."\n";
+            }
+            else {
+                @curre = ();
+                $lasttitle = "";
             }
         }
-        $self->update_helptext($currc, $lasttitle, $helptext, $indent);
+        $self->update_helptext($lasttitle, $helptext, $indent, @curre);
     }
 
     sub update_helptext : PRIVATE {
-        my ($self, $ident, $title, $text, $indent) = @_;
-        my $helptext = "";
-        if ( ! $ident || ! $title || ! $text || $text !~ m{ [^\s]+ }xms ) { return; }
-        if ( $ident->get_helptext() ne "" ) {
-            $helptext .= $ident->get_helptext()."\n\n=====\n\n";
-        }
-        $helptext .= $title;
+        my ($self, $title, $text, $indent, @idents) = @_;
+        if ( $#idents < 0 || ! $title || ! $text || $text !~ m{ [^\s] }xms ) { return; }
+
+        my $validhelp;
+        my $helptext = $title;
         LINE:
         foreach my $line ( split m{ \n }xms, $text ) {
-            $helptext .= length($line) < $indent ? $line."\n" : substr($line, $indent)."\n";
+            if ( $line =~ m{ [^\s] }xms && $line !~ s{ \A \s{$indent} }{}xms ) { last LINE; }
+            $helptext .= $line."\n";
+            $validhelp = 1;
         }
-        $ident->set_helptext($helptext);
-        logger->debug("Updated help of [".$ident->get_fullnm."]");
+        if ( ! $validhelp ) { return; }
+
+        ADD_HELPTEXT:
+        foreach my $e ( @idents ) {
+            if ( ! $e || ! $e->isa("PlSense::Symbol") ) { next ADD_HELPTEXT; }
+            $e->set_helptext($e->get_helptext."\n===== Part of PerlDoc =====\n".$helptext);
+            logger->info("Updated help of [".$e->get_fullnm."]");
+        }
+        return 1;
     }
 }
 

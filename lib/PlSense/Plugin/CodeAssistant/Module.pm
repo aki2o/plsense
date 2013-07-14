@@ -19,7 +19,10 @@ use PlSense::Logger;
         my ($self, $code, $tok) = @_;
 
         my $input;
-        if ( $code =~ m{ ["'] [^"']* \s* ([a-zA-Z0-9_:]+) \z }xms ) {
+        if ( $code =~ m{ ["'] ([a-zA-Z0-9_:]+) \z }xms ) {
+            $input = $1;
+        }
+        elsif ( $code =~ m{ ["'] [^"']+ \s+ ([a-zA-Z0-9_:]+) \z }xms ) {
             $input = $1;
         }
         elsif ( $code =~ m{ ([a-zA-Z0-9_:]+) \s+ ([a-zA-Z0-9_:]+) \z }xms ) {

@@ -18,6 +18,7 @@ use PlSense::SubstituteBuilder;
 use PlSense::ModuleBuilder::PPIBuilder;
 
 my %function_of = (status    => \&get_status,
+                   pid       => \&get_own_pid,
                    remove    => \&remove,
                    removeall => \&remove_all,
                    onproj    => \&set_currentproject,
@@ -85,6 +86,13 @@ my $ppibuilder = PlSense::ModuleBuilder::PPIBuilder->new({ builtin => $builtin,
                                                            substbuilder => $substbuilder,
                                                            libpath => "", });
 my $currprojnm = "";
+my $nowstoringmdl = undef;
+my $nowresolving = undef;
+
+$SIG{WINCH} = sub { logger->notice("Receive SIGWINCH"); resume_store(); exit 0; };
+$SIG{TERM} = sub { logger->notice("Receive SIGTERM"); resume_store(); exit 0; };
+$SIG{USR1} = sub { logger->notice("Receive SIGUSR1"); resume_store(); update_project_info(1); };
+$SIG{HUP} = sub { logger->notice("Receive SIGHUP"); resume_store(); update_project_info(1); };
 
 logger->info("Starting resolve server");
 ACCEPT_CLIENT:
@@ -129,6 +137,10 @@ exit 0;
 
 sub get_status {
     return "Running\n";
+}
+
+sub get_own_pid {
+    return $$."\n";
 }
 
 sub remove {
@@ -198,8 +210,12 @@ sub add_source {
     my $mtd = $currmtdnm ? $mdl->get_method($currmtdnm) : undef;
 
     $ppibuilder->build_source($mdl, $mtd, $code);
+
+    $nowstoringmdl = $mdl;
     $mdlkeeper->store_module($mdl);
     $addrrouter->store_current_project;
+    $nowstoringmdl = undef;
+
     my $mdlkey = $mdl->get_name eq "main" ? $mdl->get_filepath : $mdl->get_name;
     $cli->request_main_server("built $mdlkey");
     $cli->request_main_server("resolved");
@@ -217,9 +233,12 @@ sub load {
 }
 
 sub resolve {
+    $nowresolving = 1;
     $substkeeper->resolve_substitute;
     $substkeeper->resolve_unknown_argument;
     $addrrouter->store_current_project;
+    $nowresolving = 0;
+
     $cli->request_main_server("resolved");
     return;
 }
@@ -247,9 +266,12 @@ sub setup_built_module {
         logger->notice("Finished reload module of '$mdl_or_file'");
     }
 
+    $nowresolving = 1;
     $substkeeper->resolve_substitute;
     $substkeeper->resolve_unknown_argument;
     $addrrouter->store_current_project;
+    $nowresolving = 0;
+
     $cli->request_main_server("resolved");
     return;
 }
@@ -278,11 +300,28 @@ sub get_needbuild_extmodules {
 }
 
 sub update_project_info {
-    if ( $currprojnm eq $mdlkeeper->get_project ) { return; }
+    my $force = shift || 0;
+    if ( ! $force && $currprojnm eq $mdlkeeper->get_project ) { return; }
     if ( ! $currprojnm ) { $currprojnm = $mdlkeeper->get_default_project_name; }
     $mdlkeeper->set_project($currprojnm);
     $mdlkeeper->reset;
     $substkeeper->switch_project($currprojnm, 1);
     return 1;
 }
+
+sub resume_store {
+    my $mdl = $nowstoringmdl;
+    if ( $mdl && $mdl->isa("PlSense::Symbol::Module") ) {
+        $mdlkeeper->store_module($mdl);
+        $addrrouter->store_current_project;
+        $nowstoringmdl = undef;
+    }
+    if ( $nowresolving ) {
+        $substkeeper->resolve_substitute;
+        $substkeeper->resolve_unknown_argument;
+        $addrrouter->store_current_project;
+        $nowresolving = 0;
+    }
+}
+
 

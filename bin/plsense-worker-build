@@ -80,8 +80,12 @@ my $ppibuilder = PlSense::ModuleBuilder::PPIBuilder->new({ builtin => $builtin,
                                                            substkeeper => $substkeeper,
                                                            substbuilder => $substbuilder,
                                                            libpath => $libpath });
-
 my (@builtmdls, @builtmdlkeys, @extmdls);
+
+$SIG{INT} = sub { logger->notice("Receive SIGINT"); interrupt_build(); exit 0; };
+$SIG{QUIT} = sub { logger->notice("Receive SIGQUIT"); interrupt_build(); exit 0; };
+$SIG{TERM} = sub { logger->notice("Receive SIGTERM"); interrupt_build(); exit 0; };
+
 try {
     if ( ! $projectnm ) { $projectnm = $mdlkeeper->get_default_project_name; }
     $builtin->build();
@@ -166,13 +170,7 @@ catch {
 if ( $#builtmdlkeys >= 0 ) {
     logger->notice("Request reload modules : ".join(", ", @builtmdlkeys));
     $cli->request_main_server("built ".join("|", @builtmdlkeys));
-    if ( ! $cli->request_resolve_server("built ".join("|", @builtmdlkeys)) ) {
-        BUILTMDL:
-        foreach my $mdl ( @builtmdls ) {
-            $mdl->uninitialized;
-            $mdlkeeper->store_module($mdl);
-        }
-    }
+    if ( ! $cli->request_resolve_server("built ".join("|", @builtmdlkeys)) ) { interrupt_build(); }
 }
 
 finish_build(@extmdls);
@@ -225,4 +223,11 @@ sub get_extmodules {
     return uniq(sort @ret);
 }
 
+sub interrupt_build {
+    BUILTMDL:
+    foreach my $mdl ( @builtmdls ) {
+        $mdl->uninitialized;
+        $mdlkeeper->store_module($mdl);
+    }
+}
 

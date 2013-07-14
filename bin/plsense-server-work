@@ -12,20 +12,21 @@ use lib "$FindBin::Bin/../lib";
 use PlSense::Logger;
 use PlSense::SocketClient;
 
-my %function_of = (status        => \&get_status,
-                   init          => \&initialize,
-                   build         => \&build,
-                   buildr        => \&build_recursive,
-                   buildf        => \&build_force,
-                   buildrf       => \&build_recursive_force,
-                   buildfr       => \&build_recursive_force,
-                   rebuildall    => \&rebuild_all,
-                   onproj        => \&set_currentproject,
-                   findlib       => \&find_project_library,
-                   ps            => \&get_process_list,
-                   queue         => \&get_task_queue,
-                   finfind       => \&finish_find,
-                   finbuild      => \&finish_build,
+my %function_of = (status     => \&get_status,
+                   pid        => \&get_own_pid,
+                   init       => \&initialize,
+                   build      => \&build,
+                   buildr     => \&build_recursive,
+                   buildf     => \&build_force,
+                   buildrf    => \&build_recursive_force,
+                   buildfr    => \&build_recursive_force,
+                   rebuildall => \&rebuild_all,
+                   onproj     => \&set_currentproject,
+                   findlib    => \&find_project_library,
+                   ps         => \&get_process_list,
+                   queue      => \&get_task_queue,
+                   finfind    => \&finish_find,
+                   finbuild   => \&finish_build,
                    );
 
 my $usage = <<EOF;
@@ -73,10 +74,15 @@ if ( ! $sock->listen ) {
     exit 1;
 }
 
-my %tasklimit_of;
+my %taskinfo_of;
 my @taskqueue;
 my $currprojnm = "";
 my $currprojlib = "";
+
+$SIG{WINCH} = sub { logger->notice("Receive SIGWINCH"); kill_all_task(); exit 0; };
+$SIG{TERM} = sub { logger->notice("Receive SIGTERM"); kill_all_task(); exit 0; };
+$SIG{USR1} = sub { logger->notice("Receive SIGUSR1"); kill_all_task(); };
+$SIG{HUP} = sub { logger->notice("Receive SIGHUP"); kill_all_task(); };
 
 logger->info("Starting work server");
 ACCEPT_CLIENT:
@@ -124,15 +130,20 @@ sub run_task {
     my $now = localtime;
     my $taskcount = 0;
     CHK_TIMEOUT:
-    foreach my $key ( keys %tasklimit_of ) {
-        my $limit = $tasklimit_of{$key};
-        if ( $now > $limit ) {
+    foreach my $key ( keys %taskinfo_of ) {
+        my $task = $taskinfo_of{$key};
+        if ( $now > $task->{limit} ) {
             logger->notice("Timeout task : $key");
-            delete $tasklimit_of{$key};
-            if ( $key =~ m{ \A build \s+ (.+) \z }xms ) {
+            my $pid = $task->{pid};
+            if ( $pid && kill(0, $pid) ) {
+                kill 'INT', $pid;
+            }
+            elsif ( $key =~ m{ \A build \s+ (.+) \z }xms ) {
                 my $mdl_or_file = $1;
+                logger->notice("Request reload module of zombie task : $key");
                 $cli->request_main_server("built $mdl_or_file");
             }
+            delete $taskinfo_of{$key};
         }
         else {
             $taskcount++;
@@ -140,19 +151,22 @@ sub run_task {
     }
 
     # do not run task while doing find task
-    my @findtasks = grep { $_ =~ m{ \A find \s+ }xms } keys %tasklimit_of;
+    my @findtasks = grep { $_ =~ m{ \A find \s+ }xms } keys %taskinfo_of;
     if ( $#findtasks >= 0 ) { return; }
 
     my $limit = $now + 60 * 10;
     RUN_TASK:
     while ( $taskcount < $maxtasks ) {
         my $nexttask = shift @taskqueue or return;
-        if ( is_running($nexttask->{key}) ) { next RUN_TASK; }
-        $tasklimit_of{$nexttask->{key}} = $limit;
-        logger->info("Run task : ".$nexttask->{cmd});
-        system $nexttask->{cmd}." &";
+        my $taskkey = $nexttask->{key};
+        if ( is_running($taskkey) ) { next RUN_TASK; }
+        my $cmdstr = $nexttask->{cmd};
+        logger->info("Run task : $cmdstr");
+        system "$cmdstr &";
+        # TODO: get pid of task
+        $taskinfo_of{$taskkey} = { pid => undef, limit => $limit };
         $taskcount++;
-        if ( $nexttask->{key} =~ m{ \A find \s+ }xms ) { last RUN_TASK; }
+        if ( $taskkey =~ m{ \A find \s+ }xms ) { last RUN_TASK; }
     }
 }
 
@@ -170,12 +184,24 @@ sub finish_task {
     my $taskkey = shift || "";
     if ( ! $taskkey ) { return; }
     logger->info("Finished task : $taskkey");
-    delete $tasklimit_of{$taskkey};
+    delete $taskinfo_of{$taskkey};
 }
 
 sub is_running {
     my $taskkey = shift || "";
-    exists $tasklimit_of{$taskkey};
+    exists $taskinfo_of{$taskkey};
+}
+
+sub kill_all_task {
+    KILL_TASK:
+    foreach my $key ( keys %taskinfo_of ) {
+        my $task = $taskinfo_of{$key};
+        my $pid = $task->{pid};
+        if ( ! $pid || ! kill(0, $pid) ) { next KILL_TASK; }
+        logger->notice("Kill task : $key");
+        kill 'INT', $pid;
+    }
+    %taskinfo_of = ();
 }
 
 sub get_common_option {
@@ -203,6 +229,10 @@ sub add_find_task {
 
 sub get_status {
     return "Running\n";
+}
+
+sub get_own_pid {
+    return $$."\n";
 }
 
 sub initialize {
@@ -298,7 +328,7 @@ sub find_project_library {
 }
 
 sub get_process_list {
-    return join("\n", sort keys %tasklimit_of)."\n";
+    return join("\n", sort keys %taskinfo_of)."\n";
 }
 
 sub get_task_queue {

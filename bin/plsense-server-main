@@ -20,6 +20,7 @@ use PlSense::CodeAssist;
 use PlSense::Helper;
 
 my %function_of = (status        => \&get_status,
+                   pid           => \&get_own_pid,
                    init          => \&initialize,
                    remove        => \&remove,
                    removeall     => \&remove_all,
@@ -104,6 +105,11 @@ my $currfilepath = "";
 my $currmdlnm = "";
 my $currmtdnm = "";
 
+$SIG{WINCH} = sub { logger->notice("Receive SIGWINCH"); exit 0; };
+$SIG{TERM} = sub { logger->notice("Receive SIGTERM"); exit 0; };
+$SIG{USR1} = sub { logger->notice("Receive SIGUSR1"); initialize(); };
+$SIG{HUP} = sub { logger->notice("Receive SIGHUP"); initialize(); };
+
 logger->info("Starting main server");
 ACCEPT_CLIENT:
 while ( my $cli = $sock->accept ) {
@@ -145,15 +151,19 @@ logger->info("Stopping main server");
 exit 0;
 
 
+sub get_status {
+    return "Running\n";
+}
+
+sub get_own_pid {
+    return $$."\n";
+}
+
 sub initialize {
     $builtin->build;
     $cli->request_resolve_server("load");
     $addrrouter->reload_current_project;
     return;
-}
-
-sub get_status {
-    return "Running\n";
 }
 
 sub remove {
@@ -254,13 +264,13 @@ sub help_last_assist {
 
 sub help_code {
     my $code = shift || "";
-    update_instance_condition();
+    update_instance_condition() or return;
     return $helper->get_help_text_by_code($code);
 }
 
 sub get_method_information {
     my $code = shift || "";
-    update_instance_condition();
+    update_instance_condition() or return;
     return $helper->get_method_info_by_code($code);
 }
 
@@ -317,7 +327,7 @@ sub get_current_location {
 
 sub assist_coding {
     my $code = shift || "";
-    update_instance_condition();
+    update_instance_condition() or return;
     return join("\n", $assist->get_assist($code))."\n";
 }
 
@@ -459,7 +469,7 @@ sub update_instance_condition {
                 logger->error("Not yet exist [$currmdlnm] of [$currfilepath]");
                 logger->error("Check the module status is not 'Nothing' by ready command.");
             }
-            return;
+            return 0;
         }
         $addrfinder->set_currentmodule($mdl);
         $currmdl = $mdl;
@@ -471,7 +481,7 @@ sub update_instance_condition {
             if ( ! $mtd ) {
                 logger->error("Not found [$currmtdnm] in [$currmdlnm] of [$currfilepath]");
                 logger->error("Check the module status is 'Yes' by ready command.");
-                return;
+                return 0;
             }
             $addrfinder->set_currentmethod($mtd);
         }
@@ -479,5 +489,7 @@ sub update_instance_condition {
     elsif ( $currmtd ) {
         $addrfinder->init_currentmethod;
     }
+    return 1;
 }
+
 

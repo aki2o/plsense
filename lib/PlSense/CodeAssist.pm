@@ -59,7 +59,7 @@ use PlSense::SubstituteValueFinder;
         my $doc = $lexer_of{ident $self}->lex_source($code);
         $doc->prune("PPI::Token::Comment");
         $doc->prune("PPI::Token::Pod");
-        my $tok = $doc->last_token or return @ret;
+        my $tok = eval { $doc->last_token } or return @ret;
 
         ASSISTANT:
         foreach my $assist ( @{$assistants_of{ident $self}} ) {

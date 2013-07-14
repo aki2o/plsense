@@ -31,6 +31,7 @@ my %fnchelp_of = ("help [Command]"                => [ "Show detail help about g
                   "svstat, serverstatus"          => [ "Show server process status." ],
                   "svstart, serverstart"          => [ "Start server process." ],
                   "svstop, serverstop"            => [ "Stop server process." ],
+                  "refresh"                       => [ "Refresh server process." ],
                   "o, open [File/Module]"         => [ "Open given File/Module.", <<'EOF'
 
 Build information about given file path or module name, and external module included it.
@@ -86,6 +87,7 @@ my %function_of = (help         => \&show_help,
                    svstop       => \&stop_server,
                    serverstart  => \&start_server,
                    svstart      => \&start_server,
+                   refresh      => \&refresh,
                    open         => \&open_file,
                    o            => \&open_file,
                    update       => \&update_file,
@@ -164,6 +166,7 @@ my $cli = PlSense::SocketClient->new({ mainport => $port1,
                                        maxretry => 10 });
 my $projmanager = PlSense::ProjectManager->new();
 my $currfile = "";
+my %pid_of;
 
 if ( $interactive ) {
 
@@ -284,31 +287,31 @@ sub start_resolve_server {
 }
 sub start_server_sentinel {
     my $svtype = shift || "";
-    my $s = $svtype eq "main"    ? $cli->connect_main_server({ ignore_error => 1, maxretry => 5 })
-          : $svtype eq "work"    ? $cli->connect_work_server({ ignore_error => 1, maxretry => 5 })
-          : $svtype eq "resolve" ? $cli->connect_resolve_server({ ignore_error => 1, maxretry => 5 })
-          :                        undef;
-    if ( $s ) {
-        $s->print("quit\n");
-        $s->close;
+
+    my $pid = $pid_of{$svtype};
+    if ( $pid && kill(0, $pid) ) { return 1; }
+    $pid = $svtype eq "main"    ? $cli->get_main_server_response("pid", { ignore_error => 1, maxretry => 5 })
+         : $svtype eq "work"    ? $cli->get_work_server_response("pid", { ignore_error => 1, maxretry => 5 })
+         : $svtype eq "resolve" ? $cli->get_resolve_server_response("pid", { ignore_error => 1, maxretry => 5 })
+         :                        0;
+    if ( $pid ) {
+        $pid_of{$svtype} = $pid;
         return 1;
     }
+
     my $cmdnm = "plsense-server-".$svtype;
     my $etcopt = $svtype eq "work" ? " --maxtasks $maxtasks" : "";
     my $cmdstr = "$cmdnm ".get_common_option().$etcopt;
     logger->info("Start server : $cmdstr");
-    system $cmdstr." &";
-    $s = $svtype eq "main"    ? $cli->connect_main_server({ maxretry => 20 })
-       : $svtype eq "work"    ? $cli->connect_work_server({ maxretry => 20 })
-       : $svtype eq "resolve" ? $cli->connect_resolve_server({ maxretry => 20 })
-       :                        undef;
-    if ( ! $s ) {
-        print STDERR "Can't run $svtype server. Check '$cmdnm --help' and run $cmdnm\n";
-        return 0;
-    }
-    $s->print("quit\n");
-    $s->close;
-    logger->info("Finished start $cmdnm");
+    system "$cmdstr &";
+
+    $pid = $svtype eq "main"    ? $cli->get_main_server_response("pid", { ignore_error => 1, maxretry => 10 })
+         : $svtype eq "work"    ? $cli->get_work_server_response("pid", { ignore_error => 1, maxretry => 10 })
+         : $svtype eq "resolve" ? $cli->get_resolve_server_response("pid", { ignore_error => 1, maxretry => 10 })
+         :                        0;
+    if ( ! $pid || ! kill(0, $pid) ) { return 0; }
+    $pid_of{$svtype} = $pid;
+    logger->info("Got pid of $svtype : $pid");
     return 1;
 }
 
@@ -323,23 +326,26 @@ sub stop_resolve_server {
 }
 sub stop_server_sentinel {
     my $svtype = shift || "";
-    my $s = $svtype eq "main"    ? $cli->connect_main_server({ ignore_error => 1, maxretry => 20 })
-          : $svtype eq "work"    ? $cli->connect_work_server({ ignore_error => 1, maxretry => 20 })
-          : $svtype eq "resolve" ? $cli->connect_resolve_server({ ignore_error => 1, maxretry => 20 })
-          :                        undef;
-    if ( ! $s ) { return 1; }
-    $s->print("stop\n");
-    $s->close;
-    $s = $svtype eq "main"    ? $cli->connect_main_server({ ignore_error => 1, maxretry => 5 })
-       : $svtype eq "work"    ? $cli->connect_work_server({ ignore_error => 1, maxretry => 5 })
-       : $svtype eq "resolve" ? $cli->connect_resolve_server({ ignore_error => 1, maxretry => 5 })
-       :                        undef;
-    if ( $s ) {
-        $s->print("quit\n");
-        $s->close;
-        return 0;
+    my $pid = $pid_of{$svtype};
+    if ( $pid && ! kill(0, $pid) ) { return 1; }
+
+    my $ret = $svtype eq "main"    ? $cli->request_main_server("stop", { ignore_error => 1, maxretry => 15 })
+            : $svtype eq "work"    ? $cli->request_work_server("stop", { ignore_error => 1, maxretry => 15 })
+            : $svtype eq "resolve" ? $cli->request_resolve_server("stop", { ignore_error => 1, maxretry => 15 })
+            :                        undef;
+    if ( $ret ) {
+        logger->info("Request stop to $svtype");
+        $pid_of{$svtype} = undef;
+        return 1;
     }
-    return 1;
+    elsif ( $pid ) {
+        logger->info("Send SIGWINCH to $svtype");
+        kill 'WINCH', $pid;
+        $pid_of{$svtype} = undef;
+        return 1;
+    }
+
+    return 0;
 }
 
 sub set_current_project_automatically {
@@ -373,19 +379,23 @@ sub set_current_project_automatically {
         $cli->request_main_server("onproj ".$proj->get_name);
         $cli->request_work_server("onproj ".$proj->get_name);
         $cli->request_resolve_server("onproj ".$proj->get_name);
-        find_project_library();
+        $cli->request_work_server("findlib ".$proj->get_libpath);
     }
     return;
 }
 
 
+
 sub show_server_status {
-    my $mainstat = $cli->get_main_server_response("status", { ignore_error => 1, maxretry => 5 }) || "Not running";
-    my $workstat = $cli->get_work_server_response("status", { ignore_error => 1, maxretry => 5 }) || "Not running";
-    my $resolvestat = $cli->get_resolve_server_response("status", { ignore_error => 1, maxretry => 5 }) || "Not running";
+    my $mainstat = $cli->get_main_server_response("status", { ignore_error => 1, maxretry => 5 });
+    my $workstat = $cli->get_work_server_response("status", { ignore_error => 1, maxretry => 5 });
+    my $resolvestat = $cli->get_resolve_server_response("status", { ignore_error => 1, maxretry => 5 });
     chomp $mainstat;
     chomp $workstat;
     chomp $resolvestat;
+    if ( ! $mainstat ) { $mainstat = $pid_of{main} && kill(0, $pid_of{main}) ? "Busy" : "Not running"; }
+    if ( ! $workstat ) { $workstat = $pid_of{work} && kill(0, $pid_of{work}) ? "Busy" : "Not running"; }
+    if ( ! $resolvestat ) { $resolvestat = $pid_of{resolve} && kill(0, $pid_of{resolve}) ? "Busy" : "Not running"; }
     my $ret = "Main Server is $mainstat.\n";
     $ret .= "Work Server is $workstat.\n";
     $ret .= "Resolve Server is $resolvestat.\n";
@@ -421,10 +431,21 @@ sub stop_server {
     return $mainret && $workret && $resolveret ? "Done\n" : "Failed\n";
 }
 
-sub find_project_library {
-    my $p = $projmanager->get_current_project or return;
-    $cli->request_work_server("findlib ".$p->get_libpath);
-    return;
+sub refresh {
+    SVTYPE:
+    foreach my $svtype ( "main", "work", "resolve" ) {
+        my $pid = $pid_of{$svtype};
+        if ( ! $pid ) {
+            $pid = $svtype eq "main"    ? $cli->get_main_server_response("pid", { maxretry => 20 })
+                 : $svtype eq "work"    ? $cli->get_work_server_response("pid", { maxretry => 20 })
+                 : $svtype eq "resolve" ? $cli->get_resolve_server_response("pid", { maxretry => 20 })
+                 :                        0;
+            $pid_of{$svtype} = $pid;
+        }
+        if ( ! $pid ) { last SVTYPE; }
+        kill 'USR1', $pid;
+    }
+    return "Done\n";
 }
 
 sub open_file {
@@ -471,7 +492,7 @@ sub remove_all {
     $cli->get_resolve_server_response("removeall");
     $cli->request_main_server("init");
     $cli->request_work_server("init");
-    return;
+    return "Done\n";
 }
 
 sub help_module {

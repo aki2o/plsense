@@ -14,8 +14,8 @@ use PlSense::Entity::Array;
     my %projcache_of :ATTR( :default(undef) );
     my %substh_of :ATTR();
     my %unknownargh_of :ATTR();
-    my %max_entry_of :ATTR( :init_arg<max_entry> :default(10) );
-    my %max_address_entry_of :ATTR( :init_arg<max_address_entry> :default(5) );
+    my %max_entry_of :ATTR( :init_arg<max_entry> :default(5) );
+    my %max_address_entry_of :ATTR( :init_arg<max_address_entry> :default(3) );
 
     my %mdlkeeper_of :ATTR( :init_arg<mdlkeeper> );
     sub get_mdlkeeper { my ($self) = @_; return $mdlkeeper_of{ident $self}; }

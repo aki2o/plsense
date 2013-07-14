@@ -18,7 +18,7 @@ use PlSense::Logger;
         my $currmdl = $self->get_currentmodule;
         logger->notice("Found explicit method in ".$currmdl->get_fullnm);
         METHOD:
-        foreach my $mtd ( $currmdl->get_any_methods, $self->get_builtin->get_methods ) {
+        foreach my $mtd ( $currmdl->get_any_original_methods, $self->get_builtin->get_methods ) {
             $self->push_candidate($mtd->get_name, $mtd);
         }
         EXT_METHOD:
