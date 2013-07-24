@@ -22,17 +22,17 @@ use PlSense::ModuleBuilder::DocBuilder;
 use PlSense::ModuleBuilder::PPIBuilder;
 
 my ($cachedir, $port1, $port2, $port3, $projectnm, $libpath, $mdl_or_file, $recursive, $force, $loglvl, $logfile);
-GetOptions ('cachedir=s' => \$cachedir,
-            'port1=i' => \$port1,
-            'port2=i'  => \$port2,
-            'port3=i'  => \$port3,
+GetOptions ('cachedir=s'  => \$cachedir,
+            'port1=i'     => \$port1,
+            'port2=i'     => \$port2,
+            'port3=i'     => \$port3,
             'projectnm=s' => \$projectnm,
-            'libpath=s' => \$libpath,
-            'target=s'   => \$mdl_or_file,
-            'recursive'  => \$recursive,
-            'force'  => \$force,
-            'loglevel=s' => \$loglvl,
-            'logfile=s'  => \$logfile,
+            'libpath=s'   => \$libpath,
+            'target=s'    => \$mdl_or_file,
+            'recursive'   => \$recursive,
+            'force'       => \$force,
+            'loglevel=s'  => \$loglvl,
+            'logfile=s'   => \$logfile,
             );
 
 setup_logger($loglvl, $logfile);
@@ -41,11 +41,11 @@ if ( ! -d $cachedir ) {
     exit 1;
 }
 
-my $cli = PlSense::SocketClient->new({ mainport => $port1,
-                                       workport => $port2,
-                                       resolveport => $port3,
-                                       retryinterval => 0.5,
-                                       maxretry => 300 });
+my $scli = PlSense::SocketClient->new({ mainport => $port1,
+                                        workport => $port2,
+                                        resolveport => $port3,
+                                        retryinterval => 0.5,
+                                        maxretry => 300 });
 
 my $builtin = PlSense::Builtin->new({ cachedir => $cachedir });
 my $mdlkeeper = PlSense::ModuleKeeper->new({ cachedir => $cachedir });
@@ -135,8 +135,9 @@ try {
     MDL:
     foreach my $mdl ( @mdls ) {
 
-        $mdlkeeper->store_module($mdl);
+        my $mdlkey = $mdl->get_name eq "main" ? $mdl->get_filepath : $mdl->get_name;
         $substkeeper->reset;
+
         logger->notice("Start build [".$mdl->get_name."] : XRef part");
         $xrefbuilder->build($mdl);
         logger->notice("Start build [".$mdl->get_name."] : Inherit part");
@@ -146,8 +147,7 @@ try {
         logger->notice("Start build [".$mdl->get_name."] : PPI part");
         $ppibuilder->build($mdl);
 
-        my $mdlkey = $mdl->get_name eq "main" ? $mdl->get_filepath : $mdl->get_name;
-        if ( ! $cli->get_resolve_server_response("remove $mdlkey") ) { next MDL; }
+        if ( ! $scli->get_resolve_server_response("remove $mdlkey") ) { next MDL; }
 
         $mdl->set_source(undef);
         $mdl->initialized;
@@ -169,8 +169,8 @@ catch {
 @extmdls = uniq(sort @extmdls);
 if ( $#builtmdlkeys >= 0 ) {
     logger->notice("Request reload modules : ".join(", ", @builtmdlkeys));
-    $cli->request_main_server("built ".join("|", @builtmdlkeys));
-    if ( ! $cli->request_resolve_server("built ".join("|", @builtmdlkeys)) ) { interrupt_build(); }
+    $scli->request_main_server("built ".join("|", @builtmdlkeys));
+    if ( ! $scli->request_resolve_server("built ".join("|", @builtmdlkeys)) ) { interrupt_build(); }
 }
 
 finish_build(@extmdls);
@@ -182,10 +182,10 @@ sub finish_build {
 
     if ( $#extmdls >= 0 ) {
         logger->notice("Request build extmodules : ".join(", ", @extmdls));
-        $cli->request_work_server("buildr ".join("|", @extmdls));
+        $scli->request_work_server("buildr ".join("|", @extmdls));
     }
 
-    $cli->request_work_server("finbuild $mdl_or_file");
+    $scli->request_work_server("finbuild $mdl_or_file");
 }
 
 sub get_extmodules {

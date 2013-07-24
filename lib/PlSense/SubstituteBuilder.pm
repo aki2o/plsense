@@ -16,7 +16,7 @@ use PlSense::SubstituteValueFinder;
     sub get_substkeeper : PRIVATE { my ($self) = @_; return $substkeeper_of{ident $self}; }
 
     my %finder_of :ATTR();
-    sub get_finder : PRIVATE { my ($self) = @_; return $finder_of{ident $self}; }
+    sub get_finder { my ($self) = @_; return $finder_of{ident $self}; }
 
     sub START {
         my ($class, $ident, $arg_ref) = @_;

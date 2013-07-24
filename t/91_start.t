@@ -1,6 +1,6 @@
 use Test::More;
 use FindBin;
-use lib "$FindBin::Bin/lib";
+use lib "$FindBin::Bin/../tlib";
 use TestSupport;
 
 my $tmpdir = get_tmp_dir();
@@ -23,12 +23,12 @@ ok($mainstat && $workstat && $resolvestat, "start server process");
 
 my $count = 0;
 WAIT_IDLE:
-while ( $count < 60 ) {
+while ( $count < 100 ) {
     my $ps = qx{ $addpath ; plsense $commonopt ps };
     $ps =~ s{ ^\s+ }{}xms;
     $ps =~ s{ \s+$ }{}xms;
     if ( ! $ps ) { last WAIT_IDLE; }
-    sleep 3;
+    sleep 2;
     $count++;
 }
 

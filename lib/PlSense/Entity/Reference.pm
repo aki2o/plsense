@@ -36,7 +36,7 @@ use PlSense::Entity::Null;
         if ( eval { $entity_of{ident $self}->isa("PlSense::Entity") } ) {
             $ret->set_entity( $entity_of{ident $self}->clone );
         }
-        else {
+        elsif ( $entity_of{ident $self} ) {
             $ret->set_entity( $entity_of{ident $self} );
         }
         return $ret;

@@ -10,4 +10,5 @@ my $ee = $e->clone;
 ok($ee->isa("PlSense::Entity::Null"), "clone");
 is($ee->to_string, "NULL", "to string of clone");
 
+
 done_testing();

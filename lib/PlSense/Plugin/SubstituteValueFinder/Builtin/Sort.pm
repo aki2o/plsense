@@ -13,11 +13,20 @@ use PlSense::Logger;
 
     sub find_address {
         my ($self, @tokens) = @_;
-        return $self->get_mediator->find_address(@tokens);
+        return $self->find_something(@tokens);
     }
 
     sub find_address_or_entity {
         my ($self, @tokens) = @_;
+        return $self->find_something(@tokens);
+    }
+
+    sub find_something : PRIVATE {
+        my ($self, @tokens) = @_;
+
+        if ( $#tokens >= 0 && $tokens[0]->isa("PPI::Structure::Block") ) {
+            my $tok = shift @tokens;
+        }
         return $self->get_mediator->find_address(@tokens);
     }
 }

@@ -22,19 +22,23 @@ sub get_bar {
     my ($self) = @_;
     return $self->{bar};
 
-    # tstart own method of blessed child class
+    # astart own method of blessed child class
     #$self->
-    # tend equal: SUPER::get_fuga SUPER::get_hoge SUPER::new SUPER::set_fuga SUPER::set_hoge can get_bar get_foo get_fuga get_hoge isa new set_bar set_fuga set_hoge
+    # aend equal: SUPER::get_fuga SUPER::get_hoge SUPER::new SUPER::set_fuga SUPER::set_hoge can get_bar get_foo get_fuga get_hoge isa new set_bar set_fuga set_hoge
 }
 
 sub get_foo {
     my ($self) = @_;
     return $self->SUPER::get_hoge;
 
-    # tstart blessed hash member
+    # astart blessed hash member
     #$self->{
-    # tend equal: bar
+    # aend equal: bar
 }
+
+# astart define inherite method in blessed child class
+#sub 
+# aend equal: get_fuga get_hoge new set_fuga set_hoge
 
 1;
 

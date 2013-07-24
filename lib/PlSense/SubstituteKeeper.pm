@@ -14,7 +14,7 @@ use PlSense::Entity::Array;
     my %projcache_of :ATTR( :default(undef) );
     my %substh_of :ATTR();
     my %unknownargh_of :ATTR();
-    my %max_entry_of :ATTR( :init_arg<max_entry> :default(5) );
+    my %max_entry_of :ATTR( :init_arg<max_entry> :default(50) );
     my %max_address_entry_of :ATTR( :init_arg<max_address_entry> :default(3) );
 
     my %mdlkeeper_of :ATTR( :init_arg<mdlkeeper> );
@@ -26,7 +26,7 @@ use PlSense::Entity::Array;
     sub START {
         my ($class, $ident, $arg_ref) = @_;
         $cache_of{$ident} = $class->new_cache('Subst');
-        $projcache_of{$ident} = $class->new_cache($class->get_default_project_name);
+        $projcache_of{$ident} = $class->new_cache('Subst.'.$class->get_default_project_name);
         $substh_of{$ident} = {};
         $unknownargh_of{$ident} = {};
     }
@@ -41,18 +41,18 @@ use PlSense::Entity::Array;
     sub switch_project {
         my $self = shift;
         my $projectnm = shift || "";
-        my $force = shift || 0;
 
         if ( ! $projectnm ) { return; }
-        if ( ! $force && $projectnm eq $self->get_project() ) {
+        if ( $projectnm eq $self->get_project() ) {
             logger->info("No need switch project data from [$projectnm]");
             return;
         }
 
         logger->info("Switch project data to [$projectnm]");
+        $self->remove_project_all_sentinel(1);
         $self->set_project($projectnm);
         $addrrouter_of{ident $self}->set_project($projectnm);
-        $self->load_all;
+        $self->load_project_all(1);
         return 1;
     }
 
@@ -92,40 +92,11 @@ use PlSense::Entity::Array;
 
     sub load_all {
         my $self = shift;
-
-        $self->reset;
-        my @keys;
         logger->info("Start Load all");
-
-        try   { @keys = $cache_of{ident $self}->get_keys; }
-        catch { @keys = $cache_of{ident $self}->get_keys; };
-        KEY:
-        foreach my $key ( @keys ) {
-            my $ch = substr($key, 1, 1);
-            if ( $ch eq 'S' ) {
-                $addrrouter_of{ident $self}->load_by_cache_key(substr($key, 3));
-                $self->load_by_substitute_key($key, 0);
-            }
-            elsif ( $ch eq 'A' ) {
-                $self->load_by_unknown_argument_key($key, 0);
-            }
-        }
-
-        if ( $projcache_of{ident $self} ) {
-            try   { @keys = $projcache_of{ident $self}->get_keys; }
-            catch { @keys = $projcache_of{ident $self}->get_keys; };
-            KEY:
-            foreach my $key ( @keys ) {
-                my $ch = substr($key, 1, 1);
-                if ( $ch eq 'S' ) {
-                    $addrrouter_of{ident $self}->load_by_cache_key(substr($key, 3));
-                    $self->load_by_substitute_key($key, 1);
-                }
-                elsif ( $ch eq 'A' ) {
-                    $self->load_by_unknown_argument_key($key, 1);
-                }
-            }
-        }
+        $self->reset;
+        $self->load_installed_all;
+        $self->load_project_all;
+        $self->resolve_unknown_argument;
     }
 
     sub remove {
@@ -138,6 +109,11 @@ use PlSense::Entity::Array;
         $self->remove_by_substitute_key("[S]".$key, $projectnm);
         $self->remove_by_unknown_argument_key("[A]".$key, $projectnm);
         logger->info("Removed subst/arg info of $key");
+    }
+
+    sub remove_project_all {
+        my $self = shift;
+        $self->remove_project_all_sentinel(0);
     }
 
     sub remove_all {
@@ -263,13 +239,14 @@ use PlSense::Entity::Array;
     sub add_substitute {
         my ($self, $left, $right, $force) = @_;
 
-        if ( eval { $right->isa("PlSense::Entity") } ||
+        if ( $force ||
+             eval { $right->isa("PlSense::Entity") } ||
              $addrrouter_of{ident $self}->exist_route($right) ) {
             if ( ! $addrrouter_of{ident $self}->add_route($left, $right) ) { return; }
             $self->move_to_route($left);
         }
         else {
-            $self->add_substitute_sentinel($left, $right, $force);
+            $self->add_substitute_sentinel($left, $right);
         }
     }
 
@@ -332,8 +309,8 @@ use PlSense::Entity::Array;
 
         if ( $right !~ m{ \A & (.+) :: ([^:]+) \z }xms ) { return; }
         my ($mdlkey, $mtdnm) = ($1, $2);
-        my ($mdlnm, $filepath) = $mdlkey =~ m{ \A main \[ ([^\]]+) \] \z }xms ? ("main", $1)
-                               :                                                ($mdlkey, "");
+        my ($mdlnm, $filepath) = $mdlkey =~ m{ \A main \[ (.+) \] \z }xms ? ("main", $1)
+                               :                                            ($mdlkey, "");
         my $mdl = $mdlkeeper_of{ident $self}->get_module($mdlnm, $filepath) or return;
         if ( ! $mdl->exist_method($mtdnm) ) { return; }
         my $mtd = $mdl->get_method($mtdnm);
@@ -433,9 +410,50 @@ use PlSense::Entity::Array;
         }
     }
 
+    sub to_string_by_regexp {
+        my ($self, $regexp) = @_;
+        my $ret = "";
+        SUBST:
+        foreach my $right ( keys %{$substh_of{ident $self}} ) {
+            if ( $right !~ m{ $regexp }xms ) { next SUBST; }
+            my $substs = $substh_of{ident $self}->{$right} or next SUBST;
+            SUBST:
+            foreach my $left ( @{$substs} ) {
+                $ret .= "$left -> $right\n";
+            }
+        }
+        return $ret;
+    }
+
+    sub describe_keep_value {
+        my ($self) = @_;
+        my @substs = keys %{$substh_of{ident $self}};
+        my $substkeys = 0;
+        SUBST:
+        foreach my $right ( @substs ) {
+            my $substs = $substh_of{ident $self}->{$right} or next SUBST;
+            $substkeys += $#{$substs} + 1;
+        }
+        my @unargs = keys %{$unknownargh_of{ident $self}};
+        my $unargvalues = 0;
+        ARG:
+        foreach my $mtdaddr ( @unargs ) {
+            my $idxh = $unknownargh_of{ident $self}->{$mtdaddr};
+            INDEX:
+            foreach my $idx ( keys %$idxh ) {
+                my $values = $idxh->{$idx} or next INDEX;
+                $unargvalues += $#{$values} + 1;
+            }
+        }
+
+        my $ret = "Substitute ... Lefts:".$substkeys." Rights:".($#substs+1)."\n";
+        $ret .= "Not Clear Argument ... Entrys:".($#unargs+1)." Values:".$unargvalues."\n";
+        return $ret;
+    }
+
 
     sub add_substitute_sentinel : PRIVATE {
-        my ($self, $left, $right, $force) = @_;
+        my ($self, $left, $right) = @_;
         if ( ! $left || ! $right ) { return; }
 
         my $substs = $substh_of{ident $self}->{$right};
@@ -446,8 +464,7 @@ use PlSense::Entity::Array;
         if ( any { $_ eq $left } @{$substs} ) { return; }
         if ( $#{$substs} + 1 >= $max_entry_of{ident $self} ) { splice @{$substs}, $#{$substs} - 1, 1; }
 
-        $force ? unshift @{$substs}, $left
-               : push @{$substs}, $left;
+        push @{$substs}, $left;
         logger->debug("Add substitute : $left -> $right");
     }
 
@@ -455,15 +472,14 @@ use PlSense::Entity::Array;
         my ($self, $addr) = @_;
 
         logger->debug("Move to route : $addr");
-        my @routables = grep { index($addr, $_) == 0 || index($_, $addr) == 0 } keys %{$substh_of{ident $self}};
         my %substs_of;
         ROUTABLE:
-        foreach my $right ( @routables ) {
+        foreach my $right ( grep { index($addr, $_) == 0 || index($_, $addr) == 0 } keys %{$substh_of{ident $self}} ) {
             $substs_of{$right} = $substh_of{ident $self}->{$right};
             delete $substh_of{ident $self}->{$right};
         }
         FOUND:
-        foreach my $right ( @routables ) {
+        foreach my $right ( keys %substs_of ) {
             my $substs = $substs_of{$right} or next FOUND;
             SUBST:
             foreach my $left ( @{$substs} ) {
@@ -519,7 +535,7 @@ use PlSense::Entity::Array;
     }
 
     sub remove_by_substitute_key : PRIVATE {
-        my ($self, $key, $is_project) = @_;
+        my ($self, $key, $is_project, $memoryonly) = @_;
         my $loadh;
         if ( ! $is_project ) {
             try   { $loadh = $cache_of{ident $self}->get($key); }
@@ -544,7 +560,9 @@ use PlSense::Entity::Array;
                     splice @{$substs}, $idx, 1;
                 }
             }
+            if ( $#{$substs} < 0 ) { delete $substh_of{ident $self}->{$rightaddr}; }
         }
+        if ( $memoryonly ) { return; }
         if ( ! $is_project ) {
             try   { $cache_of{ident $self}->remove($key); }
             catch { $cache_of{ident $self}->remove($key); };
@@ -556,7 +574,7 @@ use PlSense::Entity::Array;
     }
 
     sub remove_by_unknown_argument_key : PRIVATE {
-        my ($self, $key, $is_project) = @_;
+        my ($self, $key, $is_project, $memoryonly) = @_;
         my $loadh;
         if ( ! $is_project ) {
             try   { $loadh = $cache_of{ident $self}->get($key); }
@@ -574,8 +592,7 @@ use PlSense::Entity::Array;
             if ( ! $idxh ) { next MTDADDR; }
             IDX:
             foreach my $idx ( keys %$lidxh ) {
-                my $values = $idxh->{$idx};
-                if ( ! $values ) { next IDX; }
+                my $values = $idxh->{$idx} or next IDX;
                 VALUE:
                 foreach my $v ( @{$lidxh->{$idx}} ) {
                     my $fidx = eval { $v->get_type } ? firstidx { eval { $_->to_string eq $v->to_string } } @{$values}
@@ -583,8 +600,12 @@ use PlSense::Entity::Array;
                     if ( $fidx < 0 ) { next VALUE; }
                     splice @{$values}, $fidx, 1;
                 }
+                if ( $#{$values} < 0 ) { delete $idxh->{$idx}; }
             }
+            my @idxs = keys %$idxh;
+            if ( $#idxs < 0 ) { delete $unknownargh_of{ident $self}->{$mtdaddr}; }
         }
+        if ( $memoryonly ) { return; }
         if ( ! $is_project ) {
             try   { $cache_of{ident $self}->remove($key); }
             catch { $cache_of{ident $self}->remove($key); };
@@ -593,6 +614,70 @@ use PlSense::Entity::Array;
             try   { $projcache_of{ident $self}->remove($key); }
             catch { $projcache_of{ident $self}->remove($key); };
         }
+    }
+
+    sub load_installed_all : PRIVATE {
+        my $self = shift;
+        my $not_resolve_subst = shift || 0;
+        my @keys;
+        try   { @keys = $cache_of{ident $self}->get_keys; }
+        catch { @keys = $cache_of{ident $self}->get_keys; };
+        KEY:
+        foreach my $key ( @keys ) {
+            my $ch = substr($key, 1, 1);
+            if ( $ch eq 'S' ) {
+                $addrrouter_of{ident $self}->load_by_cache_key(substr($key, 3));
+                $self->load_by_substitute_key($key, 0);
+            }
+            elsif ( $ch eq 'A' ) {
+                $self->load_by_unknown_argument_key($key, 0);
+            }
+        }
+        logger->info("Loaded subst/arg info of installed module all");
+        if ( ! $not_resolve_subst ) { $self->resolve_substitute; }
+    }
+
+    sub load_project_all : PRIVATE {
+        my $self = shift;
+        my $not_resolve_subst = shift || 0;
+        if ( $self->get_project eq $self->get_default_project_name ) { return; }
+        my @keys;
+        try   { @keys = $projcache_of{ident $self}->get_keys; }
+        catch { @keys = $projcache_of{ident $self}->get_keys; };
+        KEY:
+        foreach my $key ( @keys ) {
+            my $ch = substr($key, 1, 1);
+            if ( $ch eq 'S' ) {
+                $addrrouter_of{ident $self}->load_by_cache_key(substr($key, 3));
+                $self->load_by_substitute_key($key, 1);
+            }
+            elsif ( $ch eq 'A' ) {
+                $self->load_by_unknown_argument_key($key, 1);
+            }
+        }
+        logger->info("Loaded subst/arg info of project module all");
+        if ( ! $not_resolve_subst ) { $self->resolve_substitute; }
+    }
+
+    sub remove_project_all_sentinel : PRIVATE {
+        my $self = shift;
+        my $memoryonly = shift || 0;
+        my @keys;
+        try   { @keys = $projcache_of{ident $self}->get_keys; }
+        catch { @keys = $projcache_of{ident $self}->get_keys; };
+        KEY:
+        foreach my $key ( @keys ) {
+            my $ch = substr($key, 1, 1);
+            if ( $ch eq 'S' ) {
+                $memoryonly ? $addrrouter_of{ident $self}->remove_by_cache_key_on_memory(substr($key, 3))
+                            : $addrrouter_of{ident $self}->remove_by_cache_key(substr($key, 3));
+                $self->remove_by_substitute_key($key, 1, $memoryonly);
+            }
+            elsif ( $ch eq 'A' ) {
+                $self->remove_by_unknown_argument_key($key, 1, $memoryonly);
+            }
+        }
+        logger->info("Removed subst/arg info of project module all : memoryonly[$memoryonly]");
     }
 
 }

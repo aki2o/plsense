@@ -14,7 +14,8 @@ use PlSense::Entity::Null;
     sub end {
         my ($self, $mdl, $ppi) = @_;
         if ( ! $mdl->exist_usingmdl("Class::Std") &&
-             ! $mdl->exist_usingmdl("Class::Std::Storable") ) { return; }
+             ! $mdl->exist_usingmdl("Class::Std::Storable") &&
+             ! $mdl->exist_usingmdl("Class::Std::Fast::Storable") ) { return; }
 
         $self->get_substkeeper->add_substitute("&".$mdl->get_fullnm."::BUILD[3]", "&".$mdl->get_fullnm."::new[2]", 1);
         $self->get_substkeeper->add_substitute("&".$mdl->get_fullnm."::START[3]", "&".$mdl->get_fullnm."::new[2]", 1);
@@ -25,7 +26,8 @@ use PlSense::Entity::Null;
 
         my $mdl = $mtd->get_module or return;
         if ( ! $mdl->exist_usingmdl("Class::Std") &&
-             ! $mdl->exist_usingmdl("Class::Std::Storable") ) { return; }
+             ! $mdl->exist_usingmdl("Class::Std::Storable") &&
+             ! $mdl->exist_usingmdl("Class::Std::Fast::Storable") ) { return; }
 
         my $attr = $mtd->get_attribute or return;
         if ( $attr->{content} eq 'PRIVATE' ) {
@@ -45,7 +47,8 @@ use PlSense::Entity::Null;
         my $mdl = $var->get_belong or return;
         if ( ! $mdl->isa("PlSense::Symbol::Module") ) { return; }
         if ( ! $mdl->exist_usingmdl("Class::Std") &&
-             ! $mdl->exist_usingmdl("Class::Std::Storable") ) { return; }
+             ! $mdl->exist_usingmdl("Class::Std::Storable") &&
+             ! $mdl->exist_usingmdl("Class::Std::Fast::Storable") ) { return; }
 
         my @tokens = $stmt->children;
         my $e = shift @tokens or return;

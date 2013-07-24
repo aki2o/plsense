@@ -38,7 +38,7 @@ use PlSense::Logger;
         }
 
         my $mdl = $mediator->get_currentmodule;
-        $mediator->get_substkeeper->add_substitute('&'.$mdl->get_name.'::BLESS.R', $value);
+        $mediator->get_substkeeper->add_substitute('&'.$mdl->get_name.'::BLESS.R', $value, 1);
         return;
     }
 }

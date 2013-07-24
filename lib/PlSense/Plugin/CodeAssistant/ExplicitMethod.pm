@@ -9,7 +9,7 @@ use PlSense::Logger;
     sub is_only_valid_context {
         my ($self, $code, $tok) = @_;
 
-        if ( $code !~ m{ & ([a-zA-Z0-9_:]*) \z }xms ) { return; }
+        if ( $code !~ m{ [^\$&] & ([a-zA-Z0-9_:]+) \z }xms ) { return; }
         my $input = $1;
 
         logger->info("Match context : input[$input]");

@@ -32,7 +32,7 @@ use PlSense::Logger;
         if ( eval { $any->isa("PlSense::Symbol") } ) {
             return $self->get_symbol_help_text($any);
         }
-        if ( eval { $any->isa("PlSense::Entity") } ) {
+        elsif ( eval { $any->isa("PlSense::Entity") } ) {
             return $self->get_entity_description($any);
         }
         else {
@@ -58,7 +58,10 @@ use PlSense::Logger;
         my $mtd;
         my $addrfinder = $addrfinder_of{ident $self};
         if ( ! $pretok || $pretok->isa("PPI::Token::Whitespace") ) {
-            $mtd = $self->get_currentmodule->get_any_original_method($word) or return "";
+            $mtd = $self->get_currentmodule->get_any_original_method($word);
+            if ( ! $mtd && $addrfinder->get_builtin->exist_method($word) ) {
+                $mtd = $addrfinder->get_builtin->get_method($word);
+            }
         }
         elsif ( $pretok->isa("PPI::Token::Operator") && $pretok->content eq '->' ) {
             my @tokens = $self->get_valid_tokens($pretok);
@@ -70,9 +73,9 @@ use PlSense::Logger;
                 $mdl = $addrfinder->get_mdlkeeper->get_module($entity->get_modulenm) or return "";
             }
             else {
-                $pretok = $pretok->previous_sibling or return "";
+                $pretok = pop @tokens or return "";
                 if ( ! $pretok->isa("PPI::Token::Word") ) { return ""; }
-                $mdl = $addrfinder->get_mdlkeeper->get_module($word) or return "";
+                $mdl = $addrfinder->get_mdlkeeper->get_module("".$pretok->content."") or return "";
             }
             if ( ! $mdl ) { return ""; }
             $mtd = $mdl->get_any_original_method($word) or return "";
@@ -111,9 +114,10 @@ use PlSense::Logger;
                     if ( ! $entity->isa("PlSense::Entity::Instance") ) { return ""; }
                     $mdl = $addrfinder->get_mdlkeeper->get_module($entity->get_modulenm) or return "";
                 }
-                elsif ( $pretok = $pretok->previous_sibling ) {
+                else {
+                    $pretok = pop @tokens or return "";
                     if ( ! $pretok->isa("PPI::Token::Word") ) { return ""; }
-                    $mdl = $addrfinder->get_mdlkeeper->get_module($word) or return "";
+                    $mdl = $addrfinder->get_mdlkeeper->get_module("".$pretok->content."") or return "";
                 }
                 if ( ! $mdl ) { return ""; }
                 my $mtd = $mdl->get_any_original_method($word) or return "";
@@ -133,8 +137,8 @@ use PlSense::Logger;
                 my $addr = $addrfinder->find_address($tok) or return "";
                 if ( $addr !~ m{ \A & (.+) :: ([^:]+) \z }xms ) { return ""; }
                 my ($mdlkey, $mtdnm) = ($1, $2);
-                my ($mdlnm, $filepath) = $mdlkey =~ m{ \A main \[ ([^\]]+) \] \z }xms ? ("main", $1)
-                                       :                                                ($mdlkey, "");
+                my ($mdlnm, $filepath) = $mdlkey =~ m{ \A main \[ (.+) \] \z }xms ? ("main", $1)
+                                       :                                            ($mdlkey, "");
                 my $mdl = $addrfinder->get_mdlkeeper->get_module($mdlnm, $filepath) or return "";
                 if ( ! $mdl->exist_method($mtdnm) ) { return ""; }
                 my $mtd = $mdl->get_any_original_method($mtdnm);
@@ -146,9 +150,10 @@ use PlSense::Logger;
             my $varnm = "".$tok->symbol."";
             my $mdl = $self->get_currentmodule;
             my $mtd = $self->get_currentmethod;
-            my $var = $mtd && $mtd->exist_variable($varnm) ? $mtd->get_variable($varnm)
-                    : $mdl->exist_member($varnm)           ? $mdl->get_member($varnm)
-                    :                                        first { $_->get_fullnm eq $varnm } $mdl->get_external_any_variables;
+            my $var = $addrfinder->get_builtin->exist_variable($varnm) ? $addrfinder->get_builtin->get_variable($varnm)
+                    : $mtd && $mtd->exist_variable($varnm)             ? $mtd->get_variable($varnm)
+                    : $mdl->exist_member($varnm)                       ? $mdl->get_member($varnm)
+                    :                                                    first { $_->get_fullnm eq $varnm } $mdl->get_external_any_variables;
             if ( ! $var ) { return ""; }
             return $self->get_symbol_help_text($var);
         }
@@ -175,7 +180,7 @@ use PlSense::Logger;
                 $ret = $sym->get_name." is Builtin Method.\n\n";
             }
             $ret .= $self->get_method_definition($sym);
-            $ret .= $sym->get_helptext ? $sym->get_helptext."\n" : "Not documented.\n";
+            $ret .= $sym->get_helptext ? $sym->get_helptext."\n" : "\nNot documented.\n";
         }
 
         elsif ( $sym->isa("PlSense::Symbol::Variable") ) {
@@ -188,7 +193,7 @@ use PlSense::Logger;
             }
             my $entity = $addrrouter_of{ident $self}->resolve_address($sym->get_fullnm);
             $ret .= $self->get_entity_description($entity);
-            $ret .= $sym->get_helptext ? $sym->get_helptext."\n" : "Not documented.\n";
+            $ret .= $sym->get_helptext ? $sym->get_helptext."\n" : "\nNot documented.\n";
         }
 
         else {
@@ -252,10 +257,10 @@ use PlSense::Logger;
             $ret .= " of $mdlnm.\n";
         }
         elsif ( $etype ne 'Unknown' ) {
-            $ret .= "\nThe value maybe ...\n".$entity->to_string."\n";
+            $ret .= ".\nThe value maybe ...\n".$entity->to_string."\n";
         }
         else {
-            $ret .= "\n";
+            $ret .= ".\n";
         }
 
         return $ret;

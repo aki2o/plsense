@@ -1,6 +1,6 @@
 use Test::More;
 use FindBin;
-use lib "$FindBin::Bin/lib";
+use lib "$FindBin::Bin/../tlib";
 use TestSupport;
 
 my $tmpdir = get_tmp_dir();

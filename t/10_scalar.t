@@ -15,4 +15,5 @@ ok($ee->isa("PlSense::Entity::Scalar"), "clone");
 is($ee->get_value, "hoge", "get value of clone");
 is($ee->to_string, "S<hoge>", "to string of clone");
 
+
 done_testing();

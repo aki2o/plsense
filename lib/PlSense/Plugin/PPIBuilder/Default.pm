@@ -147,9 +147,20 @@ use PlSense::Symbol::Variable;
         logger->info("Found for/foreach statement : ".$e->content);
         @children = $e->children;
 
-        my @vars;
-        push @vars, $var;
-        $self->get_substbuilder->build_variable_substitute( \@vars, @children );
+        my $any = $self->get_substbuilder->get_finder->find_address_or_entity(@children) or return;
+        if ( eval { $any->isa("PlSense::Entity") } ) {
+            if ( ! $any->isa("PlSense::Entity::Array") ) { return; }
+            my $el = $any->get_element;
+            if ( $el ) {
+                $self->get_substkeeper->add_substitute($var->get_fullnm, $el);
+            }
+            elsif ( $any->count_address > 0 ) {
+                $self->get_substkeeper->add_substitute($var->get_fullnm, $any->get_address(1).".A");
+            }
+        }
+        else {
+            $self->get_substkeeper->add_substitute($var->get_fullnm, $any.".A");
+        }
     }
 
     sub build_by_while_statement : PRIVATE {

@@ -10,13 +10,14 @@ use PlSense::Logger;
     sub is_only_valid_context {
         my ($self, $code, $tok) = @_;
 
-        if ( ! $tok ) { return; }
-        if ( ! $tok->isa("PPI::Token::Symbol") &&
-             ! $tok->isa("PPI::Token::Cast") &&
-             ! $tok->isa("PPI::Token::Operator") ) { return; }
-        my $input = "".$tok->content."";
+        if ( $code !~ m{ (\$|\$\#|@|%) ([^\s\$\#@%]*) \z }xms ) { return; }
+        my $vartype = $1;
+        my $input = $2;
 
-        my $pretok1 = $tok->previous_sibling;
+        if ( $input =~ m{ -> }xms ) { return; }
+        if ( $input =~ m{ [a-zA-Z0-9_][\[\{] }xms ) { return; }
+
+        my $pretok1 = $tok && $tok->previous_sibling;
         my $pretok2 = $pretok1 && $pretok1->previous_sibling;
         if ( $pretok1 &&
              $pretok2 &&
@@ -26,10 +27,9 @@ use PlSense::Logger;
             return;
         }
 
-        my $vartype = substr($input, 0, 1);
+        if ( $vartype eq '$#' ) { $vartype = '@'; }
         if ( $vartype ne '$' && $vartype ne '@' && $vartype ne '%' ) { return; }
 
-        $input = substr($input, 1);
         $self->set_input($input);
         logger->info("Match context : vartype[$vartype] input[$input]");
 

@@ -15,7 +15,7 @@ use PlSense::Logger;
     sub START {
         my ($class, $ident, $arg_ref) = @_;
         $cache_of{$ident} = $class->new_cache('Module');
-        $projcache_of{$ident} = $class->new_cache($class->get_default_project_name);
+        $projcache_of{$ident} = $class->new_cache('Module.'.$class->get_default_project_name);
         $moduleh_of{$ident} = {};
     }
 
@@ -37,7 +37,12 @@ use PlSense::Logger;
 
         logger->info("Switch project data to [$projectnm]");
         $self->set_project($projectnm);
-        $self->load_all_module;
+        MDL:
+        foreach my $mdlkey ( keys %{$moduleh_of{ident $self}} ) {
+            my $mdl = $moduleh_of{ident $self}->{$mdlkey};
+            if ( ! $mdl->get_projectnm ) { next MDL; }
+            delete $moduleh_of{ident $self}->{$mdlkey};
+        }
         return 1;
     }
 
@@ -53,29 +58,6 @@ use PlSense::Logger;
         my $filepath = shift || "";
         my $key = $self->get_cache_key($mdlnm, $filepath);
         return $self->load_module_sentinel($key);
-    }
-
-    sub load_all_module {
-        my $self = shift;
-        logger->info("Start Load all");
-        $self->reset;
-        my @keys;
-        if ( $projcache_of{ident $self} ) {
-            try   { @keys = $projcache_of{ident $self}->get_keys; }
-            catch { @keys = $projcache_of{ident $self}->get_keys; };
-            KEY:
-            foreach my $key ( @keys ) {
-                if ( $moduleh_of{ident $self}->{$key} ) { next KEY; }
-                $self->load_module_sentinel($key);
-            }
-        }
-        try   { @keys = $cache_of{ident $self}->get_keys; }
-        catch { @keys = $cache_of{ident $self}->get_keys; };
-        KEY:
-        foreach my $key ( @keys ) {
-            if ( $moduleh_of{ident $self}->{$key} ) { next KEY; }
-            $self->load_module_sentinel($key);
-        }
     }
 
     sub remove_module {
@@ -98,13 +80,11 @@ use PlSense::Logger;
 
     sub remove_project_all_module {
         my ($self) = @_;
-        if ( $projcache_of{ident $self} ) { return; }
-        my @keys;
-        try   { @keys = $projcache_of{ident $self}->get_keys; }
-        catch { @keys = $projcache_of{ident $self}->get_keys; };
-        KEY:
-        foreach my $key ( @keys ) {
-            delete $moduleh_of{ident $self}->{$key};
+        MDL:
+        foreach my $mdlkey ( keys %{$moduleh_of{ident $self}} ) {
+            my $mdl = $moduleh_of{ident $self}->{$mdlkey};
+            if ( ! $mdl->get_projectnm ) { next MDL; }
+            delete $moduleh_of{ident $self}->{$mdlkey};
         }
         try   { $projcache_of{ident $self}->clear; }
         catch { $projcache_of{ident $self}->clear; };
@@ -116,10 +96,8 @@ use PlSense::Logger;
         $self->reset;
         try   { $cache_of{ident $self}->clear; }
         catch { $cache_of{ident $self}->clear; };
-        if ( $projcache_of{ident $self} ) {
-            try   { $projcache_of{ident $self}->clear; }
-            catch { $projcache_of{ident $self}->clear; };
-        }
+        try   { $projcache_of{ident $self}->clear; }
+        catch { $projcache_of{ident $self}->clear; };
         logger->info("Removed all module info");
     }
 
@@ -169,6 +147,13 @@ use PlSense::Logger;
         my ($self) = @_;
         return grep { $_->is_initialized } $self->get_packages;
     }
+
+    sub describe_keep_value {
+        my ($self) = @_;
+        my @mdlkeys = keys %{$moduleh_of{ident $self}};
+        return "Modules ... ".($#mdlkeys+1)."\n";
+    }
+
 
     sub store_module_sentinel : PRIVATE {
         my ($self, $mdl) = @_;

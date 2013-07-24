@@ -60,8 +60,11 @@ use PlSense::Logger;
             CAND:
             foreach my $cand ( @cands ) {
                 my $regexp = quotemeta($cand);
-                if ( $title !~ m{ \A $regexp \b }xms ) { next CAND; }
-                $c = $mdl->exist_member($cand) ? $mdl->get_member($cand) : $mdl->get_method($cand) and last CAND;
+                if ( $title =~ m{ \A $regexp (\s|$) }xms ||
+                     $title =~ m{ \A " $regexp " (\s|$) }xms ||
+                     $title =~ m{ \A ' $regexp ' (\s|$) }xms ) {
+                    $c = $mdl->exist_member($cand) ? $mdl->get_member($cand) : $mdl->get_method($cand) and last CAND;
+                }
             }
             if ( $c ) {
                 push @curre, $c;

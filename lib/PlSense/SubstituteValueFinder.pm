@@ -4,7 +4,8 @@ use strict;
 use warnings;
 use Class::Std;
 use PPI::Lexer;
-use Module::Pluggable instantiate => 'new', search_path => 'PlSense::Plugin::SubstituteValueFinder::Builtin';
+use Module::Pluggable instantiate => 'new', search_path => [ 'PlSense::Plugin::SubstituteValueFinder::Builtin',
+                                                             'PlSense::Plugin::SubstituteValueFinder::Ext' ];
 use PlSense::Logger;
 use PlSense::Entity::Null;
 use PlSense::Entity::Scalar;
@@ -12,7 +13,8 @@ use PlSense::Entity::Array;
 use PlSense::Entity::Hash;
 use PlSense::Entity::Reference;
 {
-    my %pluginh_of :ATTR();
+    my %bpluginh_of :ATTR();
+    my %epluginh_of :ATTR();
     my %lexer_of :ATTR();
 
     my %builtin_of :ATTR( :init_arg<builtin> );
@@ -58,7 +60,8 @@ use PlSense::Entity::Reference;
 
     sub BUILD {
         my ($class, $ident, $arg_ref) = @_;
-        $pluginh_of{$ident} = {};
+        $bpluginh_of{$ident} = {};
+        $epluginh_of{$ident} = {};
         $lexer_of{$ident} = PPI::Lexer->new();
     }
 
@@ -67,8 +70,12 @@ use PlSense::Entity::Reference;
         my @plugins = $class->plugins({ mediator => $class,
                                         with_build => $class->with_build });
         PLUGIN:
-        foreach my $p ( @plugins ) {
-            $pluginh_of{$ident}->{$p->get_builtin_name} = $p;
+        foreach my $p ( grep { $_->isa("PlSense::Plugin::SubstituteValueFinder::Builtin") } @plugins ) {
+            $bpluginh_of{$ident}->{$p->get_builtin_name} = $p;
+        }
+        PLUGIN:
+        foreach my $p ( grep { $_->isa("PlSense::Plugin::SubstituteValueFinder::Ext") } @plugins ) {
+            $epluginh_of{$ident}->{$p->get_method_name} = $p;
         }
     }
 
@@ -209,7 +216,17 @@ use PlSense::Entity::Reference;
         my ($self, @tokens) = @_;
         my @ret = $self->find_somethings_in_list(0, @tokens);
         if ( $#ret < 0 ) { return; }
-
+        my $entity = PlSense::Entity::Array->new();
+        FOUND:
+        foreach my $any ( @ret ) {
+            if ( eval { $any->isa("PlSense::Entity") } ) {
+                $entity->set_element($any);
+            }
+            else {
+                $entity->push_address($any);
+            }
+        }
+        return $entity;
     }
 
     sub find_somethings_in_list : PRIVATE {
@@ -414,17 +431,22 @@ use PlSense::Entity::Reference;
         my $mtd = $self->get_currentmethod;
 
         if ( $builtin_of{ident $self}->exist_variable($varnm) ) {
+            logger->debug("Found builtin variable : $varnm");
+            my $p = $bpluginh_of{ident $self}->{$varnm};
+            if ( $p ) { return $p->find_address(@tokens); }
             return;
         }
 
-        my @cands = $mtd ? ( $mtd->keys_variable, $mdl->keys_member ) : $mdl->keys_member;
-        MYVAR:
-        foreach my $v ( @cands ) {
-            if ( $v eq $varnm ) {
-                logger->info("Found own variable : ".$varnm);
-                my $var = $mtd && $mtd->exist_variable($v) ? $mtd->get_variable($v) : $mdl->get_member($v);
-                return $self->build_address_anything($var->get_fullnm, @tokens);
-            }
+        if ( $mtd && $mtd->exist_variable($varnm) ) {
+            logger->info("Found method local variable : ".$varnm);
+            my $var = $mtd->get_variable($varnm);
+            return $self->build_address_anything($var->get_fullnm, @tokens);
+        }
+
+        if ( $mdl->exist_member($varnm) ) {
+            logger->info("Found own variable : ".$varnm);
+            my $var = $mdl->get_member($varnm);
+            return $self->build_address_anything($var->get_fullnm, @tokens);
         }
 
         if ( $varnm =~ m{ ^ ($|@|%|&) ([a-zA-Z0-9:]+) :: ([a-zA-Z0-9_]+) $ }xms ) {
@@ -453,21 +475,26 @@ use PlSense::Entity::Reference;
         my $currwd = "".$e->literal."";
         my $mdl = $self->get_currentmodule;
 
-        MYMTD:
-        foreach my $mtdnm ( $mdl->keys_method ) {
-            if ( $mtdnm eq $currwd ) {
-                logger->info("Found own method : $currwd");
-                my $mtd = $mdl->get_method($mtdnm);
-                return $self->build_address_anything_with_method_arg($mtd->get_fullnm, @tokens);
+        if ( $mdl->exist_method($currwd) ) {
+            my $pret;
+            my $p = $epluginh_of{ident $self}->{$currwd};
+            if ( $p ) {
+                logger->info("Found importive method : $currwd");
+                $pret = $is_addr ? $p->find_address( $p->get_argument_tokens(@tokens) )
+                      :            $p->find_address_or_entity( $p->get_argument_tokens(@tokens) );
             }
+            if ( $pret ) { return $pret; }
+            logger->info("Found own method : $currwd");
+            my $mtd = $mdl->get_method($currwd);
+            return $self->build_address_anything_with_method_arg($mtd->get_fullnm, @tokens);
         }
 
         if ( $builtin_of{ident $self}->exist_method($currwd) ) {
             logger->debug("Found builtin function : $currwd");
-            my $p = $pluginh_of{ident $self}->{$currwd};
+            my $p = $bpluginh_of{ident $self}->{$currwd};
             if ( $p ) {
-                return $is_addr ? $p->find_address(@tokens)
-                     :            $p->find_address_or_entity(@tokens);
+                return $is_addr ? $p->find_address( $p->get_argument_tokens(@tokens) )
+                     :            $p->find_address_or_entity( $p->get_argument_tokens(@tokens) );
             }
             return;
         }

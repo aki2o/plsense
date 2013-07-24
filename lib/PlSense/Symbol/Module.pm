@@ -135,7 +135,7 @@ use PlSense::Logger;
     }
     sub exist_member {
         my ($self, $membernm) = @_;
-        return exists $memberh_of{ident $self}->{$membernm};
+        return $membernm && exists $memberh_of{ident $self}->{$membernm};
     }
     sub get_member {
         my ($self, $membernm) = @_;
@@ -165,7 +165,7 @@ use PlSense::Logger;
     }
     sub exist_method {
         my ($self, $methodnm) = @_;
-        return exists $methodh_of{ident $self}->{$methodnm};
+        return $methodnm && exists $methodh_of{ident $self}->{$methodnm};
     }
     sub get_method {
         my ($self, $methodnm) = @_;
@@ -244,6 +244,7 @@ use PlSense::Logger;
         for my $i ( 1..$mdl->count_usingmdl ) { $self->push_usingmdl( $mdl->get_usingmdl($i) ); }
         BUNDLEMDL:
         for my $i ( 1..$mdl->count_bundlemdl ) { $self->push_bundlemdl( $mdl->get_bundlemdl($i) ); }
+        $self->set_helptext($mdl->get_helptext);
         $self->set_source($mdl->get_source);
         $mdl->is_initialized ? $self->initialized : $self->uninitialized;
     }
@@ -256,13 +257,16 @@ use PlSense::Logger;
     sub to_detail_string {
         my $self = shift;
         my $ret = "";
+        my $first;
         my $addr = sprintf("%s", $self);
         $addr =~ s{ ^ PlSense::Symbol::Module=SCALAR\((.+)\) $ }{$1}xms;
         $ret .= "MYSELF: ".$self->get_name."($addr)\n";
         $ret .= "PARENT: ";
+        $first = 1;
         PARENT:
         foreach my $mdl ( @{$parents_of{ident $self}} ) {
-            if ( $ret ) { $ret .= ", "; }
+            if ( ! $first ) { $ret .= ", "; }
+            $first = 0;
             $ret .= $mdl->get_name;
             my $addr = sprintf("%s", $mdl);
             $addr =~ s{ ^ PlSense::Symbol::Module=SCALAR\((.+)\) $ }{$1}xms;
@@ -270,9 +274,11 @@ use PlSense::Logger;
         }
         $ret .= "\n";
         $ret .= "INCLUDE: ";
+        $first = 1;
         USINGMDL:
         foreach my $mdl ( @{$usingmdls_of{ident $self}} ) {
-            if ( $ret ) { $ret .= ", "; }
+            if ( ! $first ) { $ret .= ", "; }
+            $first = 0;
             $ret .= $mdl->get_name;
             my $addr = sprintf("%s", $mdl);
             $addr =~ s{ ^ PlSense::Symbol::Module=SCALAR\((.+)\) $ }{$1}xms;
@@ -504,7 +510,7 @@ use PlSense::Logger;
                 foreach my $m ( @{$usingmdls_of{ident $self}} ) {
                     if ( ! $m->exist_method($mtdnm) ) { next USINGMDL; }
                     my $extmtd = $m->get_method($mtdnm);
-                    if ( $extmtd->is_importive ) { next USINGMDL; }
+                    # if ( $extmtd->is_importive ) { next USINGMDL; }
                     $mtd_of{$mtdnm} = $extmtd;
                     last USINGMDL;
                 }
@@ -564,7 +570,7 @@ use PlSense::Logger;
         foreach my $m ( @{$usingmdls_of{ident $self}} ) {
             if ( ! $m->exist_method($mtdnm) ) { next USINGMDL; }
             my $extmtd = $m->get_method($mtdnm);
-            if ( $extmtd->is_importive ) { next USINGMDL; }
+            # if ( $extmtd->is_importive ) { next USINGMDL; }
             return $extmtd;
         }
         return $mtd;

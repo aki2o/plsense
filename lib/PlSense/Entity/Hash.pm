@@ -74,7 +74,7 @@ use PlSense::Logger;
             if ( eval { $member->isa("PlSense::Entity") } ) {
                 $ret->set_member($member->clone);
             }
-            else {
+            elsif ( $member ) {
                 $ret->set_member($member);
             }
         }

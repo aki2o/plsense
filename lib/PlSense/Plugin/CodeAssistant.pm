@@ -25,7 +25,7 @@ use PlSense::Logger;
     my %lasth_of :ATTR( :default(undef) );
     sub push_candidate : RESTRICTED {
         my ($self, $candidate, $instance) = @_;
-        my $input = $self->get_input;
+        my $input = quotemeta($self->get_input);
         if ( $input ne "" && $candidate !~ m{ ^ $input }xms ) { return; }
         push @{$candidates_of{ident $self}}, $candidate;
         $lasth_of{ident $self}->{$candidate} = $instance;

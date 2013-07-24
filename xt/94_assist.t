@@ -1,20 +1,15 @@
 use Test::More;
 use FindBin;
 use List::AllUtils qw{ first };
-use lib "$FindBin::Bin/lib";
+use lib "$FindBin::Bin/../tlib";
 use TestSupport;
 
 my $workpath = get_work_dir();
 my $addpath = "PATH=$FindBin::Bin/../bin:\${PATH} ; export PATH";
 my $chhome = "HOME=$workpath ; export HOME";
-my ($stat, $mainstat, $workstat, $resolvestat);
 
 system "$addpath ; $chhome ; plsense svstart > /dev/null";
-$stat = qx{ $addpath ; $chhome ; plsense svstat };
-$mainstat = $stat =~ m{ ^ Main \s+ Server \s+ is \s+ Running\. $ }xms;
-$workstat = $stat =~ m{ ^ Work \s+ Server \s+ is \s+ Running\. $ }xms;
-$resolvestat = $stat =~ m{ ^ Resolve \s+ Server \s+ is \s+ Running\. $ }xms;
-ok($mainstat && $workstat && $resolvestat, "start server process") or done_mytest();
+ok(is_running(), "start server process") or done_mytest();
 
 my @testsrc = grep { -f $_ } @ARGV;
 if ( $#testsrc < 0 ) {
@@ -22,19 +17,21 @@ if ( $#testsrc < 0 ) {
 }
 
 my ($fh, $cmdret);
-BUILD:
+SOURCE:
 foreach my $f ( @testsrc ) {
 
-    system "$addpath ; $chhome ; plsense open $f > /dev/null";
+    my $openret = qx{ $addpath ; $chhome ; plsense open '$f' };
+    chomp $openret;
+    is($openret, "Done", "do open $f") or next SOURCE;
 
     my $count = 0;
     WAIT_IDLE:
-    while ( $count < 60 ) {
+    while ( $count < 120 ) {
         my $ps = qx{ $addpath ; $chhome ; plsense ps };
         $ps =~ s{ ^\s+ }{}xms;
         $ps =~ s{ \s+$ }{}xms;
-        if ( ! $ps ) { last WAIT_IDLE; }
-        sleep 3;
+        if ( ! $ps && is_running() ) { last WAIT_IDLE; }
+        sleep 1;
         $count++;
     }
 
@@ -52,20 +49,23 @@ foreach my $f ( @testsrc ) {
             my $pkgnm = $1;
             $cmdret = qx{ $addpath ; $chhome ; plsense onmod $pkgnm };
             chomp $cmdret;
-            is($cmdret, "Done", "Set current module to $pkgnm") or last LINE;
+            is($cmdret, "Done", "set current module to $pkgnm") or last LINE;
         }
+
         elsif ( $line =~ m{ ^ sub \s+ ([^\s]+) }xms ) {
             my $subnm = $1;
             $cmdret = qx{ $addpath ; $chhome ; plsense onsub $subnm };
             chomp $cmdret;
-            is($cmdret, "Done", "Set current method to $subnm") or last LINE;
+            is($cmdret, "Done", "set current method to $subnm") or last LINE;
         }
-        elsif ( $line =~ m{ ^ \# \s* tstart \s+ (.+) $ }xms ) {
+
+        elsif ( $line =~ m{ ^ \# \s* astart \s+ (.+) $ }xms ) {
             $testdesc = $1;
             $readcode = 1;
             $testcode = "";
         }
-        elsif ( $line =~ m{ ^ \# \s* tend \s+ ([a-z]+): \s* (.*) \s* $ }xms ) {
+
+        elsif ( $line =~ m{ ^ \# \s* aend \s+ ([a-z]+): \s* (.*) \s* $ }xms ) {
             ($testmethod, $expected) = ($1, $2);
             $readcode = 0;
             $cmdret = qx{ $addpath ; $chhome ; plsense assist '$testcode' };
@@ -105,6 +105,13 @@ foreach my $f ( @testsrc ) {
                 ok($exclude, "assist check $testmethod $testdesc");
             }
         }
+
+        elsif ( $line =~ m{ ^ \# \s* ahelp \s+ ([^\s]+) \s+ : \s+ ([^\n]+) $ }xms ) {
+            my ($cand, $regexp) = ($1, $2);
+            $cmdret = qx{ $addpath ; $chhome ; plsense assisthelp $cand };
+            ok($cmdret =~ m{ $regexp }xms, "assist help $cand match '$regexp' at $testdesc");
+        }
+
         elsif ( $readcode ) {
             $line =~ s{ ^ \# }{}xms;
             if ( $testcode ) { $testcode .= " "; }
@@ -120,6 +127,16 @@ foreach my $f ( @testsrc ) {
 done_mytest();
 exit 0;
 
+
+sub is_running {
+    my ($stat, $mainstat, $workstat, $resolvestat);
+
+    $stat = qx{ $addpath ; $chhome ; plsense svstat };
+    $mainstat = $stat =~ m{ ^ Main \s+ Server \s+ is \s+ Running\. $ }xms;
+    $workstat = $stat =~ m{ ^ Work \s+ Server \s+ is \s+ Running\. $ }xms;
+    $resolvestat = $stat =~ m{ ^ Resolve \s+ Server \s+ is \s+ Running\. $ }xms;
+    return $mainstat && $workstat && $resolvestat ? 1 : 0;
+}
 
 sub done_mytest {
     my ($stat, $mainstat, $substat);

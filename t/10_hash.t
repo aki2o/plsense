@@ -2,7 +2,7 @@ use Test::More;
 use PlSense::Entity::Hash;
 use PlSense::Entity::Null;
 
-my $e = PlSense::Entity::Hash->new({});
+my $e = PlSense::Entity::Hash->new();
 ok($e->isa("PlSense::Entity::Hash"), "new");
 is($e->get_type, "hash", "get type");
 is($e->to_string, "H<>", "to string");

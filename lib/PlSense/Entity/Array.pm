@@ -10,11 +10,8 @@ use PlSense::Entity::Null;
     my %element_of :ATTR( :init_arg<element> :default('') );
     sub set_element {
         my ($self, $element) = @_;
-        if ( ! eval { $element->isa("PlSense::Entity") } ) {
-            logger->error("Not PlSense::Entity");
-            return;
-        }
-        logger->debug("Set array element : ".$element->to_string);
+        my $eltext = eval { $element->isa("PlSense::Entity") } ? $element->to_string : $element;
+        logger->debug("Set array element : ".$eltext);
         $element_of{ident $self} = $element;
     }
     sub get_element { my ($self) = @_; return $element_of{ident $self}; }
@@ -47,8 +44,8 @@ use PlSense::Entity::Null;
     sub to_string {
         my $self = shift;
         my $ret = "A<";
-        my $e = $self->get_element;
-        $ret .= $e ? $e->to_string : "";
+        my $e = $self->get_element || "";
+        $ret .= eval { $e->isa("PlSense::Entity") } ? $e->to_string : $e;
         KEY:
         for my $i ( 1..$self->count_address ) {
             $ret .= $i == 1 ? " | ".$self->get_address($i) : ", ".$self->get_address($i);
@@ -66,6 +63,9 @@ use PlSense::Entity::Null;
         }
         if ( eval { $element_of{ident $self}->isa("PlSense::Entity") } ) {
             $ret->set_element( $element_of{ident $self}->clone );
+        }
+        elsif ( $element_of{ident $self} ) {
+            $ret->set_element( $element_of{ident $self} );
         }
         return $ret;
     }

@@ -56,7 +56,7 @@ use PlSense::Logger;
                 my $resolve = $self->get_addrrouter->resolve_address($var->get_fullnm) or next EXPORTVAR;
                 if ( ! $resolve->isa("PlSense::Entity::Array") ) { next EXPORTVAR; }
                 my $scalar = $resolve->get_element or next EXPORTVAR;
-                if ( ! $scalar->isa("PlSense::Entity::Scalar") ) { next EXPORTVAR; }
+                if ( ! eval { $scalar->isa("PlSense::Entity::Scalar") } ) { next EXPORTVAR; }
                 EXPORTABLE:
                 foreach my $somenm ( split m{ \s+ }xms, $scalar->get_value ) {
                     $somenm =~ s{ ^& }{}xms;

@@ -5,41 +5,48 @@ use warnings;
 use Getopt::Long;
 use IO::Socket;
 use File::Spec;
+use File::Basename;
 use Time::Piece;
 use Try::Tiny;
 use FindBin;
 use lib "$FindBin::Bin/../lib";
 use PlSense::Logger;
 use PlSense::SocketClient;
+use PlSense::ProjectManager;
 
-my %function_of = (status     => \&get_status,
-                   pid        => \&get_own_pid,
-                   init       => \&initialize,
-                   build      => \&build,
-                   buildr     => \&build_recursive,
-                   buildf     => \&build_force,
-                   buildrf    => \&build_recursive_force,
-                   buildfr    => \&build_recursive_force,
-                   rebuildall => \&rebuild_all,
-                   onproj     => \&set_currentproject,
-                   findlib    => \&find_project_library,
-                   ps         => \&get_process_list,
-                   queue      => \&get_task_queue,
-                   finfind    => \&finish_find,
-                   finbuild   => \&finish_build,
+my %opthelp_of = ("-h, --help"     => "Show this message.",
+                  "-c, --cachedir" => "Path of directory caching information for Completion/Help.",
+                  "--port1"        => "Port number for listening by main server process. Default is 33333.",
+                  "--port2"        => "Port number for listening by work server process. Default is 33334.",
+                  "--port3"        => "Port number for listening by resolve server process. Default is 33335.",
+                  "--maxtasks"     => "Limit count of task that run on server process.",
+                  "--loglevel"     => "Level of logging. Its value is for Log::Handler.",
+                  "--logfile"      => "Path of log file.",
+                  );
+
+my %function_of = (status    => \&get_status,
+                   pid       => \&get_own_pid,
+                   removeall => \&remove_all,
+                   build     => \&build,
+                   buildr    => \&build_recursive,
+                   buildf    => \&build_force,
+                   buildrf   => \&build_recursive_force,
+                   buildfr   => \&build_recursive_force,
+                   open      => \&open_file,
+                   current   => \&current_file,
+                   ps        => \&get_process_list,
+                   queue     => \&get_task_queue,
+                   finfind   => \&finish_find,
+                   finbuild  => \&finish_build,
                    );
 
-my $usage = <<EOF;
-Usage: 
-EOF
-
 my ($cachedir, $port1, $port2, $port3, $maxtasks, $loglvl, $logfile);
-GetOptions ('help'       => sub { print $usage; exit 0; },
+GetOptions ('help'       => sub { show_usage(); exit 0; },
             'cachedir=s' => \$cachedir,
-            'port1=i' => \$port1,
-            'port2=i'  => \$port2,
-            'port3=i'  => \$port3,
-            'maxtasks=i'  => \$maxtasks,
+            'port1=i'    => \$port1,
+            'port2=i'    => \$port2,
+            'port3=i'    => \$port3,
+            'maxtasks=i' => \$maxtasks,
             'loglevel=s' => \$loglvl,
             'logfile=s'  => \$logfile,
             );
@@ -53,14 +60,14 @@ if ( ! $loglvl ) { $loglvl = ''; }
 if ( ! $logfile ) { $logfile = ''; }
 if ( ! $maxtasks || $maxtasks !~ m{ ^\d+$ }xms ) { $maxtasks = 20; }
 
-my $cli = PlSense::SocketClient->new({ mainport => $port1,
-                                       workport => $port2,
-                                       resolveport => $port3,
-                                       retryinterval => 0.5,
-                                       maxretry => 10 });
+my $scli = PlSense::SocketClient->new({ mainport => $port1,
+                                        workport => $port2,
+                                        resolveport => $port3,
+                                        retryinterval => 0.2,
+                                        maxretry => 10 });
 
 my $sock = IO::Socket::INET->new(LocalAddr => "localhost",
-                                 LocalPort => $cli->get_workport,
+                                 LocalPort => $scli->get_workport,
                                  Proto => "tcp",
                                  Listen => 1,
                                  ReUse => 1,
@@ -74,57 +81,97 @@ if ( ! $sock->listen ) {
     exit 1;
 }
 
+my $projmanager = PlSense::ProjectManager->new();
 my %taskinfo_of;
 my @taskqueue;
-my $currprojnm = "";
-my $currprojlib = "";
+my $reqprojnm = undef;
 
 $SIG{WINCH} = sub { logger->notice("Receive SIGWINCH"); kill_all_task(); exit 0; };
 $SIG{TERM} = sub { logger->notice("Receive SIGTERM"); kill_all_task(); exit 0; };
-$SIG{USR1} = sub { logger->notice("Receive SIGUSR1"); kill_all_task(); };
-$SIG{HUP} = sub { logger->notice("Receive SIGHUP"); kill_all_task(); };
+$SIG{USR1} = sub { logger->notice("Receive SIGUSR1"); kill_all_task(); accept_client(); };
+$SIG{HUP} = sub { logger->notice("Receive SIGHUP"); kill_all_task(); accept_client(); };
 
-logger->info("Starting work server");
-ACCEPT_CLIENT:
-while ( my $cli = $sock->accept ) {
-    logger->debug("Waiting client ...");
-
-    my $line = $cli->getline || "";
-    chomp $line;
-    logger->info("Receive request : $line");
-    my $cmdnm = $line =~ s{ ^ \s* ([a-z]+) }{}xms ? $1 : "";
-    if ( $cmdnm eq "quit" ) {
-        $cli->close;
-        next ACCEPT_CLIENT;
-    }
-    elsif ( $cmdnm eq "stop" ) {
-        $cli->close;
-        last ACCEPT_CLIENT;
-    }
-    elsif ( exists $function_of{$cmdnm} ) {
-        try {
-            my $fnc = $function_of{$cmdnm};
-            my $ret = &$fnc($line) || "";
-            $cli->print($ret);
-            $cli->flush;
-            run_task();
-        }
-        catch {
-            my $e = shift;
-            logger->error("Failed do $cmdnm : $e");
-        };
-    }
-    else {
-        logger->error("Unknown command [$cmdnm]");
-    }
-    $cli->close;
-
-}
-$sock->close;
-
-logger->info("Stopping work server");
+accept_client();
 exit 0;
 
+
+sub show_usage {
+    my $optstr = "";
+    OPTHELP:
+    foreach my $key ( sort keys %opthelp_of ) {
+        $optstr .= sprintf("  %-25s %s\n", $key, $opthelp_of{$key});
+    }
+
+    print <<"EOF";
+Run PlSense Work Server.
+Work Server manages task that find/build module.
+
+Usage:
+  plsense-server-work [Option]
+
+Option:
+$optstr
+EOF
+    return;
+}
+
+sub accept_client {
+    logger->info("Starting work server");
+
+    initialize();
+    ACCEPT_CLIENT:
+    while ( my $cli = $sock->accept ) {
+        logger->debug("Waiting client ...");
+
+        my $line = $cli->getline || "";
+        chomp $line;
+        logger->info("Receive request : $line");
+        my $cmdnm = $line =~ s{ ^ \s* ([a-z]+) }{}xms ? $1 : "";
+        if ( $cmdnm eq "quit" ) {
+            $cli->close;
+            next ACCEPT_CLIENT;
+        }
+        elsif ( $cmdnm eq "stop" ) {
+            $cli->close;
+            last ACCEPT_CLIENT;
+        }
+        elsif ( exists $function_of{$cmdnm} ) {
+            try {
+                my $fnc = $function_of{$cmdnm};
+                my $ret = &$fnc($line) || "";
+                $cli->print($ret);
+                $cli->flush;
+                run_task();
+            }
+            catch {
+                my $e = shift;
+                logger->error("Failed do $cmdnm : $e");
+            };
+        }
+        else {
+            logger->error("Unknown command [$cmdnm]");
+        }
+        $cli->close;
+
+    }
+    $sock->close;
+
+    logger->info("Stopping work server");
+}
+
+sub initialize {
+    my @dirs;
+    LIBPATH:
+    foreach my $dir ( qx{ perl -e 'pop \@INC; print join("\\n", \@INC);' } ) {
+        chomp $dir;
+        if ( ! -d $dir ) { next LIBPATH; }
+        push @dirs, $dir;
+    }
+    add_find_task(1, "installed", @dirs);
+    run_task();
+    $projmanager->clear_current_project;
+    return;
+}
 
 sub run_task {
     my $now = localtime;
@@ -141,7 +188,7 @@ sub run_task {
             elsif ( $key =~ m{ \A build \s+ (.+) \z }xms ) {
                 my $mdl_or_file = $1;
                 logger->notice("Request reload module of zombie task : $key");
-                $cli->request_main_server("built $mdl_or_file");
+                $scli->request_main_server("built $mdl_or_file");
             }
             delete $taskinfo_of{$key};
         }
@@ -197,20 +244,21 @@ sub kill_all_task {
     foreach my $key ( keys %taskinfo_of ) {
         my $task = $taskinfo_of{$key};
         my $pid = $task->{pid};
-        if ( ! $pid || ! kill(0, $pid) ) { next KILL_TASK; }
+        if ( ! $pid ) { next KILL_TASK; }
         logger->notice("Kill task : $key");
-        kill 'INT', $pid;
+        if ( kill(0, $pid) ) { kill 'INT', $pid; }
+        delete $taskinfo_of{$key};
     }
-    %taskinfo_of = ();
 }
 
 sub get_common_option {
-    my $global = shift || 0;
-    my $projnm = ! $global ? $currprojnm : "";
+    my $needprojopt = shift || 0;
+    my $currp = $projmanager->get_current_project;
+    my $projnm = $needprojopt && $currp ? $currp->get_name : "";
     my $ret = "--cachedir '$cachedir' --loglevel '$loglvl' --logfile '$logfile' --projectnm '$projnm'";
-    $ret .= " --port1 ".$cli->get_mainport;
-    $ret .= " --port2 ".$cli->get_workport;
-    $ret .= " --port3 ".$cli->get_resolveport;
+    $ret .= " --port1 ".$scli->get_mainport;
+    $ret .= " --port2 ".$scli->get_workport;
+    $ret .= " --port3 ".$scli->get_resolveport;
     return $ret;
 }
 
@@ -222,9 +270,59 @@ sub add_find_task {
     foreach my $dir ( @rootdirs ) {
         $rootdiropt .= " --rootdir '$dir'";
     }
-    add_task("find $tasknm", "plsense-worker-find --tasknm '$tasknm' $rootdiropt ".get_common_option($global));
+    add_task("find $tasknm", "plsense-worker-find --tasknm '$tasknm' $rootdiropt ".get_common_option($global ? 0 : 1));
     return;
 }
+
+sub get_config_path {
+    return File::Spec->rel2abs( $ENV{HOME}."/.plsense" );
+}
+
+sub update_current_project {
+    my $filepath = shift || "";
+    my $add_find_task = shift || 0;
+    if ( ! -f $filepath ) { return; }
+    my $dirpath = dirname($filepath);
+    my $confpath;
+    DIR:
+    while ( -d $dirpath ) {
+        my $curr = $dirpath."/.plsense";
+        if ( -f $curr ) {
+            if ( $curr ne get_config_path() ) { $confpath = $curr; }
+            last DIR;
+        }
+        $dirpath =~ s{ / [^/]+ $ }{}xms or last DIR;
+    }
+    if ( ! $confpath ) { $confpath = ""; }
+
+    my $currp = $projmanager->get_current_project;
+    if ( ! $currp && ! $confpath ) { return; }
+    elsif ( $currp && $currp->get_confpath eq $confpath ) { return; }
+
+    if ( ! $confpath ) {
+        $projmanager->clear_current_project;
+        $reqprojnm = "";
+    }
+    else {
+        my $proj = $projmanager->open_project($confpath) or return;
+        $reqprojnm = $proj->get_name;
+        if ( $add_find_task ) {
+            add_find_task(0, $proj->get_name, $proj->get_libpath);
+        }
+    }
+    return 1;
+}
+
+sub sync_location {
+    my $filepath = shift || "";
+    if ( defined $reqprojnm ) {
+        $scli->request_main_server("onproj ".$reqprojnm) or return;
+        $reqprojnm = undef;
+    }
+    $scli->request_main_server("onfile ".$filepath) or return;
+    return 1;
+}
+
 
 
 sub get_status {
@@ -235,47 +333,37 @@ sub get_own_pid {
     return $$."\n";
 }
 
-sub initialize {
-    my @dirs;
-    LIBPATH:
-    foreach my $dir ( qx{ perl -e 'pop \@INC; print join("\\n", \@INC);' } ) {
-        chomp $dir;
-        if ( ! -d $dir ) { next LIBPATH; }
-        push @dirs, $dir;
-    }
-    add_find_task(1, "installed", @dirs);
-    run_task();
-    return;
+sub remove_all {
+    kill_all_task();
+    initialize();
+    return "Done\n";
 }
 
 sub build {
     my $mdl_or_files = shift || "";
-    return build_sentinel($mdl_or_files, 0);
+    build_sentinel($mdl_or_files, 0);
 }
 
 sub build_recursive {
     my $mdl_or_files = shift || "";
-    return build_sentinel($mdl_or_files, 1);
+    build_sentinel($mdl_or_files, 1);
 }
 
 sub build_force {
     my $mdl_or_files = shift || "";
-    return build_sentinel($mdl_or_files, 0, 1);
+    build_sentinel($mdl_or_files, 0, 1);
 }
 
 sub build_recursive_force {
     my $mdl_or_files = shift || "";
-    return build_sentinel($mdl_or_files, 1, 1);
-}
-
-sub rebuild_all {
-    my $mdl_or_files = shift || "";
+    build_sentinel($mdl_or_files, 1, 1);
 }
 
 sub build_sentinel {
     my $mdl_or_files = shift || "";
-    my $recursive = shift;
-    my $force = shift;
+    my $recursive = shift || 0;
+    my $force = shift || 0;
+    my $not_update_current_project = shift || 0;
     my @mdl_or_files = split m{ \| }xms, $mdl_or_files;
     ENTRY:
     foreach my $mdl_or_file ( @mdl_or_files ) {
@@ -286,6 +374,9 @@ sub build_sentinel {
         if ( -f $mdl_or_file ) {
             $mdlnm = "main";
             $filepath = File::Spec->rel2abs($mdl_or_file);
+            if ( ! $not_update_current_project ) {
+                update_current_project($filepath);
+            }
             $target = $filepath;
         }
         else {
@@ -298,7 +389,9 @@ sub build_sentinel {
             next ENTRY;
         }
         logger->notice("Add task build '$mdl_or_file'. recursive[$recursive]");
-        my $cmd = "plsense-worker-build --target '$target' --libpath '$currprojlib' ".get_common_option();
+        my $currp = $projmanager->get_current_project;
+        my $projlib = $currp ? $currp->get_libpath : "";
+        my $cmd = "plsense-worker-build --target '$target' --libpath '$projlib' ".get_common_option(1);
         if ( $recursive ) { $cmd .= " --recursive" }
         if ( $force ) { $cmd .= " --force" }
         add_task($taskkey, $cmd);
@@ -306,25 +399,29 @@ sub build_sentinel {
     return;
 }
 
-sub set_currentproject {
-    my $projnm = shift || "";
-    $projnm =~ s{ ^\s+ }{}xms;
-    $projnm =~ s{ \s+$ }{}xms;
-    $currprojnm = $projnm;
-    return "Done\n";
-}
-
-sub find_project_library {
-    my $libpath = shift || "";
-    $libpath =~ s{ ^\s+ }{}xms;
-    $libpath =~ s{ \s+$ }{}xms;
-    if ( ! -d $libpath ) {
-        logger->error("Not exist directory[$libpath]");
+sub open_file {
+    my $filepath = shift || "";
+    $filepath =~ s{ ^\s+ }{}xms;
+    $filepath =~ s{ \s+$ }{}xms;
+    if ( ! -f $filepath ) {
+        logger->error("Not exist file[$filepath]");
         return "Failed\n";
     }
-    add_find_task(0, $libpath, $libpath);
-    $currprojlib = $libpath;
-    return "Done\n";
+    update_current_project(File::Spec->rel2abs($filepath), 1);
+    build_sentinel($filepath, 1, 0, 1);
+    return sync_location($filepath) ? "Done\n" : "Failed\n";
+}
+
+sub current_file {
+    my $filepath = shift || "";
+    $filepath =~ s{ ^\s+ }{}xms;
+    $filepath =~ s{ \s+$ }{}xms;
+    if ( ! -f $filepath ) {
+        logger->error("Not exist file[$filepath]");
+        return "Failed\n";
+    }
+    update_current_project(File::Spec->rel2abs($filepath), 1);
+    return sync_location($filepath) ? "Done\n" : "Failed\n";
 }
 
 sub get_process_list {

@@ -7,11 +7,7 @@ use Class::Std::Storable;
 use PlSense::Logger;
 {
     my %lexical_is :ATTR( :init_arg<lexical> :default(1) );
-    sub set_lexical {
-        my ($self, $lexical) = @_;
-        $lexical_is{ident $self} = $lexical;
-        if ( $lexical ) { $self->set_helptext("Not documented."); }
-    }
+    sub set_lexical { my ($self, $lexical) = @_; $lexical_is{ident $self} = $lexical; }
     sub is_lexical { my ($self) = @_; return $lexical_is{ident $self}; }
 
     my %importive_is :ATTR( :init_arg<importive> :default(0) );

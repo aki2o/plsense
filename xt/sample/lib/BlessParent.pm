@@ -9,7 +9,6 @@ sub new {
 
     $self->{hoge} = $arg_ref->{hoge} || undef;
     $self->{fuga} = $arg_ref->{fuga} || undef;
-    $self->{bar} = $arg_ref->{bar} || undef;
 
     bless $self, $class;
     return $self;
@@ -19,18 +18,18 @@ sub set_hoge {
     my ($self, $hoge) = @_;
     $self->{hoge} = $hoge;
 
-    # tstart blessed hash member
+    # astart blessed hash member
     #$self->{
-    # tend equal: bar fuga hoge
+    # aend equal: fuga hoge
 }
 
 sub get_hoge {
     my $self = shift;
     return $self->{hoge};
 
-    # tstart own method of blessed class by shift
+    # astart own method of blessed class by shift
     #$self->
-    # tend equal: can get_fuga get_hoge isa new set_fuga set_hoge
+    # aend equal: can get_fuga get_hoge isa new set_fuga set_hoge
 }
 
 sub set_fuga {
@@ -42,9 +41,9 @@ sub get_fuga {
     my ($self) = @_;
     return $self->{fuga};
 
-    # tstart own method of blessed class by @_
+    # astart own method of blessed class by @_
     #$self->
-    # tend equal: can get_fuga get_hoge isa new set_fuga set_hoge
+    # aend equal: can get_fuga get_hoge isa new set_fuga set_hoge
 }
 
 1;

@@ -5,7 +5,6 @@ use warnings;
 use Getopt::Long;
 use IO::Socket;
 use File::Spec;
-use File::Basename;
 use Config::Tiny;
 use Try::Tiny;
 use FindBin;
@@ -13,7 +12,6 @@ use lib "$FindBin::Bin/../lib";
 use PlSense;
 use PlSense::Logger;
 use PlSense::SocketClient;
-use PlSense::ProjectManager;
 
 my %opthelp_of = ("-h, --help"        => "Show this message.",
                   "-v, --version"     => "Show vertion.",
@@ -34,50 +32,184 @@ my %fnchelp_of = ("help [Command]"                => [ "Show detail help about g
                   "refresh"                       => [ "Refresh server process." ],
                   "o, open [File/Module]"         => [ "Open given File/Module.", <<'EOF'
 
-Build information about given file path or module name, and external module included it.
-And set the File/Module as current file or module.
-If the File/Module is already built, do not build.
+Build information about given file path or module name if not yet build it.
+Included modules (ex. 'use ...;') are built if not yet build it.
+
+And exec onfile for given file path or module name.
+For detail, see help of location command.
 
 The build task is run on server process, and requires a few minutes until finish.
-The status is shown by using ready, ps, queue command.
+The status is shown by using the following commands.
+
+ready, ps, queue
 
 EOF
                                                        ],
-                  "u, update [File/Module]"       => [ "Update given File/Module." ],
-                  "remove [Module]"               => [ "Remove cached information about given File/Module." ],
+                  "u, update [File/Module]"       => [ "Update given File/Module.", <<'EOF'
+
+Build information about given file path or module name forcely.
+Included modules (ex. 'use ...;') are built if not yet build it.
+
+EOF
+                                                       ],
+                  "remove [File/Module]"          => [ "Remove cached information about given File/Module." ],
                   "removeall"                     => [ "Remove all cached information." ],
-                  "mhelp, modhelp [Module]"       => [ "Show perldoc of given Module." ],
-                  "fhelp, subhelp [Sub] [Module]" => [ "Show a part of perldoc about given Function." ],
-                  "vhelp, varhelp [Var] [Module]" => [ "Show a part of perldoc about given Variable." ],
-                  "ahelp, assisthelp [Cand]"      => [ "Show any help about given Candidate." ],
-                  "chelp, codehelp [Cade]"        => [ "Show any help about given Code." ],
-                  "subinfo [Cade]"                => [ "Show method information matched given Code." ],
-                  "onfile [Vile]"                 => [ "Set current filepath for assist." ],
-                  "onmod [Module]"                => [ "Set current module name for assist." ],
-                  "onf, onsub [Sub]"              => [ "Set current function name for assist." ],
-                  "loc, location"                 => [ "Show set value for current filepath/module/function." ],
-                  "c, codeadd [Code]"             => [ "Add source for current function/module." ],
+                  "mhelp, modhelp [Module]"       => [ "Show help about given Module." ],
+                  "fhelp, subhelp [Sub] [Module]" => [ "Show help about given Function." ],
+                  "vhelp, varhelp [Var] [Module]" => [ "Show help about given Variable." ],
+                  "ahelp, assisthelp [Cand]"      => [ "Show help about given Candidate of last assist.", <<'EOF'
+
+Candidate is a one of result of last assist command.
+For detail, see help of assist command.
+
+EOF
+                                                       ],
+                  "chelp, codehelp [Cade]"        => [ "Show help about given Code.", << 'EOF'
+
+Code is a incomplete source code of Perl like the following line.
+
+IO::File
+my $io = IO::File->new
+$io
+
+EOF
+                                                       ],
+                  "subinfo [Cade]"                => [ "Show method information matched given Code.", <<'EOF'
+
+Code is a incomplete source code of Perl like the following line.
+
+&AnyModule::do_something
+grep
+my $io = IO::File->new
+
+Result format is like the following.
+
+NAME: Method-name
+ARG1: Var-name As Unknown/Module-name/Var-type
+ARG2: ...
+Return: Var-name/Literal/NoIdent As Unknown/Module-name/Var-type
+
+Var-type is a one of SCALAR, ARRAY, HASH, REFERENCE.
+Literal means return value is literal (ex. return "hoge";).
+NoIdent means return value is not variable/literal (ex. return grep ...;).
+Unknown means still not clear.
+
+EOF
+                                                       ],
+                  "onfile [File]"                 => [ "Set current location by given File for assist.", <<'EOF'
+
+Set given file path as current filepath.
+And set 'main' as current module automatically.
+And set '' as current function automatically.
+
+EOF
+                                                       ],
+                  "onmod [Module]"                => [ "Set current location by given Module for assist.", <<'EOF'
+
+Set given module name as current module.
+And set '' as current function automatically.
+
+EOF
+                                                       ],
+                  "onf, onsub [Sub]"              => [ "Set current location by given Function for assist.", <<'EOF'
+
+Set given function name as current function.
+
+EOF
+                                                       ],
+                  "loc, location"                 => [ "Show value about current project/filepath/module/function.", <<'EOF'
+
+Current location is where you are.
+
+The filepath/module/function is set by onfile/onmod/onsub command.
+For detail, see help of them.
+
+The project is set automatically by .plsense that is file at root of project tree.
+
+For example,
+If exec open/onfile /home/user1/MyProj/src/lib/MyModule.pm
+Seek .plsense in following order excluding '~/.plsense' that is config file for plsense.
+
+/home/user1/MyProj/src/lib/.plsense
+/home/user1/MyProj/src/.plsense
+...
+
+If not found, the project value is 'default'.
+
+.plsense format is the following.
+
+name=PROJECT-NAME
+lib-path=LIBRABY-PATH
+
+PROJECT-NAME is required match '[a-zA-Z0-9_]+'.
+LIBRARY-PATH is a relative path to root of library for the project.
+
+About '~/.plsense', see help of config command.
+
+EOF
+                                                       ],
+                  "c, codeadd [Code]"             => [ "Add source for current location.", <<'EOF'
+
+Add information for current location by build information about given Code.
+This command is a substitute for open, update command.
+This command is lighter than them.
+
+Abount current location, see help of location command.
+
+Code is a incomplete source code of Perl like the following line.
+
+use List::AllUtils qw{ :al
+for $i ( 0.. 10 ) { print $i; }
+sub hoge { my $self = shift; if ( $self ) { do_anything(); } return "hog
+
+EOF
+                                                       ],
                   "a, assist [Code]"              => [ "Do assist for given Code.", <<'EOF'
 
 Assist is a optimized completion.
 It means showing available word after given Code.
-Code is a incomplete source code of Perl like the following.
+
+Code is a incomplete source code of Perl like the following line.
 
 use 
+Use IO::F
+$
 $self->
 
-For optimize, needs where you are.
-You can give them by using onfile, onmod, onf and onsub command.
+For optimize, assist needs where you are.
+Abount it, see help of location command.
 
 EOF
                                                        ],
                   "ps"                            => [ "Show task list that is running on server process." ],
                   "queue"                         => [ "Show stack of task that is not yet running on server process." ],
-                  "ready [Module]"                => [ "Show " ],
-                  "debugmod [Module]"             => [ "Show detail information of given Module for debugging." ],
+                  "ready [File/Module]"           => [ "Show status about given File/Module is ready.", <<'EOF'
+
+If not given any argument, show list of module that is ready.
+
+EOF
+                                                       ],
+                  "debugstk"                      => [ "Show quantity of stocked on server process for debugging." ],
+                  "debugmod [File/Module]"        => [ "Show detail information of given Module for debugging." ],
                   "debugrt [Regexp]"              => [ "Show routing information matched given Regexp for debugging." ],
+                  "debugsubst [Regexp]"           => [ "Show substitute information matched given Regexp for debugging." ],
                   "debuglex [Code]"               => [ "Show result of parsing given Code by PPI::Lexer for debugging." ],
-                  "config"                        => [ "Update configuration about running plsense." ],
+                  "config"                        => [ "Update configuration about plsense.", <<'EOF'
+
+Configuration is saved in '~/.plsense'.
+The format is the following.
+
+OPTION-NAME=VALUE
+...
+
+OPTION-NAME is a name of option.
+About option, exec 'plsense --help'.
+
+Writing configuration in '~/.plsense' means giving '--OPTION-NAME=VALUE' when execut plsense.
+You can override the option in '~/.plsense' by executing 'plsense --OPTION-NAME=VALUE'.
+
+EOF
+                                                       ],
                   );
 
 my %function_of = (help         => \&show_help,
@@ -87,12 +219,11 @@ my %function_of = (help         => \&show_help,
                    svstop       => \&stop_server,
                    serverstart  => \&start_server,
                    svstart      => \&start_server,
-                   refresh      => \&refresh,
+                   refresh      => \&refresh_server,
                    open         => \&open_file,
                    o            => \&open_file,
                    update       => \&update_file,
                    u            => \&update_file,
-                   # reopen       => \&reopen_file,
                    remove       => \&remove_file,
                    removeall    => \&remove_all,
                    modhelp      => \&help_module,
@@ -119,8 +250,10 @@ my %function_of = (help         => \&show_help,
                    ps           => \&get_process_list,
                    queue        => \&get_task_queue,
                    ready        => \&is_ready,
+                   debugstk     => \&debug_stocked,
                    debugmod     => \&debug_module,
                    debugrt      => \&debug_routing,
+                   debugsubst   => \&debug_substitute,
                    debuglex     => \&debug_lexer,
                    config       => \&update_config,
                    );
@@ -130,9 +263,9 @@ my $interactive = 0;
 GetOptions ('help'        => sub { show_usage(); exit 0; },
             'version'     => sub { print "PlSense version is $PlSense::VERSION\n"; exit 0; },
             'cachedir=s'  => \$cachedir,
-            'port1=i' => \$port1,
-            'port2=i'  => \$port2,
-            'port3=i'  => \$port3,
+            'port1=i'     => \$port1,
+            'port2=i'     => \$port2,
+            'port3=i'     => \$port3,
             'maxtasks=i'  => \$maxtasks,
             'loglevel=s'  => \$loglvl,
             'logfile=s'   => \$logfile,
@@ -159,13 +292,11 @@ if ( ! $loglvl ) { $loglvl = ''; }
 if ( ! $logfile ) { $logfile = ''; }
 if ( ! $maxtasks || $maxtasks !~ m{ ^\d+$ }xms ) { $maxtasks = 20; }
 
-my $cli = PlSense::SocketClient->new({ mainport => $port1,
-                                       workport => $port2,
-                                       resolveport => $port3,
-                                       retryinterval => 0.2,
-                                       maxretry => 10 });
-my $projmanager = PlSense::ProjectManager->new();
-my $currfile = "";
+my $scli = PlSense::SocketClient->new({ mainport => $port1,
+                                        workport => $port2,
+                                        resolveport => $port3,
+                                        retryinterval => 0.2,
+                                        maxretry => 10 });
 my %pid_of;
 
 if ( $interactive ) {
@@ -270,33 +401,40 @@ sub show_help {
 
 sub get_common_option {
     my $ret = "--cachedir '$cachedir' --loglevel '$loglvl' --logfile '$logfile'";
-    $ret .= " --port1 ".$cli->get_mainport;
-    $ret .= " --port2 ".$cli->get_workport;
-    $ret .= " --port3 ".$cli->get_resolveport;
+    $ret .= " --port1 ".$scli->get_mainport;
+    $ret .= " --port2 ".$scli->get_workport;
+    $ret .= " --port3 ".$scli->get_resolveport;
     return $ret;
 }
 
 sub start_main_server {
-    return start_server_sentinel("main");
+    my $immediately = shift || 0;
+    return start_server_sentinel("main", $immediately);
 }
 sub start_work_server {
-    return start_server_sentinel("work");
+    my $immediately = shift || 0;
+    return start_server_sentinel("work", $immediately);
 }
 sub start_resolve_server {
-    return start_server_sentinel("resolve");
+    my $immediately = shift || 0;
+    return start_server_sentinel("resolve", $immediately);
 }
 sub start_server_sentinel {
     my $svtype = shift || "";
+    my $immediately = shift || 0;
 
     my $pid = $pid_of{$svtype};
     if ( $pid && kill(0, $pid) ) { return 1; }
-    $pid = $svtype eq "main"    ? $cli->get_main_server_response("pid", { ignore_error => 1, maxretry => 5 })
-         : $svtype eq "work"    ? $cli->get_work_server_response("pid", { ignore_error => 1, maxretry => 5 })
-         : $svtype eq "resolve" ? $cli->get_resolve_server_response("pid", { ignore_error => 1, maxretry => 5 })
-         :                        0;
-    if ( $pid ) {
-        $pid_of{$svtype} = $pid;
-        return 1;
+
+    if ( ! $immediately ) {
+        $pid = $svtype eq "main"    ? $scli->get_main_server_response("pid", { ignore_error => 1, maxretry => 5 })
+             : $svtype eq "work"    ? $scli->get_work_server_response("pid", { ignore_error => 1, maxretry => 5 })
+             : $svtype eq "resolve" ? $scli->get_resolve_server_response("pid", { ignore_error => 1, maxretry => 5 })
+             :                        0;
+        if ( $pid ) {
+            $pid_of{$svtype} = $pid;
+            return 1;
+        }
     }
 
     my $cmdnm = "plsense-server-".$svtype;
@@ -305,9 +443,9 @@ sub start_server_sentinel {
     logger->info("Start server : $cmdstr");
     system "$cmdstr &";
 
-    $pid = $svtype eq "main"    ? $cli->get_main_server_response("pid", { ignore_error => 1, maxretry => 10 })
-         : $svtype eq "work"    ? $cli->get_work_server_response("pid", { ignore_error => 1, maxretry => 10 })
-         : $svtype eq "resolve" ? $cli->get_resolve_server_response("pid", { ignore_error => 1, maxretry => 10 })
+    $pid = $svtype eq "main"    ? $scli->get_main_server_response("pid", { ignore_error => 1, maxretry => 10 })
+         : $svtype eq "work"    ? $scli->get_work_server_response("pid", { ignore_error => 1, maxretry => 10 })
+         : $svtype eq "resolve" ? $scli->get_resolve_server_response("pid", { ignore_error => 1, maxretry => 10 })
          :                        0;
     if ( ! $pid || ! kill(0, $pid) ) { return 0; }
     $pid_of{$svtype} = $pid;
@@ -329,9 +467,9 @@ sub stop_server_sentinel {
     my $pid = $pid_of{$svtype};
     if ( $pid && ! kill(0, $pid) ) { return 1; }
 
-    my $ret = $svtype eq "main"    ? $cli->request_main_server("stop", { ignore_error => 1, maxretry => 15 })
-            : $svtype eq "work"    ? $cli->request_work_server("stop", { ignore_error => 1, maxretry => 15 })
-            : $svtype eq "resolve" ? $cli->request_resolve_server("stop", { ignore_error => 1, maxretry => 15 })
+    my $ret = $svtype eq "main"    ? $scli->request_main_server("stop", { ignore_error => 1, maxretry => 15 })
+            : $svtype eq "work"    ? $scli->request_work_server("stop", { ignore_error => 1, maxretry => 15 })
+            : $svtype eq "resolve" ? $scli->request_resolve_server("stop", { ignore_error => 1, maxretry => 15 })
             :                        undef;
     if ( $ret ) {
         logger->info("Request stop to $svtype");
@@ -348,48 +486,12 @@ sub stop_server_sentinel {
     return 0;
 }
 
-sub set_current_project_automatically {
-    my $filepath = shift || "";
-    if ( ! -f $filepath ) { return; }
-    my $dirpath = dirname( File::Spec->rel2abs($filepath) );
-    my $confpath;
-    DIR:
-    while ( -d $dirpath ) {
-        my $curr = $dirpath."/.plsense";
-        if ( -f $curr ) {
-            if ( $curr ne get_config_path() ) { $confpath = $curr; }
-            last DIR;
-        }
-        $dirpath =~ s{ / [^/]+ $ }{}xms or last DIR;
-    }
-    if ( ! $confpath ) { $confpath = ""; }
-
-    my $currp = $projmanager->get_current_project;
-    if ( ! $currp && ! $confpath ) { return; }
-    elsif ( $currp && $currp->get_confpath eq $confpath ) { return; }
-
-    if ( ! $confpath ) {
-        $projmanager->clear_current_project;
-        $cli->request_main_server("onproj ");
-        $cli->request_work_server("onproj ");
-        $cli->request_resolve_server("onproj ");
-    }
-    else {
-        my $proj = $projmanager->open_project($confpath) or return;
-        $cli->request_main_server("onproj ".$proj->get_name);
-        $cli->request_work_server("onproj ".$proj->get_name);
-        $cli->request_resolve_server("onproj ".$proj->get_name);
-        $cli->request_work_server("findlib ".$proj->get_libpath);
-    }
-    return;
-}
-
 
 
 sub show_server_status {
-    my $mainstat = $cli->get_main_server_response("status", { ignore_error => 1, maxretry => 5 });
-    my $workstat = $cli->get_work_server_response("status", { ignore_error => 1, maxretry => 5 });
-    my $resolvestat = $cli->get_resolve_server_response("status", { ignore_error => 1, maxretry => 5 });
+    my $mainstat = $scli->get_main_server_response("status", { ignore_error => 1, maxretry => 5 });
+    my $workstat = $scli->get_work_server_response("status", { ignore_error => 1, maxretry => 5 });
+    my $resolvestat = $scli->get_resolve_server_response("status", { ignore_error => 1, maxretry => 5 });
     chomp $mainstat;
     chomp $workstat;
     chomp $resolvestat;
@@ -414,14 +516,7 @@ sub start_server {
     my $mainret = start_main_server();
     my $workret = start_work_server();
     my $resolveret = start_resolve_server();
-    if ( ! $mainret || ! $workret || ! $resolveret ) { return "Failed\n"; }
-    $cli->request_main_server("init");
-    $cli->request_work_server("init");
-    $projmanager->clear_current_project;
-    $cli->request_main_server("onproj ");
-    $cli->request_work_server("onproj ");
-    $cli->request_resolve_server("onproj ");
-    return "Done\n";
+    return $mainret && $workret && $resolveret ? "Done\n" : "Failed\n";
 }
 
 sub stop_server {
@@ -431,73 +526,86 @@ sub stop_server {
     return $mainret && $workret && $resolveret ? "Done\n" : "Failed\n";
 }
 
-sub refresh {
-    SVTYPE:
-    foreach my $svtype ( "main", "work", "resolve" ) {
-        my $pid = $pid_of{$svtype};
-        if ( ! $pid ) {
-            $pid = $svtype eq "main"    ? $cli->get_main_server_response("pid", { maxretry => 20 })
-                 : $svtype eq "work"    ? $cli->get_work_server_response("pid", { maxretry => 20 })
-                 : $svtype eq "resolve" ? $cli->get_resolve_server_response("pid", { maxretry => 20 })
-                 :                        0;
-            $pid_of{$svtype} = $pid;
-        }
-        if ( ! $pid ) { last SVTYPE; }
-        kill 'USR1', $pid;
+sub refresh_server {
+    # SVTYPE:
+    # foreach my $svtype ( "main", "work", "resolve" ) {
+    #     my $pid = $pid_of{$svtype};
+    #     if ( ! $pid ) {
+    #         $pid = $svtype eq "main"    ? $scli->get_main_server_response("pid", { maxretry => 20 })
+    #              : $svtype eq "work"    ? $scli->get_work_server_response("pid", { maxretry => 20 })
+    #              : $svtype eq "resolve" ? $scli->get_resolve_server_response("pid", { maxretry => 20 })
+    #              :                        0;
+    #         $pid_of{$svtype} = $pid;
+    #     }
+    #     if ( ! $pid ) { last SVTYPE; }
+    #     kill 'USR1', $pid;
+    # }
+
+    my $mainpid = $pid_of{main} || $scli->get_main_server_response("pid", { maxretry => 20 });
+    my $workpid = $pid_of{work} || $scli->get_work_server_response("pid", { maxretry => 20 });
+    my $resolvepid = $pid_of{resolve} || $scli->get_resolve_server_response("pid", { maxretry => 20 });
+    if ( ! $mainpid || ! $workpid || ! $resolvepid ) { return "Failed\n"; }
+
+    my $loc = get_current_location() or return "Failed\n";
+    my $currfilepath = $loc =~ m{ ^ File: \s+ ([^\n]*?) $ }xms ? $1 : "";
+    my $currmdlnm = $loc =~ m{ ^ Module: \s+ ([^\n]*?) $ }xms ? $1 : "";
+    my $currmtdnm = $loc =~ m{ ^ Sub: \s+ ([^\n]*?) $ }xms ? $1 : "";
+
+    kill 'WINCH', $mainpid;
+    WAIT:
+    for my $i ( 1..5 ) {
+        if ( ! kill(0, $mainpid) ) { last WAIT; }
+        sleep 1;
     }
+    my $mainret = start_main_server(1);
+
+    kill 'USR1', $workpid;
+
+    kill 'WINCH', $resolvepid;
+    WAIT:
+    for my $i ( 1..5 ) {
+        if ( ! kill(0, $resolvepid) ) { last WAIT; }
+        sleep 1;
+    }
+    my $resolveret = start_resolve_server(1);
+
+    if ( ! $mainret || ! $resolveret ) { return "Failed\n"; }
+
+    set_currentfile($currfilepath);
+    set_currentmodule($currmdlnm);
+    set_currentmethod($currmtdnm);
+
     return "Done\n";
 }
 
 sub open_file {
     my $filepath = shift || "";
-    $filepath =~ s{ ^\s+ }{}xms;
-    $filepath =~ s{ \s+$ }{}xms;
-
-    my $ret = $cli->get_main_server_response("onfile $filepath");
-    chomp $ret;
-    if ( $ret ne "Done" ) { return $ret."\n"; }
-
-    set_current_project_automatically($filepath);
-    $cli->request_work_server("buildr $filepath");
-    return "Done\n";
+    return $scli->get_work_server_response("open $filepath");
 }
 
 sub update_file {
     my $filepath = shift || "";
-    $filepath =~ s{ ^\s+ }{}xms;
-    $filepath =~ s{ \s+$ }{}xms;
-
-    set_current_project_automatically($filepath);
-    $cli->request_main_server("uninit $filepath");
-    $cli->request_work_server("buildrf $filepath");
-    return;
-}
-
-sub reopen_file {
-    my $filepath = shift || "";
-    $cli->request_work_server("rebuildall $filepath");
+    $scli->request_work_server("buildrf $filepath");
     return;
 }
 
 sub remove_file {
     my $filepath = shift || "";
-    set_current_project_automatically($filepath);
-    $cli->request_main_server("remove $filepath");
-    $cli->request_resolve_server("remove $filepath");
+    $scli->request_main_server("remove $filepath");
+    $scli->request_resolve_server("remove $filepath");
     return;
 }
 
 sub remove_all {
-    $cli->get_main_server_response("removeall");
-    $cli->get_resolve_server_response("removeall");
-    $cli->request_main_server("init");
-    $cli->request_work_server("init");
+    $scli->get_main_server_response("removeall");
+    $scli->get_work_server_response("removeall");
+    $scli->get_resolve_server_response("removeall");
     return "Done\n";
 }
 
 sub help_module {
     my $mdlnm = shift || "";
-    return $cli->get_main_server_response("modhelp $mdlnm");
+    return $scli->get_main_server_response("modhelp $mdlnm");
 }
 
 sub help_method {
@@ -506,7 +614,7 @@ sub help_method {
     my @e = split m{ \s+ }xms, $arg;
     my $mtdnm = shift @e || "";
     my $mdlnm = shift @e || "";
-    return $cli->get_main_server_response("subhelp $mtdnm $mdlnm");
+    return $scli->get_main_server_response("subhelp $mtdnm $mdlnm");
 }
 
 sub help_variable {
@@ -515,81 +623,93 @@ sub help_variable {
     my @e = split m{ \s+ }xms, $arg;
     my $varnm = shift @e || "";
     my $mdlnm = shift @e || "";
-    return $cli->get_main_server_response("varhelp $varnm $mdlnm");
+    return $scli->get_main_server_response("varhelp $varnm $mdlnm");
 }
 
 sub help_last_assist {
     my $candidate = shift || "";
-    return $cli->get_main_server_response("assisthelp $candidate");
+    return $scli->get_main_server_response("assisthelp $candidate");
 }
 
 sub help_code {
     my $code = shift || "";
-    return $cli->get_main_server_response("codehelp $code");
+    return $scli->get_main_server_response("codehelp $code");
 }
 
 sub get_method_information {
     my $code = shift || "";
-    return $cli->get_main_server_response("subinfo $code");
+    return $scli->get_main_server_response("subinfo $code");
 }
 
 sub set_currentfile {
     my $filepath = shift || "";
-    set_current_project_automatically($filepath);
-    return $cli->get_main_server_response("onfile $filepath");
+    return $scli->get_work_server_response("current $filepath");
 }
 
 sub set_currentmodule {
     my $mdlnm = shift || "";
-    return $cli->get_main_server_response("onmod $mdlnm");
+    return $scli->get_main_server_response("onmod $mdlnm");
 }
 
 sub set_currentmethod {
     my $mtdnm = shift || "";
-    return $cli->get_main_server_response("onsub $mtdnm");
+    return $scli->get_main_server_response("onsub $mtdnm");
 }
 
 sub get_current_location {
-    return $cli->get_main_server_response("location");
+    return $scli->get_main_server_response("location");
 }
 
 sub add_source {
     my $code = shift || "";
-    $cli->request_resolve_server("codeadd $code");
+    $scli->request_resolve_server("codeadd $code");
     return;
 }
 
 sub assist_coding {
     my $code = shift || "";
-    return $cli->get_main_server_response("codeassist $code");
+    return $scli->get_main_server_response("codeassist $code");
 }
 
 sub get_process_list {
-    return $cli->get_work_server_response("ps");
+    return $scli->get_work_server_response("ps");
 }
 
 sub get_task_queue {
-    return $cli->get_work_server_response("queue");
+    return $scli->get_work_server_response("queue");
 }
 
 sub is_ready {
     my $mdl_or_file = shift || "";
-    return $cli->get_main_server_response("ready $mdl_or_file");
+    return $scli->get_main_server_response("ready $mdl_or_file");
+}
+
+sub debug_stocked {
+    my $ret = "[MainServer]\n";
+    $ret .= $scli->get_main_server_response("debugstk");
+    $ret .= "[ResolveServer]\n";
+    $ret .= $scli->get_resolve_server_response("debugstk");
+    return $ret;
 }
 
 sub debug_module {
     my $mdl_or_file = shift || "";
-    return $cli->get_main_server_response("debugmod $mdl_or_file");
+    return $scli->get_main_server_response("debugmod $mdl_or_file");
 }
 
 sub debug_routing {
     my $regexp = shift || "";
-    return $cli->get_main_server_response("debugrt $regexp");
+    return $scli->get_main_server_response("debugrt $regexp");
+}
+
+sub debug_substitute {
+    my $regexp = shift || "";
+    return $scli->get_resolve_server_response("debugsubst $regexp");
 }
 
 sub debug_lexer {
     my $code = shift || "";
-    return $cli->get_main_server_response("debuglex $code");
+    return $scli->get_main_server_response("debuglex $code");
 }
 
 sub update_config {

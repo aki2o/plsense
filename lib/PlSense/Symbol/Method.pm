@@ -54,7 +54,7 @@ use PlSense::Logger;
     }
     sub exist_variable {
         my ($self, $variablenm) = @_;
-        return exists $variableh_of{ident $self}->{$variablenm};
+        return $variablenm && exists $variableh_of{ident $self}->{$variablenm};
     }
     sub get_variable {
         my ($self, $variablenm) = @_;

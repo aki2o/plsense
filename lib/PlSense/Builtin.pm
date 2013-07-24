@@ -161,7 +161,7 @@ use PlSense::Symbol::Variable;
         foreach my $varnm ( @targetvars ) {
             if ( $self->exist_variable($varnm) ) { next SET_HELPTEXT; }
             my $var = PlSense::Symbol::Variable->new({ name => $varnm });
-            $var->set_helptext($helptext);
+            $var->set_helptext("\n===== Part of PerlDoc =====\n".$helptext);
             $self->set_variable($varnm, $var);
             logger->debug("Got builtin variable : $varnm");
         }
@@ -212,7 +212,7 @@ use PlSense::Symbol::Variable;
         foreach my $funcnm ( @targetfuncs ) {
             if ( $self->exist_method($funcnm) ) { next SET_HELPTEXT; }
             my $func = PlSense::Symbol::Method->new({ name => $funcnm });
-            $func->set_helptext($helptext);
+            $func->set_helptext("\n===== Part of PerlDoc =====\n".$helptext);
             $self->set_method($funcnm, $func);
             logger->debug("Got builtin function : $funcnm");
         }

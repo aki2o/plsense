@@ -106,7 +106,21 @@ use PlSense::Logger;
         my $mdlnm = shift || "";
         my $filepath = shift || "";
         my $projectnm = shift || "";
-        my $key = $self->get_cache_key($mdlnm, $filepath, $projectnm);
+        $self->remove_by_cache_key( $self->get_cache_key($mdlnm, $filepath, $projectnm) );
+    }
+
+    sub remove_by_cache_key {
+        my $self = shift;
+        my $key = shift || "";
+        $self->remove_by_cache_key_on_memory($key);
+        try   { $cache_of{ident $self}->remove($key); }
+        catch { $cache_of{ident $self}->remove($key); };
+        logger->info("Removed routing of $key");
+    }
+
+    sub remove_by_cache_key_on_memory {
+        my $self = shift;
+        my $key = shift || "";
         my $loadh;
         try   { $loadh = $cache_of{ident $self}->get($key); }
         catch { $loadh = $cache_of{ident $self}->get($key); };
@@ -119,9 +133,7 @@ use PlSense::Logger;
                 $self->remove_route($addr, $resolve);
             }
         }
-        try   { $cache_of{ident $self}->remove($key); }
-        catch { $cache_of{ident $self}->remove($key); };
-        logger->info("Removed routing of $key");
+        logger->info("Removed routing on memory of $key");
     }
 
     sub remove_all {
@@ -210,6 +222,7 @@ use PlSense::Logger;
                 :          firstidx { ! eval { $_->get_type } && $_ eq $value } @{$resolves};
         if ( $idx < 0 ) { return; }
         splice @{$resolves}, $idx, 1;
+        if ( $#{$resolves} < 0 ) { delete $routeh_of{ident $self}->{$addr}; }
         if ( ! $vtype ) { $self->remove_reverse_route($value, $addr); }
         my $vtext = $vtype ? $value->to_string : $value;
         logger->debug("Removed routing : $addr -> $vtext");
@@ -248,7 +261,18 @@ use PlSense::Logger;
     sub resolve_anything {
         my ($self, $addr) = @_;
         logger->debug("Start resolve anything : $addr");
-        return $self->resolve_address_1($addr, 1);
+        my (@ret, %found_is);
+        RESOLVED:
+        foreach my $resolve ( $self->resolve_address_1($addr, 1) ) {
+            if ( eval { $resolve->isa("PlSense::Entity") } ) {
+                push @ret, $resolve;
+            }
+            elsif ( $resolve && ! $found_is{$resolve} ) {
+                $found_is{$resolve} = 1;
+                push @ret, $resolve;
+            }
+        }
+        return @ret;
     }
 
     sub get_route_list {
@@ -274,6 +298,18 @@ use PlSense::Logger;
             }
         }
         return $ret;
+    }
+
+    sub describe_keep_value {
+        my ($self) = @_;
+        my @routes = $self->get_route_list;
+        my $valuecount = 0;
+        ROUTE:
+        foreach my $addr ( @routes ) {
+            my $values = $routeh_of{ident $self}->{$addr} or next ROUTE;
+            $valuecount += $#{$values} + 1;
+        }
+        return "Route ... Entrys:".($#routes+1)." Resolves:".$valuecount."\n";
     }
 
 
@@ -309,19 +345,21 @@ use PlSense::Logger;
             logger->debug("Start try resolve by $curraddr");
             $trycount_of{ident $self} = 0;
             $chkaddress_is{ident $self} = {};
-            @ret = $self->resolve_address_sentinel($curraddr, $allow_addr);
+            @ret = $self->resolve_address_sentinel($curraddr, $allow_addr, 1);
             if ( $#ret >= 0 ) { last ADDR; }
 
             if ( ! defined $followaddr ) {
                 logger->debug("Start try get other address from [$addr]");
-                if ( $addr !~ s{ \A ( & [a-zA-Z0-9_:]+ ) }{}xms ) { last ADDR; }
-                my $mtdaddr = $1;
+                my $mtdaddr = $addr =~ s{ \A & ( main \[ .+? \] :: [^.]+ ) }{}xms ? $1
+                            : $addr =~ s{ \A & ( [a-zA-Z0-9_:]+ ) }{}xms          ? $1
+                            :                                                       "" or last ADDR;
                 $followaddr = $addr || "";
                 if ( $mtdaddr !~ s{ :: ([^:]+) \z }{}xms ) { last ADDR; }
                 my $mtdnm = $1;
                 $followaddr = $mtdnm.$followaddr;
-                my $mdlnm = substr($mtdaddr, 1);
-                my $mdl = $self->get_mdlkeeper->get_module($mdlnm) or last ADDR;
+                my ($mdlnm, $filepath) = $mtdaddr =~ m{ \A main \[ (.+) \] \z }xms ? ("main", $1)
+                                       :                                             ($mtdaddr, "");
+                my $mdl = $self->get_mdlkeeper->get_module($mdlnm, $filepath) or last ADDR;
                 my $mtd = $mdl->get_any_method($mtdnm) or last ADDR;
                 if ( $mtd->is_importive ) {
                     logger->debug("Try get original method of [$mtdnm] in [".$mdl->get_name."]");
@@ -352,14 +390,23 @@ use PlSense::Logger;
 
     sub is_valid_address_to_resolve : PRIVATE {
         my ($self, $addr) = @_;
+        # Allow try to resolve some time for the case that call same method having different follow address.
+        # For example, method for clone.
         my $trycount = $chkaddress_is{ident $self}->{$addr} || 0;
         if ( $trycount >= 3 ) { return 0; }
         $chkaddress_is{ident $self}->{$addr} = $trycount + 1;
         return 1;
     }
 
+    sub is_found_address_while_resolve : PRIVATE {
+        my ($self, $addr) = @_;
+        if ( $chkaddress_is{ident $self}->{$addr} ) { return 1; }
+        $chkaddress_is{ident $self}->{$addr} = 1;
+        return 0;
+    }
+
     sub resolve_address_sentinel : PRIVATE {
-        my ($self, $addr, $allow_addr) = @_;
+        my ($self, $addr, $allow_addr, $not_resolve_reverse) = @_;
 
         if ( ! $self->is_valid_address_to_resolve($addr) ) { return (); }
         if ( $trycount_of{ident $self} >= $max_try_routing_of{ident $self} ) {
@@ -368,8 +415,13 @@ use PlSense::Logger;
         }
         $trycount_of{ident $self}++;
 
-        my $curraddr = $addr;
         my (@ret, @follows);
+        my $curraddr = $addr;
+
+        if ( ! $not_resolve_reverse ) {
+            push @ret, $self->resolve_reverse_address($addr, $allow_addr);
+        }
+
         FIND:
         while ( $curraddr && ! exists $routeh_of{ident $self}->{$curraddr} ) {
             if ( $curraddr !~ s{ \. ([^.]+) \z }{}xms ) { last FIND; }
@@ -392,13 +444,18 @@ use PlSense::Logger;
                 push @ret, $self->resolve_address_sentinel($naddr, $allow_addr);
             }
         }
+        return @ret;
+    }
 
+    sub resolve_reverse_address : PRIVATE {
+        my ($self, $addr, $allow_addr) = @_;
+
+        my (@ret, @follows);
         if ( $addr !~ s{ \. ( R \.? .*? ) \z }{}xms ) { return @ret; }
-        if ( $#ret >= 0 && ! $allow_addr ) { return @ret; }
 
         # If exist reference in address, try resolve by reverse routing.
         @follows = split m{ \. }xms, $1;
-        $curraddr = $addr;
+        my $curraddr = $addr;
         FIND:
         while ( $curraddr && ! exists $rrouteh_of{ident $self}->{$curraddr} ) {
             if ( $curraddr !~ s{ \. ([^.]+) \z }{}xms ) { last FIND; }
@@ -406,16 +463,15 @@ use PlSense::Logger;
         }
         my $raddrs = $curraddr ? $rrouteh_of{ident $self}->{$curraddr} : [] or return @ret;
 
-        $fstr = join(".", @follows);
+        my $fstr = join(".", @follows);
         PUSH_RESOLVED:
         foreach my $raddr ( @{$raddrs} ) {
-            if ( ! $self->is_valid_address_to_resolve($raddr) ) { next PUSH_RESOLVED; }
+            if ( $self->is_found_address_while_resolve($raddr) ) { next PUSH_RESOLVED; }
             my $naddr = $raddr.".".$fstr;
             logger->debug("Resolved $curraddr -> $raddr / $fstr");
             if ( $allow_addr ) { push @ret, $naddr; }
             push @ret, $self->resolve_address_sentinel($naddr, $allow_addr);
         }
-
         return @ret;
     }
 
@@ -427,11 +483,22 @@ use PlSense::Logger;
         if ( $etype eq 'null' ) { return (); }
         my $follow = shift @follows or return ( $self->get_correct_entity($entity) );
 
+        my @ret;
         my $ch = substr($follow, 0, 1);
         my $fstr = join(".", @follows);
         if ( $ch eq "A" ) {
             if ( $etype ne 'array' ) { return (); }
-            return $self->resolve_entity($allow_addr, $entity->get_element, @follows);
+            my $el = $entity->get_element;
+            if ( eval { $el->isa("PlSense::Entity") } ) {
+                logger->debug("Resolved ".$entity->to_string.$follow." -> ".$el->to_string." / $fstr");
+                return $self->resolve_entity($allow_addr, $el, @follows);
+            }
+            elsif ( $self->is_valid_address_to_resolve($el) ) {
+                my $naddr = $el && $fstr ? $el.".".$fstr : $el;
+                logger->debug("Resolved ".$entity->to_string.$follow." -> $el / $fstr");
+                if ( $allow_addr ) { push @ret, $naddr; }
+                push @ret, $self->resolve_address_sentinel($naddr, $allow_addr);
+            }
         }
         elsif ( $ch eq "H" ) {
             if ( $etype ne 'hash' ) { return (); }
@@ -444,7 +511,8 @@ use PlSense::Logger;
             elsif ( $self->is_valid_address_to_resolve($member) ) {
                 my $naddr = $member && $fstr ? $member.".".$fstr : $member;
                 logger->debug("Resolved ".$entity->to_string.$follow." -> $member / $fstr");
-                return $allow_addr ? ($naddr) : $self->resolve_address_sentinel($naddr, 0);
+                if ( $allow_addr ) { push @ret, $naddr; }
+                push @ret, $self->resolve_address_sentinel($naddr, $allow_addr);
             }
         }
         elsif ( $ch eq "R" ) {
@@ -457,7 +525,8 @@ use PlSense::Logger;
                 elsif ( $self->is_valid_address_to_resolve($e) ) {
                     my $naddr = $e && $fstr ? $e.".".$fstr : $e;
                     logger->debug("Resolved ".$entity->to_string.$follow." -> $e / $fstr");
-                    return $allow_addr ? ($naddr) : $self->resolve_address_sentinel($naddr, 0);
+                    if ( $allow_addr ) { push @ret, $naddr; }
+                    push @ret, $self->resolve_address_sentinel($naddr, $allow_addr);
                 }
             }
             elsif ( $etype eq 'instance' ) {
@@ -466,10 +535,8 @@ use PlSense::Logger;
                 if ( ! $self->is_valid_address_to_resolve($baddr) ) { return (); }
                 my $naddr = $fstr ? $baddr.".".$fstr : $baddr;
                 logger->debug("Resolved ".$entity->to_string.$follow." -> $baddr / $fstr");
-                return $allow_addr ? ($naddr) : $self->resolve_address_sentinel($naddr, 0);
-            }
-            else {
-                return ();
+                if ( $allow_addr ) { push @ret, $naddr; }
+                push @ret, $self->resolve_address_sentinel($naddr, $allow_addr);
             }
         }
         elsif ( $ch eq "W" ) {
@@ -493,14 +560,16 @@ use PlSense::Logger;
             if ( ! $self->is_valid_address_to_resolve($mtdfullnm) ) { return (); }
             my $naddr = $fstr ? $mtdfullnm.".".$fstr : $mtdfullnm;
             logger->debug("Resolved ".$entity->to_string.$follow." -> ".$mtdfullnm." / ".$fstr);
-            return $allow_addr ? ($naddr) : $self->resolve_address_sentinel($naddr, 0);
+            if ( $allow_addr ) { push @ret, $naddr; }
+            push @ret, $self->resolve_address_sentinel($naddr, $allow_addr);
         }
-        return ();
+        return @ret;
     }
 
     sub get_correct_entity : PRIVATE {
         my ($self, $entity) = @_;
         if ( ! $entity ) { return; }
+
         if ( $entity->isa("PlSense::Entity::Array") ) {
             my $e = $entity->get_element;
             my $etype = eval { $e->get_type } || '';
@@ -524,7 +593,7 @@ use PlSense::Logger;
                 }
                 elsif ( $resolve->isa("PlSense::Entity::Array") ) {
                     my $curre = $resolve->get_element or next ADDR;
-                    if ( ! $curre->isa("PlSense::Entity::Scalar") ) { next ADDR; }
+                    if ( ! eval { $curre->isa("PlSense::Entity::Scalar") } ) { next ADDR; }
                     my $currvalue = $curre->get_value || "";
                     $value .= $value ne "" && $currvalue ne "" ? " ".$currvalue : $currvalue;
                 }
@@ -538,6 +607,7 @@ use PlSense::Logger;
             }
             return $entity;
         }
+
         return $entity;
     }
 
@@ -619,8 +689,7 @@ use PlSense::Logger;
             if ( $newtype ne 'array' ) { return $new; }
             my $olde = $old->get_element;
             my $newe = $new->get_element;
-            my $updated = $self->update_value($olde, $newe);
-            if ( eval { $updated->isa("PlSense::Entity") } ) { $old->set_element($updated); }
+            $old->set_element( $self->update_value($olde, $newe) );
         }
 
         elsif ( $oldtype eq 'scalar' ) {
@@ -656,6 +725,7 @@ use PlSense::Logger;
         my $idx = firstidx { $_ eq $raddr } @{$raddrs};
         if ( $idx < 0 ) { return; }
         splice @{$raddrs}, $idx, 1;
+        if ( $#{$raddrs} < 0 ) { delete $rrouteh_of{ident $self}->{$addr}; }
     }
 
 }

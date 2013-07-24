@@ -17,27 +17,33 @@ use PlSense::SubstituteKeeper;
 use PlSense::SubstituteBuilder;
 use PlSense::ModuleBuilder::PPIBuilder;
 
-my %function_of = (status    => \&get_status,
-                   pid       => \&get_own_pid,
-                   remove    => \&remove,
-                   removeall => \&remove_all,
-                   onproj    => \&set_currentproject,
-                   codeadd   => \&add_source,
-                   load      => \&load,
-                   resolve   => \&resolve,
-                   built     => \&setup_built_module,
+my %opthelp_of = ("-h, --help"     => "Show this message.",
+                  "-c, --cachedir" => "Path of directory caching information for Completion/Help.",
+                  "--port1"        => "Port number for listening by main server process. Default is 33333.",
+                  "--port2"        => "Port number for listening by work server process. Default is 33334.",
+                  "--port3"        => "Port number for listening by resolve server process. Default is 33335.",
+                  "--loglevel"     => "Level of logging. Its value is for Log::Handler.",
+                  "--logfile"      => "Path of log file.",
+                  );
+
+my %function_of = (status        => \&get_status,
+                   pid           => \&get_own_pid,
+                   debugstk      => \&debug_stocked,
+                   debugsubst    => \&debug_substitute,
+                   remove        => \&remove,
+                   removeall     => \&remove_all,
+                   removeprojall => \&remove_project_all,
+                   codeadd       => \&add_source,
+                   resolve       => \&resolve,
+                   built         => \&setup_built_module,
                    );
 
-my $usage = <<EOF;
-Usage: 
-EOF
-
 my ($cachedir, $port1, $port2, $port3, $loglvl, $logfile);
-GetOptions ('help'       => sub { print $usage; exit 0; },
+GetOptions ('help'       => sub { show_usage(); exit 0; },
             'cachedir=s' => \$cachedir,
-            'port1=i' => \$port1,
-            'port2=i'  => \$port2,
-            'port3=i'  => \$port3,
+            'port1=i'    => \$port1,
+            'port2=i'    => \$port2,
+            'port3=i'    => \$port3,
             'loglevel=s' => \$loglvl,
             'logfile=s'  => \$logfile,
             );
@@ -48,14 +54,14 @@ if ( ! $cachedir || ! -d $cachedir ) {
     exit 1;
 }
 
-my $cli = PlSense::SocketClient->new({ mainport => $port1,
-                                       workport => $port2,
-                                       resolveport => $port3,
-                                       retryinterval => 0.2,
-                                       maxretry => 100 });
+my $scli = PlSense::SocketClient->new({ mainport => $port1,
+                                        workport => $port2,
+                                        resolveport => $port3,
+                                        retryinterval => 0.2,
+                                        maxretry => 100 });
 
 my $sock = IO::Socket::INET->new(LocalAddr => "localhost",
-                                 LocalPort => $cli->get_resolveport,
+                                 LocalPort => $scli->get_resolveport,
                                  Proto => "tcp",
                                  Listen => 1,
                                  ReUse => 1,
@@ -76,7 +82,8 @@ my $addrrouter = PlSense::AddressRouter->new({ cachedir => $cachedir,
                                                with_build => 1 });
 my $substkeeper = PlSense::SubstituteKeeper->new({ cachedir => $cachedir,
                                                    mdlkeeper => $mdlkeeper,
-                                                   addrrouter => $addrrouter, });
+                                                   addrrouter => $addrrouter,
+                                                   max_entry => 500 });
 my $substbuilder = PlSense::SubstituteBuilder->new({ builtin => $builtin,
                                                      mdlkeeper => $mdlkeeper,
                                                      substkeeper => $substkeeper });
@@ -86,53 +93,91 @@ my $ppibuilder = PlSense::ModuleBuilder::PPIBuilder->new({ builtin => $builtin,
                                                            substbuilder => $substbuilder,
                                                            libpath => "", });
 my $currprojnm = "";
+my $currfilepath = "";
+my $currmdlnm = "";
+my $currmtdnm = "";
 my $nowstoringmdl = undef;
 my $nowresolving = undef;
 
 $SIG{WINCH} = sub { logger->notice("Receive SIGWINCH"); resume_store(); exit 0; };
 $SIG{TERM} = sub { logger->notice("Receive SIGTERM"); resume_store(); exit 0; };
-$SIG{USR1} = sub { logger->notice("Receive SIGUSR1"); resume_store(); update_project_info(1); };
-$SIG{HUP} = sub { logger->notice("Receive SIGHUP"); resume_store(); update_project_info(1); };
+$SIG{USR1} = sub { logger->notice("Receive SIGUSR1"); resume_store(); accept_client(); };
+$SIG{HUP} = sub { logger->notice("Receive SIGHUP"); resume_store(); accept_client(); };
 
-logger->info("Starting resolve server");
-ACCEPT_CLIENT:
-while ( my $cli = $sock->accept ) {
-    logger->debug("Waiting client ...");
-
-    my $line = $cli->getline || "";
-    chomp $line;
-    logger->info("Receive request : $line");
-    my $cmdnm = $line =~ s{ ^ \s* ([a-z]+) }{}xms ? $1 : "";
-    if ( $cmdnm eq "quit" ) {
-        $cli->close;
-        next ACCEPT_CLIENT;
-    }
-    elsif ( $cmdnm eq "stop" ) {
-        $cli->close;
-        last ACCEPT_CLIENT;
-    }
-    elsif ( exists $function_of{$cmdnm} ) {
-        try {
-            my $fnc = $function_of{$cmdnm};
-            my $ret = &$fnc($line) || "";
-            $cli->print($ret);
-            $cli->flush;
-        }
-        catch {
-            my $e = shift;
-            logger->error("Failed do $cmdnm : $e");
-        };
-    }
-    else {
-        logger->error("Unknown command [$cmdnm]");
-    }
-    $cli->close;
-
-}
-$sock->close;
-
-logger->info("Stopping resolve server");
+accept_client();
 exit 0;
+
+
+sub show_usage {
+    my $optstr = "";
+    OPTHELP:
+    foreach my $key ( sort keys %opthelp_of ) {
+        $optstr .= sprintf("  %-25s %s\n", $key, $opthelp_of{$key});
+    }
+
+    print <<"EOF";
+Run PlSense Resolve Server.
+Resolve Server resolve information of Substitute/Argument got from module source.
+
+Usage:
+  plsense-server-resolve [Option]
+
+Option:
+$optstr
+EOF
+    return;
+}
+
+sub accept_client {
+    logger->info("Starting resolve server");
+
+    initialize();
+    ACCEPT_CLIENT:
+    while ( my $cli = $sock->accept ) {
+        logger->debug("Waiting client ...");
+
+        my $line = $cli->getline || "";
+        chomp $line;
+        logger->info("Receive request : $line");
+        my $cmdnm = $line =~ s{ ^ \s* ([a-z]+) }{}xms ? $1 : "";
+        if ( $cmdnm eq "quit" ) {
+            $cli->close;
+            next ACCEPT_CLIENT;
+        }
+        elsif ( $cmdnm eq "stop" ) {
+            $cli->close;
+            last ACCEPT_CLIENT;
+        }
+        elsif ( exists $function_of{$cmdnm} ) {
+            try {
+                my $fnc = $function_of{$cmdnm};
+                my $ret = &$fnc($line) || "";
+                $cli->print($ret);
+                $cli->flush;
+            }
+            catch {
+                my $e = shift;
+                logger->error("Failed do $cmdnm : $e");
+            };
+        }
+        else {
+            logger->error("Unknown command [$cmdnm]");
+        }
+        $cli->close;
+
+    }
+    $sock->close;
+
+    logger->info("Stopping resolve server");
+}
+
+sub initialize {
+    $builtin->build;
+    $scli->request_main_server("builtin");
+    $substkeeper->load_all;
+    return;
+}
+
 
 
 sub get_status {
@@ -141,6 +186,18 @@ sub get_status {
 
 sub get_own_pid {
     return $$."\n";
+}
+
+sub debug_stocked {
+    my $ret = $mdlkeeper->describe_keep_value;
+    $ret .= $addrrouter->describe_keep_value;
+    $ret .= $substkeeper->describe_keep_value;
+    return $ret;
+}
+
+sub debug_substitute {
+    my $regexp = shift || "";
+    return $substkeeper->to_string_by_regexp($regexp);
 }
 
 sub remove {
@@ -168,29 +225,19 @@ sub remove {
 
 sub remove_all {
     $substkeeper->remove_all;
+    $builtin->remove;
+    initialize();
     return "Done\n";
 }
 
-# sub remove_project_all {
-#     $mdlkeeper->remove_project_all_module;
-#     $substkeeper->remove_project_all;
-#     return;
-# }
-
-sub set_currentproject {
-    my $projnm = shift || "";
-    $projnm =~ s{ ^\s+ }{}xms;
-    $projnm =~ s{ \s+$ }{}xms;
-    $currprojnm = $projnm;
+sub remove_project_all {
+    $mdlkeeper->remove_project_all_module;
+    $substkeeper->remove_project_all;
     return "Done\n";
 }
 
 sub add_source {
     my $code = shift || "";
-    my $loc = $cli->get_main_server_response("location") or return;
-    my $currfilepath = $loc =~ m{ ^ File: \s+ ([^\n]*?) $ }xms ? $1 : "";
-    my $currmdlnm = $loc =~ m{ ^ Module: \s+ ([^\n]*?) $ }xms ? $1 : "";
-    my $currmtdnm = $loc =~ m{ ^ Sub: \s+ ([^\n]*?) $ }xms ? $1 : "";
 
     if ( update_project_info() ) {
         $substkeeper->resolve_substitute;
@@ -217,18 +264,13 @@ sub add_source {
     $nowstoringmdl = undef;
 
     my $mdlkey = $mdl->get_name eq "main" ? $mdl->get_filepath : $mdl->get_name;
-    $cli->request_main_server("built $mdlkey");
-    $cli->request_main_server("resolved");
+    $scli->request_main_server("built $mdlkey");
+    $scli->request_main_server("resolved");
 
     my @extmdls = get_needbuild_extmodules($mdl);
     if ( $#extmdls >= 0 ) {
-        $cli->request_work_server("buildr ".join("|", @extmdls));
+        $scli->request_work_server("buildr ".join("|", @extmdls));
     }
-    return;
-}
-
-sub load {
-    $builtin->load;
     return;
 }
 
@@ -239,14 +281,14 @@ sub resolve {
     $addrrouter->store_current_project;
     $nowresolving = 0;
 
-    $cli->request_main_server("resolved");
+    $scli->request_main_server("resolved");
     return;
 }
 
 sub setup_built_module {
     my $mdl_or_files = shift || "";
     my @mdl_or_files = split m{ \| }xms, $mdl_or_files;
-    my $projupdated = update_project_info();
+    update_project_info();
 
     ENTRY:
     foreach my $mdl_or_file ( @mdl_or_files ) {
@@ -266,13 +308,7 @@ sub setup_built_module {
         logger->notice("Finished reload module of '$mdl_or_file'");
     }
 
-    $nowresolving = 1;
-    $substkeeper->resolve_substitute;
-    $substkeeper->resolve_unknown_argument;
-    $addrrouter->store_current_project;
-    $nowresolving = 0;
-
-    $cli->request_main_server("resolved");
+    resolve();
     return;
 }
 
@@ -300,28 +336,31 @@ sub get_needbuild_extmodules {
 }
 
 sub update_project_info {
-    my $force = shift || 0;
-    if ( ! $force && $currprojnm eq $mdlkeeper->get_project ) { return; }
-    if ( ! $currprojnm ) { $currprojnm = $mdlkeeper->get_default_project_name; }
-    $mdlkeeper->set_project($currprojnm);
-    $mdlkeeper->reset;
-    $substkeeper->switch_project($currprojnm, 1);
+    my $loc = $scli->get_main_server_response("location") or return;
+    $currprojnm = $loc =~ m{ ^ Project: \s+ ([^\n]*?) $ }xms ? $1 : "";
+    $currfilepath = $loc =~ m{ ^ File: \s+ ([^\n]*?) $ }xms ? $1 : "";
+    $currmdlnm = $loc =~ m{ ^ Module: \s+ ([^\n]*?) $ }xms ? $1 : "";
+    $currmtdnm = $loc =~ m{ ^ Sub: \s+ ([^\n]*?) $ }xms ? $1 : "";
+
+    $mdlkeeper->switch_project($currprojnm);
+    $substkeeper->switch_project($currprojnm);
     return 1;
 }
 
 sub resume_store {
     my $mdl = $nowstoringmdl;
     if ( $mdl && $mdl->isa("PlSense::Symbol::Module") ) {
+        logger->notice("Resume store module : ".$mdl->get_fullnm);
         $mdlkeeper->store_module($mdl);
         $addrrouter->store_current_project;
         $nowstoringmdl = undef;
     }
     if ( $nowresolving ) {
+        logger->notice("Resume resolve subst/arg");
         $substkeeper->resolve_substitute;
         $substkeeper->resolve_unknown_argument;
         $addrrouter->store_current_project;
         $nowresolving = 0;
     }
 }
-
 

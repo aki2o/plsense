@@ -14,15 +14,15 @@ use PlSense::Symbol::Module;
 
 my ($cachedir, $port1, $port2, $port3, $projectnm, $tasknm, $loglvl, $logfile);
 my @dirs;
-GetOptions ('cachedir=s' => \$cachedir,
-            'port1=i' => \$port1,
-            'port2=i'  => \$port2,
-            'port3=i'  => \$port3,
+GetOptions ('cachedir=s'  => \$cachedir,
+            'port1=i'     => \$port1,
+            'port2=i'     => \$port2,
+            'port3=i'     => \$port3,
             'projectnm=s' => \$projectnm,
-            'tasknm=s' => \$tasknm,
-            'rootdir=s' => \@dirs,
-            'loglevel=s' => \$loglvl,
-            'logfile=s'  => \$logfile,
+            'tasknm=s'    => \$tasknm,
+            'rootdir=s'   => \@dirs,
+            'loglevel=s'  => \$loglvl,
+            'logfile=s'   => \$logfile,
             );
 
 setup_logger($loglvl, $logfile);
@@ -31,11 +31,11 @@ if ( ! -d $cachedir ) {
     exit 1;
 }
 
-my $cli = PlSense::SocketClient->new({ mainport => $port1,
-                                       workport => $port2,
-                                       resolveport => $port3,
-                                       retryinterval => 0.5,
-                                       maxretry => 200 });
+my $scli = PlSense::SocketClient->new({ mainport => $port1,
+                                        workport => $port2,
+                                        resolveport => $port3,
+                                        retryinterval => 0.5,
+                                        maxretry => 200 });
 
 my $mdlkeeper = PlSense::ModuleKeeper->new({ cachedir => $cachedir });
 my $nowstoringmdl = undef;
@@ -92,12 +92,12 @@ foreach my $dir ( @dirs ) {
             $found_is{$mdlkey} = 1;
             push @mdl_or_files, $mdlkey;
 
-            if ( $lastmodified > $mdl->get_lastmodified && $mdl->get_filepath eq $filepath ) {
+            my $needbuild = $mdl->is_initialized;
+            if ( $lastmodified != $mdl->get_lastmodified && $mdl->get_filepath eq $filepath && $needbuild ) {
                 push @needbuild, $mdlkey;
             }
             elsif ( $mdl->get_filepath ne $filepath && $mdl->get_projectnm eq $projectnm ) {
                 logger->info("Found moved module [$mdlnm] from [".$mdl->get_filepath."] to [$filepath]");
-                my $needbuild = $mdl->is_initialized;
                 $mdl = PlSense::Symbol::Module->new({ name => $mdlnm,
                                                       filepath => $filepath,
                                                       projectnm => $projectnm,
@@ -120,20 +120,20 @@ foreach my $dir ( @dirs ) {
 }
 
 if ( $#mdl_or_files >= 0 ) {
-    $cli->request_main_server("found ".join("|", @mdl_or_files));
+    $scli->request_main_server("found ".join("|", @mdl_or_files));
 }
 
 if ( $#needbuild >= 0 ) {
     logger->notice("Request build updated/moved modules : ".join(", ", @needbuild));
-    $cli->request_work_server("buildrf ".join("|", @needbuild));
+    $scli->request_work_server("buildrf ".join("|", @needbuild));
 }
 
 if ( $#firstbuild >= 0 ) {
     logger->notice("Request build project modules : ".join(", ", @firstbuild));
-    $cli->request_work_server("buildr ".join("|", @firstbuild));
+    $scli->request_work_server("buildr ".join("|", @firstbuild));
 }
 
-$cli->request_work_server("finfind $tasknm");
+$scli->request_work_server("finfind $tasknm");
 exit 0;
 
 

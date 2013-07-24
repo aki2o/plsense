@@ -34,8 +34,13 @@ use PlSense::Logger;
         else {
             my $value = $mediator->find_address_or_entity($e, @tokens) or return;
             if ( eval { $value->isa("PlSense::Entity") } ) {
-                if ( $is_addr ) { return; }
-                return $value->get_element;
+                if ( ! $value->isa("PlSense::Entity::Array") ) { return; }
+                my $el = $value->get_element;
+                if ( $el ) {
+                    if ( $is_addr && eval { $el->isa("PlSense::Entity") } ) { return; }
+                    return $el;
+                }
+                if ( $value->count_address > 0 ) { return $value->get_address(1).".A"; }
             }
             else {
                 return $value.".A";
