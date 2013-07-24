@@ -18,6 +18,7 @@ To install this module, run the following commands:
 
 	perl Makefile.PL
 	make
+	make manifest
 	make test
 	make install
 
@@ -29,6 +30,9 @@ perldoc command.
     perldoc PlSense
 
 You can also look for information at:
+
+    GitHub
+        https://github.com/aki2o/plsense
 
     RT, CPAN's request tracker (report bugs here)
         http://rt.cpan.org/NoAuth/Bugs.html?Dist=PlSense

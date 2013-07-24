@@ -18,8 +18,7 @@ requires 'PPI::Lexer' => 1.215;
 requires 'Time::Piece' => 1.20_01;
 requires 'Try::Tiny' => 0.11;
 
-test_requires('Class::Std');
-test_requires('List::AllUtils');
+test_requires 'Test::More' => 0.98;
 
 auto_include_deps();
 
@@ -29,6 +28,8 @@ install_script 'bin/plsense-server-resolve';
 install_script 'bin/plsense-server-work';
 install_script 'bin/plsense-worker-build';
 install_script 'bin/plsense-worker-find';
+
+tests_recursive;
 
 WriteAll;
 

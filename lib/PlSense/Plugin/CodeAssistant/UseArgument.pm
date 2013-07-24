@@ -15,8 +15,8 @@ use PlSense::Logger;
         if ( ! $stmt->isa("PPI::Statement::Include") ) { return; }
         my $mdlnm = $stmt->module or return;
 
-        if ( $tok->content !~ m{ qw[^\s] \s* (.+) \z  }xms &&
-             $tok->content !~ m{ ["'] \s* ([^"']+) \z  }xms ) {
+        if ( $tok->content !~ m{ qw[^\s] \s* ([^;]*) \z  }xms &&
+             $tok->content !~ m{ ["'] \s* ([^"']*) \z  }xms ) {
             return;
         }
         my $argtext = $1 || "";
