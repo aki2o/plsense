@@ -150,10 +150,16 @@ use PlSense::Logger;
             my $varnm = "".$tok->symbol."";
             my $mdl = $self->get_currentmodule;
             my $mtd = $self->get_currentmethod;
-            my $var = $addrfinder->get_builtin->exist_variable($varnm) ? $addrfinder->get_builtin->get_variable($varnm)
-                    : $mtd && $mtd->exist_variable($varnm)             ? $mtd->get_variable($varnm)
-                    : $mdl->exist_member($varnm)                       ? $mdl->get_member($varnm)
-                    :                                                    first { $_->get_fullnm eq $varnm } $mdl->get_external_any_variables;
+            my @varnms = $varnm =~ m{ ^\$ }xms ? ($varnm, '@'.substr($varnm, 1), '%'.substr($varnm, 1)) : ($varnm);
+            my $var;
+            SEEK:
+            foreach my $varnm ( @varnms ) {
+                $var = $addrfinder->get_builtin->exist_variable($varnm) ? $addrfinder->get_builtin->get_variable($varnm)
+                     : $mtd && $mtd->exist_variable($varnm)             ? $mtd->get_variable($varnm)
+                     : $mdl->exist_member($varnm)                       ? $mdl->get_member($varnm)
+                     :                                                    first { $_->get_fullnm eq $varnm } $mdl->get_external_any_variables;
+                if ( $var ) { last SEEK; }
+            }
             if ( ! $var ) { return ""; }
             return $self->get_symbol_help_text($var);
         }

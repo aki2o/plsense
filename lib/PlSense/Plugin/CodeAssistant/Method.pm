@@ -21,7 +21,7 @@ use PlSense::Logger;
             if ( $preword eq "our" ) { return; }
             if ( $preword eq "local" ) { return; }
         }
-        elsif ( $code =~ m{ (?:\s|^|;|,|\}|\{|\[|\(|=>) \s* ([a-zA-Z0-9_:]+) \z }xms ) {
+        elsif ( $code =~ m{ (?:\s|^|;|,|\}|\{|\[|\(|=>|\.) \s* ([a-zA-Z0-9_:]+) \z }xms ) {
             $input = $1;
         }
         else {

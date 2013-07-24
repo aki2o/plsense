@@ -21,8 +21,28 @@ our ($scalar2, @arr2, %hash2);
 # ahelp hash1 : ^ Not \s documented\. $
 
 
-# hstart own variable
-#$hash1{hoge}
-# hend ^ %hash1 \s is \s Variable \s of \s main\[ [^\n]+ \] \. $
+# hstart own scalar
+#$scalar1
+# hend ^ \$scalar1 \s is \s Variable \s of \s main\[ [^\n]+ \] \. $
+# hend ^ Not \s documented\. $
+
+# hstart own array 1
+#@arr1
+# hend ^ @arr1 \s is \s Variable \s of \s main\[ [^\n]+ \] \. $
+# hend ^ Not \s documented\. $
+
+# hstart own array 2
+#$arr1
+# hend ^ @arr1 \s is \s Variable \s of \s main\[ [^\n]+ \] \. $
+# hend ^ Not \s documented\. $
+
+# hstart own hash 1
+#%hash2
+# hend ^ %hash2 \s is \s Variable \s of \s main\[ [^\n]+ \] \. $
+# hend ^ Not \s documented\. $
+
+# hstart own hash 2
+#$hash2
+# hend ^ %hash2 \s is \s Variable \s of \s main\[ [^\n]+ \] \. $
 # hend ^ Not \s documented\. $
 
