@@ -386,4 +386,18 @@ Usage
 =====
 
 talk with server process throw plsense command provided by installation of PlSense.  
+see help of the command by executing `plsense --help`.
+
+**Note:** If you are not developer of PlSense, no need to see the help.
+
+
+Tested On
+=========
+
+* WindowsXP Pro SP3 32bit
+* Cygwin 1.7.20-1
+* Perl 5.14.2
+
+
+**Enjoy!!!**
 
