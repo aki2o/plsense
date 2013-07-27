@@ -174,27 +174,33 @@ sub hoge () {
 それらに渡される値によって、変数やメソッド戻り値などの型を特定していきますが、
 型の特定において最も優先されるのが、リテラル式です。
 
-    my $hoge = "hoge";                # SCALAR
-    my @hoge = ("ho", "ge");          # ARRAY
-    my %hoge = ( name => "hoge", );   # HASH
-    my $hoge = [ "ho", "ge" ];        # REFERENCE of ARRAY
-    my $hoge = { name => "hoge", };   # REFERENCE of HASH
+```perl
+my $hoge = "hoge";                # SCALAR
+my @hoge = ("ho", "ge");          # ARRAY
+my %hoge = ( name => "hoge", );   # HASH
+my $hoge = [ "ho", "ge" ];        # REFERENCE of ARRAY
+my $hoge = { name => "hoge", };   # REFERENCE of HASH
+```
 
 以下のように、解決された型が複数あると、正常に判別できる保障がなくなります。
 
-    my $hoge = [ "hoge" ];
-    my $fuga = {};
-    if ( $hoge ) { $fuga = $hoge; }  # 複数の型が代入されているので、$fugaが正常に特定できない
+```perl
+my $hoge = [ "hoge" ];
+my $fuga = {};
+if ( $hoge ) { $fuga = $hoge; }  # 複数の型が代入されているので、$fugaが正常に特定できない
+```
 
 ### bless
 
 newという名称のメソッドは、自動的に戻り値がその所属するクラスのインスタンスになります。  
 その他のメソッドで、blessされたリファレンスを返しても、それが正常に判別される保障はありません。
 
-    package Hoge;
-    sub new { return; }                                                           # 戻り値は無条件にHogeになる
-    sub get_instance { Fuga->new(); }                                             # 判別可能
-    sub get_instance { my $cls = shift; my $r = {}; bless $r, $cls; return $r; }  # 保障できない
+```perl
+package Hoge;
+sub new { return; }                                                           # 戻り値は無条件にHogeになる
+sub get_instance { Fuga->new(); }                                             # 判別可能
+sub get_instance { my $cls = shift; my $r = {}; bless $r, $cls; return $r; }  # 保障できない
+```
 
 つまり、自身のインスタンスを返すメソッドはnewじゃないとだめで、  
 ファクトリー的なクラスは、それが生成するインスタンスを確実に判別できる保障はありません。
@@ -203,73 +209,87 @@ newという名称のメソッドは、自動的に戻り値がその所属す�
 
 配列の場合、要素番号は無視し、要素は全て同じ型であると判断します。
 
-    $hoge[0] = Hoge->new();
-    $hoge[1] = \%fuga;
-    $hoge[0]->    # Hogeのメソッドは補完されない
+```perl
+$hoge[0] = Hoge->new();
+$hoge[1] = \%fuga;
+$hoge[0]->    # Hogeのメソッドは補完されない
+```
 
 ### ハッシュ
 
 ハッシュの場合、キーがリテラルかつ、'[a-zA-Z0-9_\-]+'にマッチした時のみ、その値の判別が可能です。
 
-    $hoge{hoge} = Hoge->new();
-    $hoge{"fuga"} = \%fuga;
-    my ($foo, $bar) = ("foo", "bar");
-    $hoge{$foo} = Foo->new();
-    $hoge{$bar} = Bar->new(); # 区別できないキーの値は全てBarのインスタンスであると判断する
-    
-    $hoge{hoge}->      # Hogeのメソッドが補完できる
-    $hoge{'fuga'}->{   # %fugaのキーが補完できる
-    $hoge{$foo}->      # Fooのメソッドは補完されない
+```perl
+$hoge{hoge} = Hoge->new();
+$hoge{"fuga"} = \%fuga;
+my ($foo, $bar) = ("foo", "bar");
+$hoge{$foo} = Foo->new();
+$hoge{$bar} = Bar->new(); # 区別できないキーの値は全てBarのインスタンスであると判断する
+
+$hoge{hoge}->      # Hogeのメソッドが補完できる
+$hoge{'fuga'}->{   # %fugaのキーが補完できる
+$hoge{$foo}->      # Fooのメソッドは補完されない
+```
 
 ### 変数のスコープ
 
 変数を区別できるのは、subの中までです。
 
-    package Hoge;
-    my $some = Fuga->new();
+```perl
+package Hoge;
+my $some = Fuga->new();
 
-    sub get_hoge {
-        my $some = Foo->new();
-        foreach my $e ( "foo", "bar" ) {
-            my $some = $e;
-        }
-        $some->  # もはやFooでない
+sub get_hoge {
+    my $some = Foo->new();
+    foreach my $e ( "foo", "bar" ) {
+        my $some = $e;
     }
+    $some->  # もはやFooでない
+}
 
-    $some->   # Fugaのメソッドが補完される
+$some->   # Fugaのメソッドが補完される
+```
 
 ### 2項演算子
 
-    my $hoge = Hoge->new() || Fuga->new(); # Hogeのインスタンスとみなされる
-    my $fuga = Hoge->new() && Fuga->new(); # Fugaのインスタンスとみなされる
+```perl
+my $hoge = Hoge->new() || Fuga->new(); # Hogeのインスタンスとみなされる
+my $fuga = Hoge->new() && Fuga->new(); # Fugaのインスタンスとみなされる
+```
 
 ### 3項演算子
 
 一番最初の要素を採用します。
 
-    my $some = $hoge ? Hoge->new()
-             : $fuga ? Fuga->new()
-             :         Bar->new();
-    $some->  # Hogeのインスタンスとみなされる
+```perl
+my $some = $hoge ? Hoge->new()
+         : $fuga ? Fuga->new()
+         :         Bar->new();
+$some->  # Hogeのインスタンスとみなされる
+```
 
 ### リテラルへの変数/メソッド埋め込み
 
 配列、ハッシュのキーの値のみ判別可能です。
 
-    my @hoge = ( @fuga, @bar );         # @fuga/@barの要素が判別できれば、@hogeの要素も判別できる
-    my %hoge = ( fuga => get_fuga() );  # get_fuga()が判別できれば、$hoge{fuga}も判別できる
-    my $hoge = { %fuga };               # 判別できない
-    my $hoge = [ @fuga, @bar ];         # 判別できない
+```perl
+my @hoge = ( @fuga, @bar );         # @fuga/@barの要素が判別できれば、@hogeの要素も判別できる
+my %hoge = ( fuga => get_fuga() );  # get_fuga()が判別できれば、$hoge{fuga}も判別できる
+my $hoge = { %fuga };               # 判別できない
+my $hoge = [ @fuga, @bar ];         # 判別できない
+```
 
 ### メソッドの呼び出し方法
 
-    my $hoge = new Hoge;   # 前置呼び出しは判別できない
-    my $hoge = Hoge->new;  # これはOK
+```perl
+my $hoge = new Hoge;   # 前置呼び出しは判別できない
+my $hoge = Hoge->new;  # これはOK
 
-    my $hoge = myfunc $fuga;  # $fugaはmyfuncの引数とはみなされない
-    my $hoge = myfunc($fuga); # $fugaはmyfuncの引数とみなされる
+my $hoge = myfunc $fuga;  # $fugaはmyfuncの引数とはみなされない
+my $hoge = myfunc($fuga); # $fugaはmyfuncの引数とみなされる
 
-    my $hoge = shift @fuga; # 組込み関数の場合は、括弧がなくてもOK
+my $hoge = shift @fuga; # 組込み関数の場合は、括弧がなくてもOK
+```
 
 対応していない組込み関数は、引数も戻り値も判別できません。  
 現在対応しているのは、以下です。
@@ -300,30 +320,36 @@ newという名称のメソッドは、自動的に戻り値がその所属す�
 
 メソッドの引数は、通常、そのメソッド呼び出しの記述が見つかるまで、判別できません。
 
-    sub hoge {
-        my $hoge = shift;
-        $hoge->  # 型は不明
-    }
+```perl
+sub hoge {
+    my $hoge = shift;
+    $hoge->  # 型は不明
+}
 
-    hoge( Hoge->new() );  # この記述が見つかれば、上記の$hogeの型も判明する
+hoge( Hoge->new() );  # この記述が見つかれば、上記の$hogeの型も判明する
+```
 
 ただし、そのクラスがnewメソッドを持つ場合には、そのクラスのメソッドの第一引数は自身のインスタンスと判断します。
 
-    package Hoge;
+```perl
+package Hoge;
 
-    sub new { my $r = {}; bless $r; return $r; }
+sub new { my $r = {}; bless $r; return $r; }
 
-    sub hoge {
-        my $hoge = shift;
-        my $fuga = shift;
-        $hoge->  # 無条件でHogeのインスタンスだと判断する
-    }
+sub hoge {
+    my $hoge = shift;
+    my $fuga = shift;
+    $hoge->  # 無条件でHogeのインスタンスだと判断する
+}
+```
 
 その場合、メソッド呼び出しで渡される引数は順番がずれます。
 
-    package main;
-    use Hoge;
-    Hoge->hoge( $arg );  # 上記の$fugaは$argであると判断する
+```perl
+package main;
+use Hoge;
+Hoge->hoge( $arg );  # 上記の$fugaは$argであると判断する
+```
 
 本来なら、アロー演算子の前置部分が引数となるのでしょうが、本モジュールでは影響しません。
 
@@ -335,13 +361,15 @@ newという名称のメソッドは、自動的に戻り値がその所属す�
 
 例えば、Mooseを使い、以下のように記述しても、
 
-    package Hoge;
-    use Moose;
-    has 'fuga' => ( is => 'rw', isa => 'Fuga' );
+```perl
+package Hoge;
+use Moose;
+has 'fuga' => ( is => 'rw', isa => 'Fuga' );
 
-    package main;
-    my $hoge = Hoge->new();
-    $hoge->fuga->  # Fugaのインスタンスである
+package main;
+my $hoge = Hoge->new();
+$hoge->fuga->  # Fugaのインスタンスである
+```
 
 とは、判断できません。
 
