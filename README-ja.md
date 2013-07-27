@@ -164,10 +164,12 @@ maxtasksは、そのタスクの最大同時実行数なので、お使いのマ
 
 解析処理は、大雑把に言えば、代入式とreturn式の収集です。
 
-    sub hoge () {
-        my $hoge = shift;  # 代入式
-        return $hoge;      # return式
-    }
+```perl
+sub hoge () {
+    my $hoge = shift;  # 代入式
+    return $hoge;      # return式
+}
+```
 
 それらに渡される値によって、変数やメソッド戻り値などの型を特定していきますが、
 型の特定において最も優先されるのが、リテラル式です。
@@ -189,8 +191,10 @@ maxtasksは、そのタスクの最大同時実行数なので、お使いのマ
 newという名称のメソッドは、自動的に戻り値がその所属するクラスのインスタンスになります。  
 その他のメソッドで、blessされたリファレンスを返しても、それが正常に判別される保障はありません。
 
-    sub get_instance { Hoge->new(); }                                                 # 判別可能
-    sub get_instance { my $class = shift; my $r = {}; bless $r, $class; return $r; }  # 保障できない
+    package Hoge;
+    sub new { return; }                                                           # 戻り値は無条件にHogeになる
+    sub get_instance { Fuga->new(); }                                             # 判別可能
+    sub get_instance { my $cls = shift; my $r = {}; bless $r, $cls; return $r; }  # 保障できない
 
 つまり、自身のインスタンスを返すメソッドはnewじゃないとだめで、  
 ファクトリー的なクラスは、それが生成するインスタンスを確実に判別できる保障はありません。
