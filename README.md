@@ -159,26 +159,32 @@ Restriction
 
 The idea about analyzing is collection of substitute/return statement.
 
-    sub hoge () {
-        my $hoge = shift;  # substitute statement
-        return $hoge;      # return statement
-    }
+```perl
+sub hoge () {
+    my $hoge = shift;  # substitute statement
+    return $hoge;      # return statement
+}
+```
 
 Identify the type of Variable/Method by gathering them.  
 For identify type, literal has most priority.
 
-    my $hoge = "hoge";                # SCALAR
-    my @hoge = ("ho", "ge");          # ARRAY
-    my %hoge = ( name => "hoge", );   # HASH
-    my $hoge = [ "ho", "ge" ];        # REFERENCE of ARRAY
-    my $hoge = { name => "hoge", };   # REFERENCE of HASH
+```perl
+my $hoge = "hoge";                # SCALAR
+my @hoge = ("ho", "ge");          # ARRAY
+my %hoge = ( name => "hoge", );   # HASH
+my $hoge = [ "ho", "ge" ];        # REFERENCE of ARRAY
+my $hoge = { name => "hoge", };   # REFERENCE of HASH
+```
 
 If the context has multiple different literal like the following,  
 It can not be ensured that the type is identified.
 
-    my $hoge = [ "hoge" ];
-    my $fuga = {};
-    if ( $hoge ) { $fuga = $hoge; }  # can't identify $fuga
+```perl
+my $hoge = [ "hoge" ];
+my $fuga = {};
+if ( $hoge ) { $fuga = $hoge; }  # can't identify $fuga
+```
 
 ### bless
 
@@ -186,8 +192,198 @@ If the module has the method named 'new',
 The result of the method is considered as instance of the module.  
 It is not ensured that the type is identified by returning blessed reference.
 
-    package Hoge;
-    sub new { return; }                                                           # 戻り値は無条件にHogeになる
-    sub get_instance { Fuga->new(); }                                             # 判別可能
-    sub get_instance { my $cls = shift; my $r = {}; bless $r, $cls; return $r; }  # 保障できない
+```perl
+package Hoge;
+sub new { return; }                                                       # be instance of Hoge absolutely
+sub get_instance { Fuga->new(); }                                         # ensure instance of FUga
+sub get_instance { my $cls=shift; my $r={}; bless $r, $cls; return $r; }  # not ensure instance of $cls
+```
+
+### Array
+
+Number of element is ignored. Each element of array is considered as same type.
+
+```perl
+$hoge[0] = Hoge->new();
+$hoge[1] = \%fuga;
+$hoge[0]->    # not ensure complete method of Hoge
+```
+
+### Hash
+
+The value can be discerned if the key is literal and match '[a-zA-Z0-9_\-]+'.
+
+```perl
+$hoge{hoge} = Hoge->new();
+$hoge{"fuga"} = \%fuga;
+my ($foo, $bar) = ("foo", "bar");
+$hoge{$foo} = Foo->new();
+$hoge{$bar} = Bar->new(); # not discern $bar from $foo
+
+$hoge{hoge}->      # ensure complete method of Hoge
+$hoge{'fuga'}->{   # ensure complete key of %fuga
+$hoge{$foo}->      # not ensure complete method of Foo
+```
+
+### Scope of variable
+
+Variable can be discerned until sub scope.
+
+```perl
+package Hoge;
+my $some = Fuga->new();
+
+sub get_hoge {
+    my $some = Foo->new();
+    foreach my $e ( "foo", "bar" ) {
+        my $some = $e;
+    }
+    $some->  # not ensure complete method of Foo
+}
+
+$some->   # ensure complete method of Fuga
+```
+
+### Binomial operator
+
+```perl
+my $hoge = Hoge->new() || Fuga->new(); # $hoge is considered as instance of Hoge
+my $fuga = Hoge->new() && Fuga->new(); # $fuga is considered as instance of Fuga
+```
+
+### Ternary operator
+
+The first part is used.
+
+```perl
+my $some = $hoge ? Hoge->new()
+         : $fuga ? Fuga->new()
+         :         Bar->new();
+$some->  # ensure complete method of Hoge
+```
+
+### Variable/Method in literal
+
+Array or value of hash is identified only.
+
+```perl
+my @hoge = ( @fuga, @bar );         # if @fuga/@bar is identified, @hoge is identified.
+my %hoge = ( fuga => get_fuga() );  # if get_fuga() is identified, $hoge{fuga} is identified.
+my $hoge = { %fuga };               # can not identify
+my $hoge = [ @fuga, @bar ];         # can not identify
+```
+
+### Call of method
+
+```perl
+my $hoge = new Hoge;   # can not identify
+my $hoge = Hoge->new;  # can identify
+
+my $hoge = myfunc $fuga;  # $fuga is not considered as argument
+my $hoge = myfunc($fuga); # $fuga is considered as argument
+
+my $hoge = shift @fuga; # if builtin method, it's OK
+```
+
+But, can not identify if the builtin method is not _handled_.  
+At present, the _handled_ builtin method is the following.
+
+* bless
+* eval (BLOCK only)
+* grep
+* first
+* pop
+* push
+* reverse
+* shift
+* sort
+* undef
+* unshift
+* values
+
+Also, the _handled_ external method is the following.
+
+* List::Util::first, List::AllUtils::first
+* List::MoreUtils::uniq, List::AllUtils::uniq
+
+_handled_ means that the plugin is implemented about the method in addition to normal.  
+For detail, see 'Scalability' section below.
+
+### Argument of method
+
+The type of argument can not be identified until found colling the method normally.
+
+```perl
+sub hoge {
+    my $hoge = shift;
+    $hoge->  # $hoge is unknown
+}
+
+hoge( Hoge->new() );  # if this statement exists、$hoge is identified above.
+```
+
+But, if the module that the method belongs to has the method named 'new',  
+the first argument of the method in the module is considered as instance of the module.
+
+```perl
+package Hoge;
+
+sub new { my $r = {}; bless $r; return $r; }
+
+sub hoge {
+    my $hoge = shift;  # be instance of Hoge absolutely
+    my $fuga = shift;
+    $hoge->  # ensure complete method of Hoge
+}
+```
+
+In the case, index of given argument move to back.
+
+```perl
+package main;
+use Hoge;
+Hoge->hoge( $arg );  # above $fuga is considered as $arg
+```
+
+By right, the word before arrow operator is the first argument.  
+But, PlSense has not the idea.
+
+### Grammar provided by module
+
+Analyzing is done by reading default grammar of Perl.  
+If some module provide special grammar, it can be read.  
+For example, write the following by using Moose,
+
+```perl
+package Hoge;
+use Moose;
+has 'fuga' => ( is => 'rw', isa => 'Fuga' );
+
+package main;
+my $hoge = Hoge->new();
+$hoge->fuga->  # return of fuga() is instance of Fuga
+```
+
+It is not identified.
+
+But, at present, can read special grammar of the following module.
+
+* Class::Std
+
+It means that the plugin is implemented about the above module.  
+For detail, see 'Scalability' section below.
+
+
+Scalability
+===========
+
+PlSense use Module::Pluggable and has some point for plugin.  
+If you have some idea for above restriction, resolving it is possible by making plugin.  
+For detail, see https://github.com/aki2o/plsense/blob/master/DevelopmentGuide.md
+
+
+Usage
+=====
+
+talk with server process throw plsense command provided by installation of PlSense.  
 
