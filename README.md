@@ -155,6 +155,25 @@ It depends on recursive count of modules not yet analyzed.
 For example, it's about 15 minutes for about 200 modules when _maxtasks_ is 20.
 
 
+Search of Library
+=================
+
+The target of searching library is the installed module and the project module.
+
+### Installed module
+
+It is searched by @INC and can be referenced at any location.  
+It means that always shown by `plsense assist use ...`.
+
+### Project module
+
+It is searching by _lib-path_ that is config of the above file, and can be referenced at same location.  
+It means that shown by `plsense assist use ...` on same project file.
+
+Also, at present,
+environment variable (e.g. PERL5LIB), lib statement (`use lib ...;`) is not interpreted.
+
+
 Restriction
 ===========
 
@@ -275,6 +294,24 @@ my %hoge = ( fuga => get_fuga() );  # if get_fuga() is identified, $hoge{fuga} i
 my $hoge = { %fuga };               # can not identify
 my $hoge = [ @fuga, @bar ];         # can not identify
 ```
+
+### use/require
+
+Bare word is interpreted only.
+
+```perl
+use Hoge;        # OK
+require Hoge;    # OK
+require "Hoge";  # ignore
+require $class;  # ignore
+```
+
+Also, if pragma, the effect is not interpreted other than the following.
+
+* vars
+
+About the above pragmas, the plugin is implemented.  
+For detail, see 'Scalability' section below.
 
 ### Call of method
 
