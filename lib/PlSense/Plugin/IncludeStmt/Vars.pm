@@ -25,7 +25,7 @@ use Class::Std;
             }
         }
         elsif ( $e->isa("PPI::Structure::List") ) {
-            @tokens = shift $e->children;;
+            @tokens = $e->children;
             $e = shift @tokens or return;
             if ( ! $e->isa("PPI::Statement::Expression") ) { return; }
             VAR:

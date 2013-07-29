@@ -19,6 +19,7 @@ if ( $#testsrc < 0 ) {
 BUILD:
 foreach my $f ( @testsrc ) {
     system "$addpath ; $chhome ; plsense open '$f' > /dev/null";
+    sleep 1;
 }
 
 my $count = 0;
