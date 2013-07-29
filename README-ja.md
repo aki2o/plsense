@@ -51,14 +51,16 @@ https://github.com/aki2o/emacs-plsense/blob/master/README-ja.md
 
 ### cpanmでインストール
 
-    # git clone https://github.com/aki2o/plsense.git
-    # cd plsense
-    # cpanm PlSense-?.??.tar.gz
+以下から最新のPlSense-?.??.tar.gzをダウンロードして、cpanmコマンドに、そのファイルパスを渡して下さい。  
+https://github.com/aki2o/plsense/releases
 
 ### 手動でインストール
 
-    # git clone https://github.com/aki2o/plsense.git
-    # cd plsense
+以下から最新のPlSense-?.??.tar.gzをダウンロードして、  
+https://github.com/aki2o/plsense/releases
+
+解凍して、できたディレクトリに移動後、以下を実行して下さい。
+
     # perl Makefile.PL
     # make
     # make manifest
@@ -88,6 +90,7 @@ https://github.com/aki2o/emacs-plsense/blob/master/README-ja.md
 * logfile ... ログ出力先ファイル
 * loglevel ... ログ出力レベル
 
+※ cachedirは絶対パスです。  
 ※ cachedirに保存する情報は継続して利用可能なので、/tmpなどの一時領域でない方が良いです。  
 ※ 頻繁にI/Oが発生するので、cachedirに指定するパスは高速なデバイスの方が良いです。  
 ※ cachedirに必要な容量、maxtasksの指定数に関しては、消費リソースを参照して下さい。  

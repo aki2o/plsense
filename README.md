@@ -51,14 +51,16 @@ Install
 
 ### Using cpanm
 
-    # git clone https://github.com/aki2o/plsense.git
-    # cd plsense
-    # cpanm PlSense-?.??.tar.gz
+Download latest PlSense-?.??.tar.gz from the following URL and execute cpanm to the downloaded file path.
+https://github.com/aki2o/plsense/releases
 
 ### Manually
 
-    # git clone https://github.com/aki2o/plsense.git
-    # cd plsense
+Download latest PlSense-?.??.tar.gz from the following URL.
+https://github.com/aki2o/plsense/releases
+
+Extract the file, move the maked directory, execute the following.
+
     # perl Makefile.PL
     # make
     # make manifest
@@ -87,6 +89,7 @@ The following has an effect on action of PlSense.
 * logfile ... path of log file.
 * loglevel ... level of logging by Log::Handler.
 
+**Note:** Require absolute path for _cachedir_.  
 **Note:** Avoid a temporary path (e.g. /tmp) for _cachedir_ because cache is available continuously.  
 **Note:** The high speed device is better for _cachedir_ because I/O is required frequently.  
 **Note:** About quantity for _cachedir_ and number for _maxtasks_, see 'Resource' section.  
@@ -311,7 +314,7 @@ For detail, see 'Scalability' section below.
 
 ### Argument of method
 
-The type of argument can not be identified until found colling the method normally.
+Normally, the type of argument can not be identified until found calling the method.
 
 ```perl
 sub hoge {
