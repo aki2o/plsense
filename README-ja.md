@@ -63,7 +63,6 @@ https://github.com/aki2o/plsense/releases
 
     # perl Makefile.PL
     # make
-    # make manifest
     # make test
     # make instal
 

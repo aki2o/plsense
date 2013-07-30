@@ -63,7 +63,6 @@ Extract the file, move the maked directory, execute the following.
 
     # perl Makefile.PL
     # make
-    # make manifest
     # make test
     # make instal
 
