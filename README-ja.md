@@ -64,7 +64,7 @@ https://github.com/aki2o/plsense/releases
     # perl Makefile.PL
     # make
     # make test
-    # make instal
+    # make install
 
 手動の場合、依存モジュールがインストールされていないとエラーになると思います。  
 都度、インストールして頂くか、Makefile.PLを参照して下さい。

@@ -64,7 +64,7 @@ Extract the file, move the maked directory, execute the following.
     # perl Makefile.PL
     # make
     # make test
-    # make instal
+    # make install
 
 If the module is not yet installed that this module depends on, error maybe happen.  
 In the case, install the module and retry. About the module, see Makefile.PL.
