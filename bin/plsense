@@ -465,7 +465,10 @@ sub stop_resolve_server {
 sub stop_server_sentinel {
     my $svtype = shift || "";
     my $pid = $pid_of{$svtype};
-    if ( $pid && ! kill(0, $pid) ) { return 1; }
+    if ( $pid && ! kill(0, $pid) ) {
+        $pid_of{$svtype} = undef;
+        return 1;
+    }
 
     my $ret = $svtype eq "main"    ? $scli->request_main_server("stop", { ignore_error => 1, maxretry => 15 })
             : $svtype eq "work"    ? $scli->request_work_server("stop", { ignore_error => 1, maxretry => 15 })
@@ -483,7 +486,7 @@ sub stop_server_sentinel {
         return 1;
     }
 
-    return 0;
+    return 1;
 }
 
 
@@ -506,13 +509,14 @@ sub show_server_status {
 
 sub start_server {
     if ( ! $cachedir ) {
-        logger->error("Required information for cachedir. For more information, run 'plsense --help'");
+        logger->fatal("Required information for cachedir. For more information, run 'plsense --help'");
         return;
     }
     if ( ! -d $cachedir && ! mkdir($cachedir) ) {
-        logger->error("Failed create cache directory [$cachedir]");
+        logger->fatal("Failed create cache directory [$cachedir]");
         return;
     }
+    if ( ! verify_commands() ) { return; }
     my $mainret = start_main_server();
     my $workret = start_work_server();
     my $resolveret = start_resolve_server();
@@ -791,5 +795,18 @@ sub read_string {
     $ret =~ s{ ^\s+ }{}xms;
     $ret =~ s{ \s+$ }{}xms;
     return $ret;
+}
+
+sub verify_commands {
+    my @chkcommands = ("which", "perldoc");
+    CHK_COMMAND:
+    foreach my $command ( @chkcommands ) {
+        my $ret = qx{ which $command 2>/dev/null };
+        if ( ! $ret ) {
+            logger->fatal("Can't execute '$command'.");
+            return 0;
+        }
+    }
+    return 1;
 }
 
