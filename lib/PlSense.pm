@@ -1,11 +1,11 @@
 package PlSense;
 
 use 5.006;
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 =head1 NAME
 
-PlSense - Development Tool for Perl
+PlSense - Omni Completion Tool for Perl
 
 =head1 SYNOPSIS
 
