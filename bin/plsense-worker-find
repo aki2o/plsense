@@ -57,7 +57,7 @@ foreach my $dir ( @dirs ) {
     $dir = File::Spec->rel2abs($dir);
     logger->debug("Start find module in [$dir]");
     LINE:
-    foreach my $line ( qx{ find "$dir" -name '*.pm' -type f | xargs egrep -H -o '^package\\s+[a-zA-Z0-9_:]+\\s*;' } ) {
+    foreach my $line ( qx{ find "$dir" -follow -name '*.pm' -type f | xargs egrep -H -o '^package\\s+[a-zA-Z0-9_:]+\\s*;' } ) {
         if ( $line !~ m{ \A ( .. [^:]* \.pm ) : package \s+ ([a-zA-Z0-9:]+) \s* ; }xms ) { next LINE; }
         my ($filepath, $mdlnm) = ($1, $2);
         try {
