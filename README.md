@@ -176,6 +176,10 @@ environment variable (e.g. PERL5LIB), lib statement (`use lib ...;`) is not inte
 Restriction
 ===========
 
+### Syntax error
+
+Can not analyze the file that has syntax error.
+
 ### Literal
 
 The idea about analyzing is collection of substitute/return statement.
