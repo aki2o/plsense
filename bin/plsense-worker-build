@@ -124,7 +124,7 @@ try {
 
     my $libopt = $libpath ? "-I'".$libpath."'" : "";
     if ( system("perl $libopt -c '$filepath' 2>/dev/null") ) {
-        logger->notice("Failed compile '$filepath'");
+        logger->error("Failed compile '$filepath'");
         finish_build();
         exit 1;
     }
