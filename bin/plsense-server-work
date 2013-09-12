@@ -8,8 +8,6 @@ use File::Spec;
 use File::Basename;
 use Time::Piece;
 use Try::Tiny;
-use FindBin;
-use lib "$FindBin::Bin/../lib";
 use PlSense::Logger;
 use PlSense::SocketClient;
 use PlSense::ProjectManager;

@@ -6,8 +6,6 @@ use Getopt::Long;
 use IO::Socket;
 use File::Spec;
 use Try::Tiny;
-use FindBin;
-use lib "$FindBin::Bin/../lib";
 use PlSense::Logger;
 use PlSense::SocketClient;
 use PlSense::Builtin;

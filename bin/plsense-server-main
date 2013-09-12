@@ -8,8 +8,6 @@ use File::Spec;
 use PPI::Lexer;
 use PPI::Dumper;
 use Try::Tiny;
-use FindBin;
-use lib "$FindBin::Bin/../lib";
 use PlSense::Logger;
 use PlSense::SocketClient;
 use PlSense::Builtin;
