@@ -107,8 +107,9 @@ use PlSense::Symbol::Variable;
 
     sub build_builtin_variables : PRIVATE {
         my $self = shift;
+        logger->debug("Start build builtin variables");
         $variableh_of{ident $self} = {};
-        my @perldocret = `perldoc perlvar`;
+        my @perldocret = qx{ perldoc -t perlvar };
         my $validline = 0;
         my $helptext = "";
         my $foundvar = 1;
@@ -122,10 +123,12 @@ use PlSense::Symbol::Variable;
             if ( $line =~ m{ ^ (\s+) \$ARG $ }xms ) {
                 $validline = 1;
                 $indentlvl = length $1;
+                logger->debug("Found region start of build builtin variables");
             }
             # End region of builtin variables
             elsif ( $validline && $line =~ m{ ^ \s+ Error \s Indicators $ }xms ) {
                 $validline = 0;
+                logger->debug("Found region end of build builtin variables");
                 if ( $#foundvars >= 0 ) {
                     $self->set_variable_helptext($helptext, @foundvars);
                     @foundvars = ();
@@ -169,8 +172,9 @@ use PlSense::Symbol::Variable;
 
     sub build_builtin_functions : PRIVATE {
         my $self = shift;
+        logger->debug("Start build builtin functions");
         $methodh_of{ident $self} = {};
-        my @perldocret = `perldoc perlfunc`;
+        my @perldocret = qx{ perldoc -t perlfunc };
         my $validline = 0;
         my $helptext = "";
         my $foundfunc = 1;
@@ -180,8 +184,19 @@ use PlSense::Symbol::Variable;
             chomp $line;
 
             # Start region of builtin functions
-            if ( $line =~ m{ ^ \s{2} Alphabetical \s Listing \s of \s Perl \s Functions $ }xms ) {
+            if ( $line =~ m{ ^ \s+ Alphabetical \s Listing \s of \s Perl \s Functions $ }xms ) {
                 $validline = 1;
+                logger->debug("Found region start of build builtin functions");
+            }
+            # End region of builtin functions
+            elsif ( $validline && $line =~ m{ ^ \s+ Non-function \s Keywords \s by \s Cross-reference $ }xms ) {
+                $validline = 0;
+                logger->debug("Found region end of build builtin functions");
+                if ( $#foundfuncs >= 0 ) {
+                    $self->set_function_helptext($helptext, @foundfuncs);
+                    @foundfuncs = ();
+                    $helptext = "";
+                }
             }
             if ( ! $validline ) { next LINE; }
 
