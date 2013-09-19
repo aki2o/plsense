@@ -15,23 +15,19 @@ use PlSense::Logger;
             $tok = $tok->previous_sibling;
         }
         if ( ! $tok || ! $tok->isa("PPI::Token::Operator") || $tok->content ne '->' ) { return; }
-        $self->set_input($input);
-        logger->info("Match context : input[$input]");
-
         my @tokens = $self->get_valid_tokens($tok);
-        my $addr = $self->get_addrfinder->find_address(@tokens);
-        if ( ! $addr ) {
-            logger->info("Not found address in current context");
-            return 1;
-        }
+        my $addr = $self->get_addrfinder->find_address(@tokens) or return;
+        $self->set_input($input);
+        logger->info("Match context : input[$input] addr[$addr]");
+
         my $entity = $self->get_addrrouter->resolve_address($addr);
         if ( ! $entity || ! $entity->isa("PlSense::Entity::Instance") ) {
-            logger->info("Not instance entity in current context");
+            logger->info("Can't get instance entity from [$addr]");
             return 1;
         }
         my $mdl = $self->get_mdlkeeper->get_module( $entity->get_modulenm );
         if ( ! $mdl ) {
-            logger->info("Not found object from current context");
+            logger->info("Can't get module of [".$entity->get_modulenm."]");
             return 1;
         }
 
