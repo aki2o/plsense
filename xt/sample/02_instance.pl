@@ -49,3 +49,12 @@ foreach my $io ( @arr1 ) {
 #$scalar2->{key1}->ioctl
 # hend ^ ioctl \s is \s Method \s of \s IO::
 
+
+# mstart instance method
+#$scalar2->{key1}->ioctl
+# mend ^ NAME: \s ioctl $
+# mend ^ FILE: \s .+ /IO/ .+ $
+# mend ^ LINE: \s \d+ $
+# mend ^ COL: \s \d+ $
+
+

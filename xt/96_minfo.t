@@ -68,7 +68,9 @@ foreach my $f ( @testsrc ) {
             $regexp = $1;
             $readcode = 0;
             $cmdret = qx{ $addpath ; $chhome ; plsense subinfo '$testcode' };
-            ok($cmdret =~ m{ $regexp }xms, "minfo check $testdesc match $regexp");
+            if ( ! ok($cmdret =~ m{ $regexp }xms, "minfo check $testdesc match $regexp") ) {
+                print STDERR "$cmdret";
+            }
         }
 
         elsif ( $readcode ) {

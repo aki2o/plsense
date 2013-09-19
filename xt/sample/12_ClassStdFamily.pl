@@ -39,3 +39,30 @@ $cc->set_attr3(IO::Socket::INET->new());
 #my $c2 = ClassStdChild->new({ 
 # aend equal: attr1 attr2 cattr1 cattr2
 
+
+# hstart instance method of Class::Std child class
+#$cc->get_cattr1
+# hend ^ get_cattr1 \s is \s Method \s of \s ClassStdChild
+
+# hstart instance method of Class::Std parent class
+#$cc->get_attr1
+# hend ^ get_attr1 \s is \s Method \s of \s ClassStdParent
+
+
+# mstart instance method of Class::Std child class
+#$cc->get_cattr1
+# mend ^ NAME: \s get_cattr1 $
+# mend ^ RETURN: \s NoIdent \s As \s Unknown $
+# mend ^ FILE: \s .+ /ClassStdChild.pm $
+# mend ^ LINE: \s 0 $
+# mend ^ COL: \s 0 $
+
+# mstart instance method of Class::Std parent class
+#$cc->get_attr1
+# mend ^ NAME: \s get_attr1 $
+# mend ^ RETURN: \s NoIdent \s As \s IO::File $
+# mend ^ FILE: \s .+ /ClassStdParent.pm $
+# mend ^ LINE: \s 0 $
+# mend ^ COL: \s 0 $
+
+

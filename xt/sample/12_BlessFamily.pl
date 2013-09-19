@@ -36,3 +36,30 @@ $bc->set_bar($io);
 #my $b2 = BlessChild->new({ 
 # aend equal: fuga hoge
 
+
+# hstart instance method of blessed child class
+#$bc->set_bar
+# hend ^ set_bar \s is \s Method \s of \s BlessChild
+
+# hstart instance method of blessed parent class
+#$bc->get_fuga
+# hend ^ get_fuga \s is \s Method \s of \s BlessParent
+
+
+# mstart instance method of blessed child class
+#$bc->set_bar
+# mend ^ NAME: \s set_bar $
+# mend ^ ARG1: \s \$bar \s As \s IO::File $
+# mend ^ RETURN: \s NoIdent \s As \s IO::File $
+# mend ^ FILE: \s .+ /BlessChild.pm $
+# mend ^ LINE: \s 16 $
+# mend ^ COL: \s 1 $
+
+# mstart instance method of blessed parent class
+#$bc->get_fuga
+# mend ^ NAME: \s get_fuga $
+# mend ^ RETURN: \s NoIdent \s As \s IO::Socket::INET $
+# mend ^ FILE: \s .+ /BlessParent.pm $
+# mend ^ LINE: \s 40 $
+# mend ^ COL: \s 1 $
+

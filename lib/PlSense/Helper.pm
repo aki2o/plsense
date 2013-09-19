@@ -85,6 +85,9 @@ use PlSense::Logger;
         logger->info("Found valid method : ".$mtd->get_name);
         my $ret = "NAME: ".$mtd->get_name."\n";
         $ret .= $self->get_method_definition($mtd);
+        $ret .= "FILE: ".($mtd->get_module ? $mtd->get_module->get_filepath : "")."\n";
+        $ret .= "LINE: ".$mtd->get_linenumber."\n";
+        $ret .= "COL: ".$mtd->get_colnumber."\n";
         return $ret;
     }
 
@@ -247,7 +250,7 @@ use PlSense::Logger;
         my $etext = ! $entity                                 ? "Unknown"
                   : $entity->isa("PlSense::Entity::Instance") ? $entity->get_modulenm
                   :                                             uc $entity->get_type;
-        $ret .= "Return: $retnm As $etext\n";
+        $ret .= "RETURN: $retnm As $etext\n";
 
         return $ret;
     }

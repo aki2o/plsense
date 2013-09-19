@@ -40,17 +40,17 @@ use PlSense::Symbol::Variable;
     sub build_source {
         my ($self, $mdl, $mtd, $source) = @_;
         my $ppi = $lexer_of{ident $self}->lex_source($source) or return;
-        $self->build_document($mdl, $mtd, $ppi);
+        $self->build_document($mdl, $mtd, $ppi, 1);
     }
 
     sub build_document : PRIVATE {
-        my ($self, $mdl, $mtd, $ppi) = @_;
+        my ($self, $mdl, $mtd, $ppi, $is_fragment) = @_;
 
         if ( ! $ppi ) { return; }
         logger->debug("Start build document for [".$mdl->get_name."]\n".$ppi->serialize);
 
         logger->info("Start find defined method/variable in PPI part");
-        $self->build_anything($mdl, $mtd, $ppi->clone);
+        $self->build_anything($mdl, $mtd, $ppi->clone, $is_fragment);
 
         logger->info("Start build source in PPI part");
         $self->get_substbuilder->set_currentmodule($mdl);
@@ -161,12 +161,12 @@ use PlSense::Symbol::Variable;
     }
 
     sub build_anything : PRIVATE {
-        my ($self, $mdl, $mtd, $ppi) = @_;
+        my ($self, $mdl, $mtd, $ppi, $is_fragment) = @_;
         my $mtdstmts = $ppi->find("PPI::Statement::Sub");
         if ( $mtdstmts ) {
             METHOD:
             foreach my $mtdstmt ( @{$mtdstmts} ) {
-                my $mtd = $self->build_method($mdl, $mtdstmt) or next METHOD;
+                my $mtd = $self->build_method($mdl, $mtdstmt, $is_fragment) or next METHOD;
                 my $varstmts = $mtdstmt->find("PPI::Statement::Variable") or next METHOD;
                 STMT:
                 foreach my $stmt ( @{$varstmts} ) {
@@ -213,7 +213,7 @@ use PlSense::Symbol::Variable;
     }
 
     sub build_method : PRIVATE {
-        my ($self, $mdl, $mtdstmt) = @_;
+        my ($self, $mdl, $mtdstmt, $is_fragment) = @_;
         my $mtdnm = $mtdstmt->name();
         logger->info("Found method statement : $mtdnm");
         my $mtd = $mdl->exist_method($mtdnm) ? $mdl->get_method($mtdnm)
@@ -230,6 +230,11 @@ use PlSense::Symbol::Variable;
                          parameters => $tok->parameters, };
             $mtd->set_attribute($attr);
             last METHOD_TOKEN;
+        }
+
+        if ( ! $is_fragment ) {
+            $mtd->set_linenumber($mtdstmt->line_number);
+            $mtd->set_colnumber($mtdstmt->column_number);
         }
 
         return $mtd;

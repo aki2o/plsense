@@ -12,6 +12,6 @@ use List::AllUtils qw{ min max };
 #m
 # aend include: map min max
 # ahelp max : ^ max \s is \s Method \s of \s List::AllUtils\. $
-# ahelp max : ^ Return: \s
+# ahelp max : ^ RETURN: \s
 # ahelp max : ^ \s* max \s+ LIST \s
 

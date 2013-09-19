@@ -38,7 +38,7 @@ sub fugaga {
 # aend include: hogege
 # ahelp hogege : ^ hogege \s is \s Method \s of \s main\[ [^\n]+ \]\. $
 # ahelp hogege : ^ ARG1: \s \$hogevar \s As \s Unknown $
-# ahelp hogege : ^ Return: \s Literal \s As \s SCALAR $
+# ahelp hogege : ^ RETURN: \s Literal \s As \s SCALAR $
 
 # astart own method word 2
 #f
@@ -46,12 +46,22 @@ sub fugaga {
 # ahelp fugaga : ^ fugaga \s is \s Method \s of \s main\[ [^\n]+ \]\. $
 # ahelp fugaga : ^ ARG1: \s \$fugavar1 \s As \s Unknown $
 # ahelp fugaga : ^ ARG2: \s @fugavar2 \s As \s Unknown $
-# ahelp fugaga : ^ Return: \s @fugavar2 \s As \s Unknown $
+# ahelp fugaga : ^ RETURN: \s @fugavar2 \s As \s Unknown $
 
 
 # hstart own method
 #hogege
 # hend ^ hogege \s is \s Method \s of \s main\[ [^\n]+ \]\. $
 # hend ^ ARG1: \s \$hogevar \s As \s Unknown $
-# hend ^ Return: \s Literal \s As \s SCALAR $
+# hend ^ RETURN: \s Literal \s As \s SCALAR $
+
+
+# mstart own method
+#hogege
+# mend ^ NAME: \s hogege $
+# mend ^ ARG1: \s \$hogevar \s As \s Unknown $
+# mend ^ RETURN: \s Literal \s As \s SCALAR $
+# mend ^ FILE: \s .+ /02_defsub.pl $
+# mend ^ LINE: \s 5 $
+# mend ^ COL: \s 1 $
 

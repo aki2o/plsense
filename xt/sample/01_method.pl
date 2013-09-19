@@ -12,7 +12,7 @@ use File::Spec;
 # aend include: map
 # aend exclude: min max
 # ahelp map : ^ map \s is \s Builtin \s Method\. $
-# ahelp map : ^ Return: \s
+# ahelp map : ^ RETURN: \s
 # ahelp map : ^ map \s+ BLOCK \s+ LIST \s
 # ahelp map : ^ map \s+ EXPR,LIST \s
 
@@ -27,7 +27,7 @@ use File::Spec;
 # hstart builtin method
 #map
 # hend ^ map \s is \s Builtin \s Method\. $
-# hend ^ Return: \s
+# hend ^ RETURN: \s
 # hend ^ map \s+ BLOCK \s+ LIST \s
 # hend ^ map \s+ EXPR,LIST \s
 
@@ -35,4 +35,12 @@ use File::Spec;
 #File::Spec->abs2rel
 # hend ^ abs2rel \s is \s Method \s of \s File::Spec
 # hend ^ ===== \s Part \s of \s PerlDoc \s ===== \s+ abs2rel \s
+
+
+# mstart static method
+#File::Spec->abs2rel
+# mend ^ NAME: \s abs2rel $
+# mend ^ FILE: \s [^\s]+
+# mend ^ LINE: \s \d+ $
+# mend ^ COL: \s \d+ $
 
