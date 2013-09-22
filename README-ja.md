@@ -57,14 +57,12 @@ https://github.com/aki2o/emacs-plsense/blob/master/README-ja.md
 
 ### cpanmでインストール
 
-以下から最新のPlSense-?.??.tar.gzをダウンロードして、cpanmコマンドに、そのファイルパスを渡して下さい。  
-https://github.com/aki2o/plsense/releases
+[こちら](https://github.com/aki2o/plsense/releases)から最新のPlSense-?.??.tar.gzをダウンロードして、
+cpanmコマンドに、そのファイルパスを渡して下さい。  
 
 ### 手動でインストール
 
-以下から最新のPlSense-?.??.tar.gzをダウンロードして、  
-https://github.com/aki2o/plsense/releases
-
+[こちら](https://github.com/aki2o/plsense/releases)から最新のPlSense-?.??.tar.gzをダウンロードして、  
 解凍して、できたディレクトリに移動後、以下を実行して下さい。
 
 ```
