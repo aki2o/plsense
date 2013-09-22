@@ -62,7 +62,7 @@ cpanmコマンドに、そのファイルパスを渡して下さい。
 
 ### 手動でインストール
 
-[こちら](https://github.com/aki2o/plsense/releases)から最新のPlSense-?.??.tar.gzをダウンロードして、  
+[こちら](https://github.com/aki2o/plsense/releases)から最新のPlSense-?.??.tar.gzをダウンロードして、
 解凍して、できたディレクトリに移動後、以下を実行して下さい。
 
 ```
