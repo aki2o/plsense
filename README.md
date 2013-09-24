@@ -83,7 +83,7 @@ If show the PlSense version, installation is finished.
 
 ### After installation
 
-Making config file is easy for using this tool.  
+Making config file is easy way for using this tool.  
 Do `plsense` on terminal. plsense confirm whether make config file.  
 
 \* For remake config file, do `plsense config`.  
