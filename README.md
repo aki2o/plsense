@@ -87,7 +87,7 @@ Making config file is easy way for using this tool.
 Do `plsense` on terminal. plsense confirm whether make config file.  
 
 \* For remake config file, do `plsense config`.  
-\* You can use this tool without config file. see, https://github.com/aki2o/plsense/wiki/Config.  
+\* You can use this tool without config file. see https://github.com/aki2o/plsense/wiki/Config.  
 
 
 Usage
