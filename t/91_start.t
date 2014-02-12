@@ -11,7 +11,7 @@ is($#unusedports, 2, "get unused port") or done_mytest();
 my ($mainport, $workport, $resolveport) = @unusedports;
 
 my $commonopt = "--cachedir '$tmpdir' --port1 $mainport --port2 $workport --port3 $resolveport";
-my $addpath = "PATH=$FindBin::Bin/../bin:\${PATH} ; export PATH";
+my $addpath = "PATH=$FindBin::Bin/../blib/script:$FindBin::Bin/../bin:\${PATH} ; export PATH";
 my ($stat, $mainstat, $workstat, $resolvestat);
 
 system "$addpath ; plsense $commonopt svstart > /dev/null";

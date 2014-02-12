@@ -20,7 +20,7 @@ if ( -f $confpath ) {
     ok(unlink($confpath), "init config") or done_mytest();
 }
 
-my $addpath = "PATH=$FindBin::Bin/../bin:\${PATH} ; export PATH";
+my $addpath = "PATH=$FindBin::Bin/../blib/script:$FindBin::Bin/../bin:\${PATH} ; export PATH";
 my $chhome = "HOME=$workpath ; export HOME";
 
 # cancel
