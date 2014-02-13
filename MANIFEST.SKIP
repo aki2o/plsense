@@ -1,7 +1,6 @@
+.gitignore
 blib/
 pm_to_blib
-DevelopmentGuide-ja.md
-DevelopmentGuide.md
 README-ja.md
 README.md
 image/
