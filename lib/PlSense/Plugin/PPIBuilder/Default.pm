@@ -75,6 +75,7 @@ use PlSense::Symbol::Variable;
         elsif ( $stmt->isa("PPI::Statement::Compound") ) {
             my @tokens = $stmt->children;
             my $e = shift @tokens or return;
+            if ( $e->isa("PPI::Token::Label") ) { $e = shift @tokens or return; }
             if ( ! $e->isa("PPI::Token::Word") ) { return; }
             if    ( $e->content eq "for" )     { $self->build_by_for_statement($mdl, $mtd, @tokens); }
             elsif ( $e->content eq "foreach" ) { $self->build_by_foreach_statement($mdl, $mtd, @tokens); }
