@@ -208,6 +208,18 @@ You can override the option in '~/.plsense' by executing 'plsense --OPTION-NAME=
 
 EOF
                                                        ],
+                  "loglevel [Level] [Server]"     => [ "Update the log level to Level about the logging of Server.", <<'EOF'
+
+Level is the level of logging by Log::Handler.
+Server is the target server. This value is one of the following value.
+  main    ... only Main server
+  work    ... only Work server
+  resolve ... only Resolve server
+  all     ... all server
+If Server is not given, The target is local process.
+
+EOF
+                                                       ],
                   );
 
 my %function_of = (help         => \&show_help,
@@ -254,6 +266,7 @@ my %function_of = (help         => \&show_help,
                    debugsubst   => \&debug_substitute,
                    debuglex     => \&debug_lexer,
                    config       => \&update_config,
+                   loglevel     => \&update_loglevel,
                    );
 
 my ($cachedir, $port1, $port2, $port3, $maxtasks, $loglvl, $logfile);
@@ -724,6 +737,29 @@ sub update_config {
     $maxtasks = $c->{maxtasks};
     return "Finished update config\n";
 }
+
+sub update_loglevel {
+    my $arg = shift || "";
+    $arg =~ s{ ^\s+ }{}xms;
+    $arg =~ s{ \s+$ }{}xms;
+    my @e = split m{ \s+ }xms, $arg;
+    my $loglvl = shift @e || "";
+    my $svtype = lc( shift @e || "" );
+    if ( $svtype eq "all" || $svtype eq "main" ) {
+        $scli->request_main_server("loglvl $loglvl");
+    }
+    if ( $svtype eq "all" || $svtype eq "work" ) {
+        $scli->request_work_server("loglvl $loglvl");
+    }
+    if ( $svtype eq "all" || $svtype eq "resolve" ) {
+        $scli->request_resolve_server("loglvl $loglvl");
+    }
+    if ( ! $svtype ) {
+        update_logger_level($loglvl);
+    }
+    return;
+}
+
 
 sub get_config_path {
     return File::Spec->rel2abs( $ENV{HOME}."/.plsense" );

@@ -54,6 +54,7 @@ my %function_of = (status        => \&get_status,
                    found         => \&setup_found_module,
                    built         => \&setup_built_module,
                    resolved      => \&setup_resolved,
+                   loglvl        => \&update_loglevel,
                    );
 
 my ($cachedir, $port1, $port2, $port3, $loglvl, $logfile);
@@ -499,6 +500,15 @@ sub setup_resolved {
     $addrrouter->reload_current_project;
     return;
 }
+
+sub update_loglevel {
+    $loglvl = shift || "";
+    $loglvl =~ s{ ^\s+ }{}xms;
+    $loglvl =~ s{ \s+$ }{}xms;
+    update_logger_level($loglvl);
+    return;
+}
+
 
 sub update_instance_condition {
     my $currmdl = $addrfinder->get_currentmodule;

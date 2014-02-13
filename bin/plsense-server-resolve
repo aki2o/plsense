@@ -34,6 +34,7 @@ my %function_of = (status        => \&get_status,
                    codeadd       => \&add_source,
                    resolve       => \&resolve,
                    built         => \&setup_built_module,
+                   loglvl        => \&update_loglevel,
                    );
 
 my ($cachedir, $port1, $port2, $port3, $loglvl, $logfile);
@@ -307,6 +308,14 @@ sub setup_built_module {
     }
 
     resolve();
+    return;
+}
+
+sub update_loglevel {
+    $loglvl = shift || "";
+    $loglvl =~ s{ ^\s+ }{}xms;
+    $loglvl =~ s{ \s+$ }{}xms;
+    update_logger_level($loglvl);
     return;
 }
 

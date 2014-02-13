@@ -4,9 +4,11 @@ use strict;
 use warnings;
 use Log::Handler;
 use Exporter 'import';
-our @EXPORT = qw( logger setup_logger );
+our @EXPORT = qw( logger setup_logger update_logger_level );
 {
     my $logger;
+    my $logger_alias = "logger";
+
     sub logger {
         if ( ! $logger ) {
             setup_logger($ENV{PLSENSE_LOG_LEVEL});
@@ -31,6 +33,7 @@ our @EXPORT = qw( logger setup_logger );
                               $m->{message} = sprintf("%s %-8s %-4s %-45s %s",
                                                       $m->{time}, $m->{level}.":", $$, $pkgnm."(".$m->{line}.")", $m->{message});
                           },
+                          alias => $logger_alias,
                       },
                 screen => { log_to => "STDERR",
                             maxlevel => "err",
@@ -46,6 +49,15 @@ our @EXPORT = qw( logger setup_logger );
                         },
                 );
         }
+    }
+
+    sub update_logger_level {
+        my ($level) = @_;
+        if ( ! $level ) { return; }
+        if ( ! $logger ) { return; }
+        $logger->debug("Update log level : $level");
+        $logger->set_level( $logger_alias => { maxlevel => $level } );
+        return;
     }
 }
 

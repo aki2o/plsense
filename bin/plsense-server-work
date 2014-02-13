@@ -36,6 +36,7 @@ my %function_of = (status    => \&get_status,
                    queue     => \&get_task_queue,
                    finfind   => \&finish_find,
                    finbuild  => \&finish_build,
+                   loglvl    => \&update_loglevel,
                    );
 
 my ($cachedir, $port1, $port2, $port3, $maxtasks, $loglvl, $logfile);
@@ -451,6 +452,14 @@ sub finish_build {
     if ( ! $mdl_or_file ) { return; }
     my $taskkey = "build ".$mdl_or_file;
     finish_task($taskkey);
+    return;
+}
+
+sub update_loglevel {
+    $loglvl = shift || "";
+    $loglvl =~ s{ ^\s+ }{}xms;
+    $loglvl =~ s{ \s+$ }{}xms;
+    update_logger_level($loglvl);
     return;
 }
 
