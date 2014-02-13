@@ -5,7 +5,7 @@ use lib "$FindBin::Bin/../tlib";
 use TestSupport;
 
 my $workpath = get_work_dir();
-my $addpath = "PATH=$FindBin::Bin/../bin:\${PATH} ; export PATH";
+my $addpath = "PATH=$FindBin::Bin/../blib/script:$FindBin::Bin/../bin:\${PATH} ; export PATH";
 my $chhome = "HOME=$workpath ; export HOME";
 
 system "$addpath ; $chhome ; plsense svstart > /dev/null";
