@@ -223,6 +223,21 @@ If Server is not given, The target is local process.
 
 EOF
                                                        ],
+                  "explore [Regexp]"              => [ "Show the packages matched by Regexp and their methods.", <<'EOF'
+
+Regexp is the regular expression matches the packages to explore.
+The one format of result is like the following.
+
+Package-name Package-filepath Package-line:Package-column
+  &Method-name Method-line:Method-column
+  ...
+
+Package-line/Package-column is the line/column number that the package is defined on.
+Method-line/Method-column is the line/column number that the method is defined on.
+'...' means the repeat of method of the package.
+
+EOF
+                                                       ],
                   );
 
 my %function_of = (help         => \&show_help,
@@ -270,6 +285,7 @@ my %function_of = (help         => \&show_help,
                    debuglex     => \&debug_lexer,
                    config       => \&update_config,
                    loglevel     => \&update_loglevel,
+                   explore      => \&explore_package,
                    );
 
 my ($cachedir, $port1, $port2, $port3, $maxtasks, $loglvl, $logfile);
@@ -762,6 +778,11 @@ sub update_loglevel {
         update_logger_level($loglvl);
     }
     return;
+}
+
+sub explore_package {
+    my $pkg_regexp = shift || "";
+    return $scli->get_main_server_response("explore $pkg_regexp");
 }
 
 
