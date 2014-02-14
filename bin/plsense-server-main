@@ -5,6 +5,7 @@ use warnings;
 use Getopt::Long;
 use IO::Socket;
 use File::Spec;
+use PPI::Document;
 use PPI::Lexer;
 use PPI::Dumper;
 use Try::Tiny;
@@ -415,9 +416,11 @@ sub debug_routing {
 }
 
 sub debug_lexer {
-    my $code = shift || "";
-    my $lexer = PPI::Lexer->new();
-    my $doc = $lexer->lex_source($code) or return;
+    my $code_or_file = shift || "";
+    $code_or_file =~ s{ \A\s+ }{}xms;
+    my $doc = -f $code_or_file ? PPI::Document->new( $code_or_file, readonly => 1 )
+            :                    PPI::Lexer->new()->lex_source($code_or_file)
+            or return;
     my $dumper = PPI::Dumper->new($doc) or return;
     return $dumper->string;
 }

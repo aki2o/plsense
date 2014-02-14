@@ -62,7 +62,7 @@ For detail, see help of assist command.
 
 EOF
                                                        ],
-                  "chelp, codehelp [Cade]"        => [ "Show help about given Code.", << 'EOF'
+                  "chelp, codehelp [Code]"        => [ "Show help about given Code.", << 'EOF'
 
 Code is a incomplete source code of Perl like the following line.
 
@@ -72,7 +72,7 @@ $io
 
 EOF
                                                        ],
-                  "subinfo [Cade]"                => [ "Show method information matched given Code.", <<'EOF'
+                  "subinfo [Code]"                => [ "Show method information matched given Code.", <<'EOF'
 
 Code is a incomplete source code of Perl like the following line.
 
@@ -85,7 +85,10 @@ Result format is like the following.
 NAME: Method-name
 ARG1: Var-name As Unknown/Module-name/Var-type
 ARG2: ...
-Return: Var-name/Literal/NoIdent As Unknown/Module-name/Var-type
+RETURN: Var-name/Literal/NoIdent As Unknown/Module-name/Var-type
+FILE: File-path
+LINE: Line-number
+COL: Column-number
 
 Var-type is a one of SCALAR, ARRAY, HASH, REFERENCE.
 Literal means return value is literal (ex. return "hoge";).
@@ -191,7 +194,7 @@ EOF
                   "debugmod [File/Module]"        => [ "Show detail information of given Module for debugging." ],
                   "debugrt [Regexp]"              => [ "Show routing information matched given Regexp for debugging." ],
                   "debugsubst [Regexp]"           => [ "Show substitute information matched given Regexp for debugging." ],
-                  "debuglex [Code]"               => [ "Show result of parsing given Code by PPI::Lexer for debugging." ],
+                  "debuglex [Code/File]"          => [ "Show result of parsing given Code/File by PPI for debugging." ],
                   "config"                        => [ "Update configuration about plsense.", <<'EOF'
 
 Configuration is saved in '~/.plsense'.
@@ -395,6 +398,7 @@ sub show_help {
         FHELP:
         foreach my $key ( keys %fnchelp_of ) {
             if ( $key =~ m{ \b $cmdnm \b }xms ) {
+                print "Usage: ".$key."\n\n";
                 print @{$fnchelp_of{$key}}[0]."\n";
                 if ( $#{$fnchelp_of{$key}} == 1 ) {
                     print @{$fnchelp_of{$key}}[1];
