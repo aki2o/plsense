@@ -35,7 +35,9 @@ use PlSense::Symbol::Module;
             $currmdl = PlSense::Symbol::Module->new({ name => "main",
                                                       filepath => $filepath,
                                                       projectnm => $projectnm,
-                                                      lastmodified => $lastmodified });
+                                                      lastmodified => $lastmodified,
+                                                      linenumber => 1,
+                                                      colnumber => 1, });
             logger->notice("New module [".$currmdl->get_name."] in [".$currmdl->get_filepath."] belong [".$currmdl->get_projectnm."]");
             $mdlkeeper->store_module($currmdl);
         }
@@ -76,6 +78,8 @@ use PlSense::Symbol::Module;
                     $mainmdl->push_bundlemdl($mdl);
                 }
                 $currmdl = $foundmdl_is{$mdlnm};
+                $currmdl->set_linenumber($e->line_number);
+                $currmdl->set_colnumber($e->column_number);
 
             }
 

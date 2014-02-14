@@ -16,6 +16,30 @@ use PlSense::Logger;
     sub set_helptext { my ($self, $helptext) = @_; $helptext_of{ident $self} = $helptext; }
     sub get_helptext { my ($self) = @_; return $helptext_of{ident $self}; }
 
+    my %linenumber_of :ATTR( :init_arg<linenumber> :default(0) );
+    sub set_linenumber {
+        my ($self, $linenumber) = @_;
+        if ( $linenumber !~ m{ ^\d+$ }xms ) {
+            logger->warn("Not Integer");
+            return;
+        }
+        $linenumber_of{ident $self} = $linenumber;
+        logger->debug("Set linenumber[$linenumber] to ".$self->get_fullnm);
+    }
+    sub get_linenumber { my ($self) = @_; return $linenumber_of{ident $self}; }
+
+    my %colnumber_of :ATTR( :init_arg<colnumber> :default(0) );
+    sub set_colnumber {
+        my ($self, $colnumber) = @_;
+        if ( $colnumber !~ m{ ^\d+$ }xms ) {
+            logger->warn("Not Integer");
+            return;
+        }
+        $colnumber_of{ident $self} = $colnumber;
+        logger->debug("Set colnumber[$colnumber] to ".$self->get_fullnm);
+    }
+    sub get_colnumber { my ($self) = @_; return $colnumber_of{ident $self}; }
+
     sub START {
         my ($class, $ident, $arg_ref) = @_;
 

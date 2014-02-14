@@ -22,28 +22,6 @@ use PlSense::Logger;
     sub set_reserved { my ($self, $reserved) = @_; $reserved_is{ident $self} = $reserved; }
     sub is_reserved { my ($self) = @_; return $reserved_is{ident $self}; }
 
-    my %linenumber_of :ATTR( :init_arg<linenumber> :default(0) );
-    sub set_linenumber {
-        my ($self, $linenumber) = @_;
-        if ( $linenumber !~ m{ ^\d+$ }xms ) {
-            logger->warn("Not Integer");
-            return;
-        }
-        $linenumber_of{ident $self} = $linenumber;
-    }
-    sub get_linenumber { my ($self) = @_; return $linenumber_of{ident $self}; }
-
-    my %colnumber_of :ATTR( :init_arg<colnumber> :default(0) );
-    sub set_colnumber {
-        my ($self, $colnumber) = @_;
-        if ( $colnumber !~ m{ ^\d+$ }xms ) {
-            logger->warn("Not Integer");
-            return;
-        }
-        $colnumber_of{ident $self} = $colnumber;
-    }
-    sub get_colnumber { my ($self) = @_; return $colnumber_of{ident $self}; }
-
     my %attribute_of :ATTR( :default(undef) );
     sub set_attribute { my ($self, $attribute) = @_; $attribute_of{ident $self} = $attribute; }
     sub get_attribute { my ($self) = @_; return $attribute_of{ident $self}; }

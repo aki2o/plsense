@@ -220,7 +220,9 @@ use PlSense::Logger;
         return PlSense::Symbol::Module->new({ name => $self->get_name,
                                               filepath => $self->get_filepath,
                                               projectnm => $self->get_projectnm,
-                                              lastmodified => $self->get_lastmodified, });
+                                              lastmodified => $self->get_lastmodified,
+                                              linenumber => $self->get_linenumber,
+                                              colnumber => $self->get_colnumber, });
     }
 
     sub interchange_to {
