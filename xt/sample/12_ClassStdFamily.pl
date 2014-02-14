@@ -65,4 +65,12 @@ $cc->set_attr3(IO::Socket::INET->new());
 # mend ^ LINE: \s 0 $
 # mend ^ COL: \s 0 $
 
+# mstart instance own method of Class::Std child class
+#$cc->cf_1
+# mend ^ NAME: \s cf_1 $
+# mend ^ RETURN: \s NoIdent \s As \s IO::Socket::INET $
+# mend ^ FILE: \s .+ /ClassStdChild.pm $
+# mend ^ LINE: \s 34 $
+# mend ^ COL: \s 5 $
+
 

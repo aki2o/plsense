@@ -1,5 +1,45 @@
 #!/usr/bin/perl
 
+=head1 NAME
+
+defsub.pl - Check about defined sub.
+
+=cut
+
+
+# Inner package
+package DefSub;
+
+=head1 NAME
+
+DefSub - This is a inner package.
+
+=cut
+
+# Start inner package
+
+# Inner method
+sub barar {
+    my $barvar = shift;
+    return "";
+}
+
+1;
+
+
+package main;
+
+=head1 DESCRIPTION
+
+The following sub is defined.
+
+- hogege
+- fugaga
+
+=cut
+
+# Start main package
+
 my $glovalvar;
 
 sub hogege {
@@ -23,7 +63,6 @@ sub fugaga {
 
     return @fugavar2;
 }
-
 
 # astart explicit call own method 1
 #&h
@@ -56,12 +95,22 @@ sub fugaga {
 # hend ^ RETURN: \s Literal \s As \s SCALAR $
 
 
-# mstart own method
+# mstart own main method
 #hogege
 # mend ^ NAME: \s hogege $
 # mend ^ ARG1: \s \$hogevar \s As \s Unknown $
 # mend ^ RETURN: \s Literal \s As \s SCALAR $
 # mend ^ FILE: \s .+ /02_defsub.pl $
-# mend ^ LINE: \s 5 $
+# mend ^ LINE: \s 45 $
+# mend ^ COL: \s 1 $
+
+# mstart own main method 2
+#fugaga
+# mend ^ NAME: \s fugaga $
+# mend ^ ARG1: \s \$fugavar1 \s As \s Unknown $
+# mend ^ ARG2: \s \@fugavar2 \s As \s Unknown $
+# mend ^ RETURN: \s \@fugavar2 \s As \s Unknown $
+# mend ^ FILE: \s .+ /02_defsub.pl $
+# mend ^ LINE: \s 56 $
 # mend ^ COL: \s 1 $
 

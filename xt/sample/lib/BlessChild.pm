@@ -1,3 +1,13 @@
+=head1 NAME
+
+BlessChild - Child class defined by normal method.
+
+=head1 DESCRIPTION
+
+Check the inheritance/own definition of class by normal method.
+
+=cut
+
 package BlessChild;
 
 use strict;
@@ -6,6 +16,7 @@ use BlessParent;
 
 our @ISA = qw{ BlessParent };
 
+# Constructor by normal method
 sub new {
     my ($class, $arg_ref) = @_;
     my $self = $class->SUPER::new($arg_ref);

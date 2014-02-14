@@ -52,7 +52,7 @@ $bc->set_bar($io);
 # mend ^ ARG1: \s \$bar \s As \s IO::File $
 # mend ^ RETURN: \s NoIdent \s As \s IO::File $
 # mend ^ FILE: \s .+ /BlessChild.pm $
-# mend ^ LINE: \s 16 $
+# mend ^ LINE: \s 27 $
 # mend ^ COL: \s 1 $
 
 # mstart instance method of blessed parent class
