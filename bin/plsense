@@ -23,46 +23,44 @@ my %opthelp_of = ("-h, --help"        => "Show this message.",
                   "--logfile"         => "Path of log file.",
                   );
 
-my %fnchelp_of = ("help [Command]"                => [ "Show detail help about given Command." ],
+my %fnchelp_of = ("help [Command]"                => [ "Show detail help about Command." ],
                   "svstat, serverstatus"          => [ "Show server process status." ],
                   "svstart, serverstart"          => [ "Start server process." ],
                   "svstop, serverstop"            => [ "Stop server process." ],
                   "refresh"                       => [ "Refresh server process." ],
-                  "o, open [File/Module]"         => [ "Open given File/Module.", <<'EOF'
+                  "o, open [File/Module]"         => [ "Open File/Module.", <<'EOF'
 
-Build information about given file path or module name if not yet build it.
-Included modules (ex. 'use ...;') are built if not yet build it.
+Build information about File/Module if not yet build it.
+The included modules (ex. 'use ...;') of File/Module are built too if not yet build it.
 
 And exec onfile for given file path or module name.
 For detail, see help of location command.
 
 The build task is run on server process, and requires a few minutes until finish.
-The status is shown by using the following commands.
-
-ready, ps, queue
+For checking the status, use ready/ps/queue commands.
 
 EOF
                                                        ],
-                  "u, update [File/Module]"       => [ "Update given File/Module.", <<'EOF'
+                  "u, update [File/Module]"       => [ "Update File/Module.", <<'EOF'
 
-Build information about given file path or module name forcely.
-Included modules (ex. 'use ...;') are built if not yet build it.
+Build information about File/Module forcely.
+The included modules (ex. 'use ...;') of File/Module are built only if not yet build it.
 
 EOF
                                                        ],
-                  "remove [File/Module]"          => [ "Remove cached information about given File/Module." ],
+                  "remove [File/Module]"          => [ "Remove the cached information about File/Module." ],
                   "removeall"                     => [ "Remove all cached information." ],
-                  "mhelp, modhelp [Module]"       => [ "Show help about given Module." ],
-                  "fhelp, subhelp [Sub] [Module]" => [ "Show help about given Function." ],
-                  "vhelp, varhelp [Var] [Module]" => [ "Show help about given Variable." ],
-                  "ahelp, assisthelp [Cand]"      => [ "Show help about given Candidate of last assist.", <<'EOF'
+                  "mhelp, modhelp [Module]"       => [ "Show help about Module." ],
+                  "fhelp, subhelp [Sub] [Module]" => [ "Show help about Sub of Module." ],
+                  "vhelp, varhelp [Var] [Module]" => [ "Show help about Var of Module." ],
+                  "ahelp, assisthelp [Cand]"      => [ "Show help about Cand of last assist.", <<'EOF'
 
-Candidate is a one of result of last assist command.
+Cand is a one of the result of last assist command.
 For detail, see help of assist command.
 
 EOF
                                                        ],
-                  "chelp, codehelp [Code]"        => [ "Show help about given Code.", << 'EOF'
+                  "chelp, codehelp [Code]"        => [ "Show help about Code.", << 'EOF'
 
 Code is a incomplete source code of Perl like the following line.
 
@@ -72,7 +70,7 @@ $io
 
 EOF
                                                        ],
-                  "subinfo [Code]"                => [ "Show method information matched given Code.", <<'EOF'
+                  "subinfo [Code]"                => [ "Show signature of the method detected by Code.", <<'EOF'
 
 Code is a incomplete source code of Perl like the following line.
 
@@ -80,7 +78,7 @@ Code is a incomplete source code of Perl like the following line.
 grep
 my $io = IO::File->new
 
-Result format is like the following.
+The result format is the following.
 
 NAME: Method-name
 ARG1: Var-name As Unknown/Module-name/Var-type
@@ -97,79 +95,76 @@ Unknown means still not clear.
 
 EOF
                                                        ],
-                  "onfile [File]"                 => [ "Set current location by given File for assist.", <<'EOF'
+                  "onfile [File]"                 => [ "Set current location by File for assist.", <<'EOF'
 
-Set given file path as current filepath.
-And set 'main' as current module automatically.
-And set '' as current function automatically.
-
-EOF
-                                                       ],
-                  "onmod [Module]"                => [ "Set current location by given Module for assist.", <<'EOF'
-
-Set given module name as current module.
-And set '' as current function automatically.
+Set File to current filepath.
+And set 'main' to current module automatically.
+And set '' to current function automatically.
 
 EOF
                                                        ],
-                  "onf, onsub [Sub]"              => [ "Set current location by given Function for assist.", <<'EOF'
+                  "onmod [Module]"                => [ "Set current location by Module for assist.", <<'EOF'
 
-Set given function name as current function.
+Set Module to current module.
+And set '' to current function automatically.
 
 EOF
                                                        ],
-                  "loc, location"                 => [ "Show value about current project/filepath/module/function.", <<'EOF'
+                  "onf, onsub [Sub]"              => [ "Set current location by Sub for assist.", <<'EOF'
 
-Current location is where you are.
+Set Sub to current function.
 
-The filepath/module/function is set by onfile/onmod/onsub command.
-For detail, see help of them.
+EOF
+                                                       ],
+                  "loc, location"                 => [ "Show current location.", <<'EOF'
 
-The project is set automatically by .plsense that is file at root of project tree.
+Current location is where you are now.
+The result format is the following.
 
-For example,
-If exec open/onfile /home/user1/MyProj/src/lib/MyModule.pm
-Seek .plsense in following order excluding '~/.plsense' that is config file for plsense.
+Project: Project-name
+File: File-path
+Module: Module-name
+Sub: Function-name
 
+Project-name is detected by the config file that is named '.plsense' and put in the root of project tree.
+The file is found in following order. If not found, the project value is 'default'.
+
+If the file of current location is /home/user1/MyProj/src/lib/MyModule.pm,
 /home/user1/MyProj/src/lib/.plsense
 /home/user1/MyProj/src/.plsense
 ...
-
-If not found, the project value is 'default'.
+Use the first value that the file exists.
+But, '~/.plsense' is ignored because it's a config file for plsense.
+For setting location, see help of open/onfile/onmod/onsub command.
 
 .plsense format is the following.
 
-name=PROJECT-NAME
-lib-path=LIBRABY-PATH
+name=Project-name
+lib-path=Library-path
 
-PROJECT-NAME is required match '[a-zA-Z0-9_]+'.
-LIBRARY-PATH is a relative path to root of library for the project.
-
+Project-name need to match '[a-zA-Z0-9_]+'.
+Library-path is a relative path to root of library for the project.
 About '~/.plsense', see help of config command.
 
 EOF
                                                        ],
-                  "c, codeadd [Code]"             => [ "Add source for current location.", <<'EOF'
+                  "c, codeadd [Code]"             => [ "Add source to current location.", <<'EOF'
 
-Add information for current location by build information about given Code.
-This command is a substitute for open, update command.
-This command is lighter than them.
-
-Abount current location, see help of location command.
-
+Add information that is built from Code to current location.
+This command is a substitute for open/update command and lighter than them.
 Code is a incomplete source code of Perl like the following line.
 
 use List::AllUtils qw{ :al
 for $i ( 0.. 10 ) { print $i; }
 sub hoge { my $self = shift; if ( $self ) { do_anything(); } return "hog
 
+Abount current location, see help of location command.
+
 EOF
                                                        ],
-                  "a, assist [Code]"              => [ "Do assist for given Code.", <<'EOF'
+                  "a, assist [Code]"              => [ "Do assist about Code.", <<'EOF'
 
-Assist is a optimized completion.
-It means showing available word after given Code.
-
+Provide the optimized completion that is the available words after Code.
 Code is a incomplete source code of Perl like the following line.
 
 use 
@@ -177,37 +172,40 @@ Use IO::F
 $
 $self->
 
-For optimize, assist needs where you are.
-Abount it, see help of location command.
+This command needs where you are.
+For more information, see help of location command.
 
 EOF
                                                        ],
                   "ps"                            => [ "Show task list that is running on server process." ],
                   "queue"                         => [ "Show stack of task that is not yet running on server process." ],
-                  "ready [File/Module]"           => [ "Show status about given File/Module is ready.", <<'EOF'
+                  "ready [File/Module]"           => [ "Show status of File/Module.", <<'EOF'
 
-If not given any argument, show list of module that is ready.
+Kind of status is 'Yes'/'No'/'Not Found'.
+'Yes' means the File/Module information have been built already.
+'No' means the File/Module information is not built yet.
+'Not Found' means File/Module is not opened yet.
+If File/Module is not given, show the list of the 'Yes' modules.
 
 EOF
                                                        ],
                   "debugstk"                      => [ "Show quantity of stocked on server process for debugging." ],
-                  "debugmod [File/Module]"        => [ "Show detail information of given Module for debugging." ],
-                  "debugrt [Regexp]"              => [ "Show routing information matched given Regexp for debugging." ],
-                  "debugsubst [Regexp]"           => [ "Show substitute information matched given Regexp for debugging." ],
-                  "debuglex [Code/File]"          => [ "Show result of parsing given Code/File by PPI for debugging." ],
+                  "debugmod [File/Module]"        => [ "Show detail of File/Module for debugging." ],
+                  "debugrt [Regexp]"              => [ "Show routing matched by Regexp for debugging." ],
+                  "debugsubst [Regexp]"           => [ "Show substitute matched by Regexp for debugging." ],
+                  "debuglex [Code/File]"          => [ "Show the PPI::Lexer layout as result of parsing Code/File for debugging." ],
                   "config"                        => [ "Update configuration about plsense.", <<'EOF'
 
-Configuration is saved in '~/.plsense'.
+Configuration is saved into '~/.plsense'.
 The format is the following.
 
-OPTION-NAME=VALUE
+Option-name=Option-value
 ...
 
-OPTION-NAME is a name of option.
-About option, exec 'plsense --help'.
+About Option-name, exec 'plsense --help'.
 
-Writing configuration in '~/.plsense' means giving '--OPTION-NAME=VALUE' when execut plsense.
-You can override the option in '~/.plsense' by executing 'plsense --OPTION-NAME=VALUE'.
+The config of '~/.plsense' means giving '--Option-name=Option-value' when execut plsense.
+You can override the config of '~/.plsense' by executing 'plsense --Option-name=Option-value'.
 
 EOF
                                                        ],
@@ -234,7 +232,6 @@ Package-name Package-filepath Package-line:Package-column
 
 Package-line/Package-column is the line/column number that the package is defined on.
 Method-line/Method-column is the line/column number that the method is defined on.
-'...' means the repeat of method of the package.
 
 EOF
                                                        ],
