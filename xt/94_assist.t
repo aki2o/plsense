@@ -12,9 +12,8 @@ system "$addpath ; $chhome ; plsense svstart > /dev/null";
 ok(is_running(), "start server process") or done_mytest();
 
 my @testsrc = grep { -f $_ } @ARGV;
-if ( $#testsrc < 0 ) {
-    @testsrc = (glob("$FindBin::Bin/sample/*.pl") , glob("$FindBin::Bin/sample/lib/*.pm"));
-}
+if ( $#testsrc < 0 ) { @testsrc = split m{ : }xms, $ENV{PLSENSE_TEST_SOURCE}; }
+if ( $#testsrc < 0 ) { @testsrc = (glob("$FindBin::Bin/sample/*.pl") , glob("$FindBin::Bin/sample/lib/*.pm")); }
 
 my ($fh, $cmdret);
 SOURCE:
@@ -109,7 +108,9 @@ foreach my $f ( @testsrc ) {
         elsif ( $line =~ m{ ^ \# \s* ahelp \s+ ([^\s]+) \s+ : \s+ ([^\n]+) $ }xms ) {
             my ($cand, $regexp) = ($1, $2);
             $cmdret = qx{ $addpath ; $chhome ; plsense assisthelp $cand };
-            ok($cmdret =~ m{ $regexp }xms, "assist help $cand match '$regexp' at $testdesc");
+            if ( ! ok($cmdret =~ m{ $regexp }xms, "assist help $cand match '$regexp' at $testdesc") ) {
+                print STDERR "$cmdret";
+            }
         }
 
         elsif ( $readcode ) {

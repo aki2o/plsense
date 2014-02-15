@@ -11,9 +11,8 @@ system "$addpath ; $chhome ; plsense svstart > /dev/null";
 ok(is_running(), "start server process") or done_mytest();
 
 my @testsrc = grep { -f $_ } @ARGV;
-if ( $#testsrc < 0 ) {
-    @testsrc = (glob("$FindBin::Bin/sample/*.pl") , glob("$FindBin::Bin/sample/lib/*.pm"));
-}
+if ( $#testsrc < 0 ) { @testsrc = split m{ : }xms, $ENV{PLSENSE_TEST_SOURCE}; }
+if ( $#testsrc < 0 ) { @testsrc = (glob("$FindBin::Bin/sample/*.pl") , glob("$FindBin::Bin/sample/lib/*.pm")); }
 
 my ($fh, $cmdret);
 BUILD:
