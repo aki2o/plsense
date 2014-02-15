@@ -1,7 +1,7 @@
 package PlSense;
 
 use 5.006;
-our $VERSION = '0.10';
+our $VERSION = '0.20';
 
 =head1 NAME
 
