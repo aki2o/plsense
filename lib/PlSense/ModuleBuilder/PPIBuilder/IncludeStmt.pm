@@ -37,7 +37,13 @@ use PlSense::Logger;
         if ( $mdl->exist_usingmdl($mdlnm) ) { return; }
         my $incmdl = $self->get_mdlkeeper->get_module($mdlnm);
         if ( ! $incmdl ) {
-            logger->warn("Not found module named [$mdlnm]");
+            logger->warn("Not found module : $mdlnm");
+            return;
+        }
+        my $filepath = $incmdl->get_filepath;
+        if ( ! $filepath || ! -f $filepath ) {
+            logger->warn("Not exist module : $mdlnm");
+            $self->get_mdlkeeper->remove_module($incmdl->get_name, $filepath, $incmdl->get_projectnm);
             return;
         }
         logger->debug("Found using module of [".$mdl->get_name."] : ".$incmdl->get_name);

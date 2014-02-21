@@ -53,6 +53,7 @@ my %function_of = (status        => \&get_status,
                    uninit        => \&uninitialize_module,
                    builtin       => \&setup_builtin,
                    found         => \&setup_found_module,
+                   foundp        => \&setup_found_project_module,
                    built         => \&setup_built_module,
                    resolved      => \&setup_resolved,
                    loglvl        => \&update_loglevel,
@@ -458,6 +459,7 @@ sub setup_builtin {
 
 sub setup_found_module {
     my $mdl_or_files = shift || "";
+    my $is_project = shift || 0;
     my @mdl_or_files = split m{ \| }xms, $mdl_or_files;
     ENTRY:
     foreach my $mdl_or_file ( @mdl_or_files ) {
@@ -472,10 +474,17 @@ sub setup_found_module {
         else {
             $mdlnm = $mdl_or_file;
         }
-        $mdlkeeper->get_module($mdlnm, $filepath);
+        $is_project ? $mdlkeeper->get_project_module($mdlnm, $filepath)
+                    : $mdlkeeper->get_module($mdlnm, $filepath);
     }
-    logger->info("Finished setup found module");
+    $is_project ? logger->info("Finished setup found project module")
+                : logger->info("Finished setup found module");
     return;
+}
+
+sub setup_found_project_module {
+    my $mdl_or_files = shift || "";
+    setup_found_module($mdl_or_files, 1);
 }
 
 sub setup_built_module {

@@ -67,7 +67,8 @@ foreach my $dir ( @dirs ) {
                 $lastmodified_of{$filepath} = $lastmodified;
             }
 
-            my $mdl = $mdlkeeper->get_module($mdlnm, $filepath);
+            my $mdl = $projectnm ? $mdlkeeper->get_project_module($mdlnm, $filepath)
+                    :              $mdlkeeper->get_module($mdlnm, $filepath);
             if ( ! $mdl ) {
                 logger->info("Found not yet stored module [$mdlnm] in [$filepath]");
                 $mdl = PlSense::Symbol::Module->new({ name => $mdlnm,
@@ -118,7 +119,8 @@ foreach my $dir ( @dirs ) {
 }
 
 if ( $#mdl_or_files >= 0 ) {
-    $scli->request_main_server("found ".join("|", @mdl_or_files));
+    $projectnm ? $scli->request_main_server("foundp ".join("|", @mdl_or_files))
+               : $scli->request_main_server("found ".join("|", @mdl_or_files));
 }
 
 if ( $#needbuild >= 0 ) {
