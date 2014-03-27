@@ -93,8 +93,8 @@ Do `plsense` on terminal. plsense confirm whether make config file.
 Usage
 =====
 
-For the end user, perhaps it's no need to know usage of this tool.  
-About usage/specification of this tool, see https://github.com/aki2o/plsense/wiki/Home.  
+Perhaps end user don't need to know the usage of this tool.  
+About the usage/specification of this tool, see https://github.com/aki2o/plsense/wiki/Home.  
 
 
 Tested On
