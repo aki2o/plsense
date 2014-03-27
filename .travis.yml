@@ -7,13 +7,20 @@ perl:
   # - 5.10
   # - 5.8
 before_install:
-  - cpanm Carton
+  - perlbrew install-cpanm -f
 install:
-  - carton install
-  - find local -type f
+  - (cpanm --installdeps --with-develop -nq .) || cat ~/.cpanm/build.log
 script:
-  - carton exec prove -I'local/lib/perl5/x86_64-linux' -lrv t
-  - carton exec prove -I'local/lib/perl5/x86_64-linux' -lrv xth
+  - prove -lrv t
+  - prove -lrv xt
+# before_install:
+#   - cpanm Carton
+# install:
+#   - carton install
+#   - find local -type f
+# script:
+#   - carton exec prove -I'local/lib/perl5/x86_64-linux' -lrv t
+#   - carton exec prove -I'local/lib/perl5/x86_64-linux' -lrv xth
 notifications:
   on_success: change
   on_failure: change
