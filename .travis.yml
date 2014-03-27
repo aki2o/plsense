@@ -10,7 +10,7 @@ before_install:
   - cpanm Carton
 install:
   - carton install
-  - carton list
+  - find local -type f -name "*.pm"
 script:
   - carton exec prove -lrv t
   - carton exec prove -lrv xt
