@@ -12,6 +12,7 @@ install:
   - carton install
 script:
   - carton exec prove -lrv t
+  - carton exec prove -lrv xt
 notifications:
   on_success: change
   on_failure: change
