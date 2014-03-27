@@ -12,8 +12,8 @@ install:
   - carton install
   - find local -type f -name "*.pm"
 script:
-  - carton exec -I'local/lib/perl5/x86 64_linux' prove -lrv t
-  - carton exec -I'local/lib/perl5/x86 64_linux' prove -lrv xth
+  - carton exec -I'local/lib/perl5/x86_64-linux' prove -lrv t
+  - carton exec -I'local/lib/perl5/x86_64-linux' prove -lrv xth
 notifications:
   on_success: change
   on_failure: change
