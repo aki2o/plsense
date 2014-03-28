@@ -11,6 +11,7 @@ before_install:
 install:
   - (cpanm --installdeps --with-develop -nq .) || cat ~/.cpanm/build.log
 before_script:
+  - export PERL_AUTOINSTALL='--defaultdeps'
   - perl Makefile.PL
   - make
 script:
