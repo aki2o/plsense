@@ -9,6 +9,8 @@ perl:
 before_install:
   - perlbrew install-cpanm -f
 install:
+  - cpanm -n CPAN
+  - (echo y; echo y; echo o conf commit) | cpan
   - (cpanm --with-develop --installdeps --notest .) || cat ~/.cpanm/build.log
 before_script:
   # - export PERL_AUTOINSTALL='--defaultdeps'
