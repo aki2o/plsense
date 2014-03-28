@@ -166,8 +166,9 @@ our @EXPORT = qw( get_tmp_dir
         chomp $value;
         my $waitsec = $value =~ m{ \A ([0-9]+) \z }xms ? $1 : undef;
         if ( ! defined $waitsec ) { return; }
+        print "start wait $waitsec\n";
         sleep $waitsec;
-        return 1;
+        return $waitsec;
     }
 }
 
