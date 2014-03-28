@@ -159,11 +159,15 @@ our @EXPORT = qw( get_tmp_dir
     }
 
     sub wait_fin_timeout {
-        if ( $ENV{PLSENSE_NOT_WAIT_TIMEOUT} ) { return; }
-        my $value = qx{ cat /proc/sys/net/ipv4/tcp_fin_timeout };
+        if ( $ENV{PLSENSE_NOT_WAIT_TIMEOUT} ) { return 1; }
+        my $sysfile = "/proc/sys/net/ipv4/tcp_fin_timeout";
+        if ( ! -f $sysfile ) { return 1; }
+        my $value = qx{ cat $sysfile };
         chomp $value;
-        my $waitsec = $value =~ m{ \A ([0-9]+) \z }xms ? $1 : 0;
+        my $waitsec = $value =~ m{ \A ([0-9]+) \z }xms ? $1 : undef;
+        if ( ! defined $waitsec ) { return; }
         sleep $waitsec;
+        return 1;
     }
 }
 
