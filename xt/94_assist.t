@@ -4,7 +4,8 @@ use List::AllUtils qw{ first };
 use lib "$FindBin::Bin/../tlib";
 use TestSupport;
 
-ok(wait_fin_timeout(), "wait for network timeout") or done_mytest();
+my $wait = wait_fin_timeout() || "";
+ok($wait, "wait $wait for network timeout") or done_mytest();
 run_plsense_testcmd("svstart > /dev/null");
 ok(is_server_running(), "start server process") or done_mytest();
 

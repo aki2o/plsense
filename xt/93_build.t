@@ -3,7 +3,8 @@ use FindBin;
 use lib "$FindBin::Bin/../tlib";
 use TestSupport;
 
-ok(wait_fin_timeout(), "wait for network timeout") or done_mytest();
+my $wait = wait_fin_timeout() || "";
+ok($wait, "wait $wait for network timeout") or done_mytest();
 run_plsense_testcmd("svstart > /dev/null");
 ok(is_server_running(), "start server process") or done_mytest();
 
@@ -17,7 +18,22 @@ foreach my $f ( @testsrc ) {
     sleep 1;
 }
 
-wait_fin_task(5, 200);
+# wait_fin_task(5, 200);
+WAIT_READY:
+for ( my $i = 0; $i <= 200; $i++ ) {
+    my $notyet = 0;
+    CHK_READY:
+    foreach my $f ( @testsrc ) {
+        my $readyret = get_plsense_testcmd_result("ready '$f'");
+        chomp $readyret;
+        if ( $readyret != "Yes" ) {
+            $notyet = 1;
+            last CHK_READY;
+        }
+    }
+    if ( ! $notyet ) { last WAIT_READY; }
+    sleep 5;
+}
 
 if ( $#testsrc == 0 ) {
     run_plsense_testcmd("update '".$testsrc[0]."' > /dev/null");
@@ -31,7 +47,7 @@ foreach my $f ( @testsrc ) {
     is($readyret, "Yes", "check ready $f");
 }
 
-
+wait_fin_task();
 done_mytest();
 exit 0;
 
