@@ -40,11 +40,15 @@ if ( $#testsrc == 0 ) {
     wait_fin_task(2, 60);
 }
 
+my $notready;
 CHK_READY:
 foreach my $f ( @testsrc ) {
     my $readyret = get_plsense_testcmd_result("ready '$f'");
     chomp $readyret;
-    is($readyret, "Yes", "check ready $f");
+    is($readyret, "Yes", "check ready $f") or $notready = 1;
+}
+if ( $notready ) {
+    print STDERR "The result of ready\n".get_plsense_testcmd_result("ready")."\n";
 }
 
 wait_fin_task();
