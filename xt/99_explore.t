@@ -1,19 +1,15 @@
 use Test::More;
 use FindBin;
-use List::AllUtils qw{ first };
 use lib "$FindBin::Bin/../tlib";
 use TestSupport;
 
-my $workpath = get_work_dir();
-my $addpath = "PATH=$FindBin::Bin/../blib/script:$FindBin::Bin/../bin:\${PATH} ; export PATH";
-my $chhome = "HOME=$workpath ; export HOME";
-
-system "$addpath ; $chhome ; plsense svstart > /dev/null";
-ok(is_running(), "start server process") or done_mytest();
+wait_fin_timeout();
+run_plsense_testcmd("svstart > /dev/null");
+ok(is_server_running(), "start server process") or done_mytest();
 
 FILE:
 foreach my $f ( glob("$FindBin::Bin/sample/*.pl") ) {
-    system "$addpath ; $chhome ; plsense onfile '$f' > /dev/null";
+    run_plsense_testcmd("onfile '$f' > /dev/null");
     last FILE;
 }
 sleep 2;
@@ -30,39 +26,22 @@ $expect .= '\s\s &new \s 6:1\n';
 $expect .= '\s\s &set_fuga \s 35:1\n';
 $expect .= '\s\s &set_hoge \s 17:1\n\n';
 
-my $cmdret = qx{ $addpath ; $chhome ; plsense explore ^Bless[A-Z] };
+my $cmdret = get_plsense_testcmd_result("explore ^Bless[A-Z]");
 like( $cmdret, qr{ \A $expect \z }xms, "explore match" );
 
-$cmdret = qx{ $addpath ; $chhome ; plsense explore };
+$cmdret = get_plsense_testcmd_result("explore");
 like( $cmdret, qr{ .+ $expect .+ }xms, "explore all" );
 
-$cmdret = qx{ $addpath ; $chhome ; plsense explore ^HogeFugaBar\$ };
+$cmdret = get_plsense_testcmd_result("explore ^HogeFugaBar\$");
 is( $cmdret, "", "explore no match" );
 
 done_mytest();
 exit 0;
 
 
-sub is_running {
-    my ($stat, $mainstat, $workstat, $resolvestat);
-
-    $stat = qx{ $addpath ; $chhome ; plsense svstat };
-    $mainstat = $stat =~ m{ ^ Main \s+ Server \s+ is \s+ Running\. $ }xms;
-    $workstat = $stat =~ m{ ^ Work \s+ Server \s+ is \s+ Running\. $ }xms;
-    $resolvestat = $stat =~ m{ ^ Resolve \s+ Server \s+ is \s+ Running\. $ }xms;
-    return $mainstat && $workstat && $resolvestat ? 1 : 0;
-}
-
 sub done_mytest {
-    my ($stat, $mainstat, $substat);
-
-    system "$addpath ; $chhome ; plsense svstop > /dev/null";
-    $stat = qx{ $addpath ; $chhome ; plsense svstat };
-    $mainstat = $stat =~ m{ ^ Main \s+ Server \s+ is \s+ Not \s+ running\. $ }xms;
-    $workstat = $stat =~ m{ ^ Work \s+ Server \s+ is \s+ Not \s+ running\. $ }xms;
-    $resolvestat = $stat =~ m{ ^ Resolve \s+ Server \s+ is \s+ Not \s+ running\. $ }xms;
-    ok($mainstat && $workstat && $resolvestat, "stop server process");
-
+    run_plsense_testcmd("svstop > /dev/null");
+    ok(is_server_stopping(), "stop server process");
     done_testing();
     exit 0;
 }
