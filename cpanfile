@@ -1,4 +1,4 @@
-on 'configure' => sub {
+on 'develop' => sub {
   requires 'Module::Install';
   requires 'Module::Install::CPANfile';
 };
