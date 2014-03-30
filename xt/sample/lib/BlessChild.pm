@@ -45,6 +45,11 @@ sub get_foo {
     # astart blessed hash member
     #$self->{
     # aend equal: bar
+
+    # mstart super method of blessed child class
+    #$self->SUPER::get_hoge
+    # mend ^ NAME: \s get_hoge $
+    # mend ^ FILE: \s .+/BlessParent\.pm $
 }
 
 # astart define inherite method in blessed child class

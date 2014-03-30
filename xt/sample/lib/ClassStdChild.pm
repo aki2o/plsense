@@ -47,6 +47,11 @@ use Class::Std;
         #$self->SUPER::f_1->
         # aend include: ioctl seek fcntl
 
+        # mstart super method of Class::Std child class
+        #$self->SUPER::f_1
+        # mend ^ NAME: \s f_1 $
+        # mend ^ FILE: \s .+/ClassStdParent\.pm $
+
         return $self->f_2;
     }
 
