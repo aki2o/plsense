@@ -544,17 +544,17 @@ use PlSense::Logger;
             my $mdl = $self->get_mdlkeeper->get_module( $entity->get_modulenm ) or return ();
             my $mtdnm = substr($follow, 2);
             my $mtd;
-            if ( $mtdnm =~ s{ \A SUPER:: }{}xms ) {
-                PARENT:
-                for my $i ( 1..$mdl->count_parent ) {
-                    my $parent = $mdl->get_parent($i);
-                    $mtd = $parent->get_any_method($mtdnm);
-                    if ( $mtd ) { last PARENT; }
-                }
-            }
-            else {
+            # if ( $mtdnm =~ s{ \A SUPER:: }{}xms ) {
+            #     PARENT:
+            #     for my $i ( 1..$mdl->count_parent ) {
+            #         my $parent = $mdl->get_parent($i);
+            #         $mtd = $parent->get_any_method($mtdnm);
+            #         if ( $mtd ) { last PARENT; }
+            #     }
+            # }
+            # else {
                 $mtd = $mdl->get_any_method($mtdnm);
-            }
+            # }
             if ( ! $mtd ) { return (); }
             my $mtdfullnm = $mtd->get_fullnm;
             if ( ! $self->is_valid_address_to_resolve($mtdfullnm) ) { return (); }

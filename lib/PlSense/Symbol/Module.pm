@@ -561,7 +561,19 @@ use PlSense::Logger;
 
     sub get_any_method {
         my ($self, $mtdnm) = @_;
-        return first { $mtdnm && $_->get_name eq $mtdnm } $self->get_any_methods;
+        if ( ! $mtdnm ) { return; }
+        if ( $mtdnm =~ s{ \A SUPER:: }{}xms ) {
+            PARENT:
+            for my $i ( 1..$self->count_parent ) {
+                my $parent = $self->get_parent($i);
+                # I'm not sure which method is correct, get_any_method, get_instance_method.
+                my $mtd = $parent->get_any_method($mtdnm) or next PARENT;
+                return $mtd;
+            }
+        }
+        else {
+            return first { $_->get_name eq $mtdnm } $self->get_any_methods;
+        }
     }
 
     sub get_any_original_method {
