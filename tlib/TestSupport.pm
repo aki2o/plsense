@@ -164,7 +164,7 @@ our @EXPORT = qw( get_tmp_dir
         if ( ! -f $sysfile ) { return 1; }
         my $value = qx{ cat $sysfile };
         chomp $value;
-        my $waitsec = $value =~ m{ \A ([0-9]+) \z }xms ? $1 + 60 : undef;
+        my $waitsec = $value =~ m{ \A ([0-9]+) \z }xms ? $1 + 90 : undef;
         if ( ! defined $waitsec ) { return; }
         sleep $waitsec;
         return $waitsec;
