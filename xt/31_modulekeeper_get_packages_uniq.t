@@ -20,8 +20,8 @@ $mdlkeeper->store_module(PlSense::Symbol::Module->new({ name => "bar", filepath 
 my @mdls = $mdlkeeper->get_packages();
 is( $#mdls, 2, "number of package" );
 is( $mdls[0]->get_name(), "bar", "name of package 1" );
-is( $mdls[1]->get_name(), "fuga", "name of package 1" );
-is( $mdls[2]->get_name(), "hoge", "name of package 2" );
+is( $mdls[1]->get_name(), "fuga", "name of package 2" );
+is( $mdls[2]->get_name(), "hoge", "name of package 3" );
 
 done_testing();
 

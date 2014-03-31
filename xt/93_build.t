@@ -31,6 +31,7 @@ for ( my $i = 0; $i <= 500; $i++ ) {
         }
     }
     if ( ! $notyet ) { last WAIT_READY; }
+    print STDERR "wait for ready all at $i\n";
     sleep 5;
 }
 
