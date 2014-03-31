@@ -23,5 +23,5 @@ my $hoge = $b1->get_hoge;
 
 # astart initializer of blessed class
 #my $b2 = BlessParent->new({ 
-# aend equal: hoge
+# aend equal: fuga hoge
 
