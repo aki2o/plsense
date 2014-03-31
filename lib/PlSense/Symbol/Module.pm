@@ -566,7 +566,7 @@ use PlSense::Logger;
             PARENT:
             for my $i ( 1..$self->count_parent ) {
                 my $parent = $self->get_parent($i);
-                # I'm not sure which method is correct, get_any_method, get_instance_method.
+                # I'm not sure which method is right, get_any_method, get_instance_method.
                 my $mtd = $parent->get_any_method($mtdnm) or next PARENT;
                 return $mtd;
             }
