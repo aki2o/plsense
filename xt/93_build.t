@@ -18,9 +18,8 @@ foreach my $f ( @testsrc ) {
     sleep 1;
 }
 
-# wait_fin_task(5, 200);
 WAIT_READY:
-for ( my $i = 0; $i <= 200; $i++ ) {
+for ( my $i = 0; $i <= 500; $i++ ) {
     my $notyet = 0;
     CHK_READY:
     foreach my $f ( @testsrc ) {
