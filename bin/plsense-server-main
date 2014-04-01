@@ -10,6 +10,7 @@ use PPI::Lexer;
 use PPI::Dumper;
 use Try::Tiny;
 use PlSense::Logger;
+use PlSense::Configure;
 use PlSense::SocketClient;
 use PlSense::Builtin;
 use PlSense::ModuleKeeper;
@@ -39,7 +40,6 @@ my %function_of = (status        => \&get_status,
                    assisthelp    => \&help_last_assist,
                    codehelp      => \&help_code,
                    subinfo       => \&get_method_information,
-                   onproj        => \&set_currentproject,
                    onfile        => \&set_currentfile,
                    onmod         => \&set_currentmodule,
                    onsub         => \&set_currentmethod,
@@ -309,16 +309,6 @@ sub get_method_information {
     return $helper->get_method_info_by_code($code);
 }
 
-sub set_currentproject {
-    my $projnm = shift || "";
-    $projnm =~ s{ ^\s+ }{}xms;
-    $projnm =~ s{ \s+$ }{}xms;
-    if ( ! $projnm ) { $projnm = $mdlkeeper->get_default_project_name; }
-    $mdlkeeper->switch_project($projnm);
-    $addrrouter->switch_project($projnm);
-    return "Done\n";
-}
-
 sub set_currentfile {
     my $filepath = shift || "";
     $filepath =~ s{ ^\s+ }{}xms;
@@ -331,6 +321,11 @@ sub set_currentfile {
     $currmdlnm = "main";
     $currmtdnm = "";
     logger->notice("Set current file is [$currfilepath]");
+    setup_config($currfilepath);
+    my $projnm = get_config("name") || "";
+    if ( ! $projnm ) { $projnm = $mdlkeeper->get_default_project_name; }
+    $mdlkeeper->switch_project($projnm);
+    $addrrouter->switch_project($projnm);
     return "Done\n";
 }
 

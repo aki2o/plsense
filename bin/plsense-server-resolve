@@ -7,6 +7,7 @@ use IO::Socket;
 use File::Spec;
 use Try::Tiny;
 use PlSense::Logger;
+use PlSense::Configure;
 use PlSense::SocketClient;
 use PlSense::Builtin;
 use PlSense::ModuleKeeper;

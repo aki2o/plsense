@@ -5,6 +5,7 @@ use strict;
 use warnings;
 use Class::Std;
 use PlSense::Logger;
+use PlSense::Configure;
 use PlSense::Symbol::Method;
 use PlSense::Symbol::Variable;
 {
@@ -13,10 +14,11 @@ use PlSense::Symbol::Variable;
         my $mdlnm = $mdl->get_name();
         my $currpkg = "";
         my $currmtd = "";
-        my $libopt = $self->get_libpath ? "-I'".$self->get_libpath."'" : "";
+        my $perl = get_config("perl");
+        my $libopt = get_config("lib-path") ? "-I'".get_config("lib-path")."'" : "";
         my $cmdstr = $mdlnm eq "main" ? "'".$mdl->get_filepath."'" : "-e 'use $mdlnm'";
         PARSE_XREF:
-        foreach my $line ( qx{ perl $libopt -MO=Xref $cmdstr 2>/dev/null } ) {
+        foreach my $line ( qx{ $perl $libopt -MO=Xref $cmdstr 2>/dev/null } ) {
             chomp $line;
             if ( $line =~ m{ ^ \s+ Subroutine \s+ (.+) $ }xms ) {
                 my @pkgtree = split m{ :: }xms, $1;

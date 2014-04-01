@@ -4,11 +4,10 @@ use strict;
 use warnings;
 use Getopt::Long;
 use IO::Socket;
-use File::Spec;
-use Config::Tiny;
 use Try::Tiny;
 use PlSense;
 use PlSense::Logger;
+use PlSense::Configure;
 use PlSense::SocketClient;
 
 my %opthelp_of = ("-h, --help"        => "Show this message.",
@@ -302,18 +301,15 @@ GetOptions ('help'        => sub { show_usage(); exit 0; },
 setup_logger($loglvl, $logfile);
 if ( ! $cachedir ) {
     logger->info("Read option from config file.");
-    create_config();
-    my $c = get_config();
-    if ( $c ) {
-        $cachedir = $c->{cachedir};
-        $port1 ||= $c->{port1};
-        $port2 ||= $c->{port2};
-        $port3 ||= $c->{port3};
-        $maxtasks ||= $c->{maxtasks};
-        $loglvl ||= $c->{loglevel};
-        $logfile ||= $c->{logfile};
-        setup_logger($loglvl, $logfile);
-    }
+    setup_config("", 0, 1) or exit 1;
+    $cachedir   = get_config("cachedir");
+    $port1    ||= get_config("port1");
+    $port2    ||= get_config("port2");
+    $port3    ||= get_config("port3");
+    $maxtasks ||= get_config("maxtasks");
+    $loglvl   ||= get_config("loglevel");
+    $logfile  ||= get_config("logfile");
+    setup_logger($loglvl, $logfile);
 }
 if ( ! $loglvl ) { $loglvl = ''; }
 if ( ! $logfile ) { $logfile = ''; }
@@ -745,13 +741,12 @@ sub debug_lexer {
 }
 
 sub update_config {
-    create_config(1);
-    my $c = get_config() or return;
-    $cachedir = $c->{cachedir};
-    $port1 = $c->{port1};
-    $port2 = $c->{port2};
-    $port3 = $c->{port3};
-    $maxtasks = $c->{maxtasks};
+    create_global_config() or return;
+    $cachedir = get_config("cachedir");
+    $port1    = get_config("port1");
+    $port2    = get_config("port2");
+    $port3    = get_config("port3");
+    $maxtasks = get_config("maxtasks");
     return "Finished update config\n";
 }
 
@@ -782,76 +777,6 @@ sub explore_package {
     return $scli->get_main_server_response("explore $pkg_regexp");
 }
 
-
-sub get_config_path {
-    return File::Spec->rel2abs( $ENV{HOME}."/.plsense" );
-}
-
-sub get_config {
-    my $confpath = get_config_path();
-    if ( ! -f $confpath ) { return; }
-    my $fh;
-    if ( ! open($fh, '<:utf8', $confpath) ) {
-        print STDERR "Failed open [$confpath] : $!\n";
-        return;
-    }
-    my $c = Config::Tiny->read_string( do { local $/; <$fh> } );
-    if ( ! close $fh ) {
-        print STDERR "Failed close [$confpath] : $!\n";
-        return;
-    }
-    my $ret = {};
-    $ret->{cachedir} = $c->{_}{cachedir};
-    $ret->{port1} = $c->{_}{port1};
-    $ret->{port2} = $c->{_}{port2};
-    $ret->{port3} = $c->{_}{port3};
-    $ret->{maxtasks} = $c->{_}{maxtasks};
-    $ret->{loglevel} = $c->{_}{loglevel};
-    $ret->{logfile} = $c->{_}{logfile};
-    return $ret;
-}
-
-sub create_config {
-    my $update = shift || 0;
-    my $confpath = get_config_path();
-    if ( ! $update && -f $confpath ) { return; }
-    if ( ! -f $confpath ) {
-        my $ret = read_string("Not exist config file [$confpath]\nMaking? (Y/n) ");
-        if ( $ret && lc($ret) ne 'y' && lc($ret) ne 'yes' ) {
-            print "Not create/update [$confpath]\n";
-            return;
-        }
-    }
-    my $defaultdir = File::Spec->rel2abs( $ENV{HOME}."/.plsense.d" );
-    my $old = get_config();
-    my $c = Config::Tiny->new;
-    $c->{_}{cachedir} = read_string("Input cache directory path: ($defaultdir) ") || $defaultdir;
-    $c->{_}{port1} = read_string("Input port number for main server: (33333) ") || 33333;
-    $c->{_}{port2} = read_string("Input port number for work server: (33334) ") || 33334;
-    $c->{_}{port3} = read_string("Input port number for resolve server: (33335) ") || 33335;
-    $c->{_}{maxtasks} = read_string("Input limit count of task on server: (20) ") || 20;
-    $c->{_}{loglevel} = $old ? $old->{loglevel} : "";
-    $c->{_}{logfile} = $old ? $old->{logfile} : "";
-    WRITE:
-    for ( my $str = $c->write_string ) {
-        my $fh;
-        if ( ! open($fh, '>:utf8', $confpath) ) {
-            print STDERR "Failed open [$confpath] : $!\n";
-            last WRITE;
-        }
-        print $fh $str or print STDERR "Failed write [$str] to [$confpath] : $!\n";
-        close $fh or print STDERR "Failed close [$confpath] : $!\n";
-    }
-}
-
-sub read_string {
-    my $prompt = shift || "";
-    print $prompt;
-    my $ret = <STDIN>;
-    $ret =~ s{ ^\s+ }{}xms;
-    $ret =~ s{ \s+$ }{}xms;
-    return $ret;
-}
 
 sub verify_commands {
     my @chkcommands = ("which", "perldoc");

@@ -10,13 +10,14 @@ use PlSense::SocketClient;
 use PlSense::ModuleKeeper;
 use PlSense::Symbol::Module;
 
-my ($cachedir, $port1, $port2, $port3, $projectnm, $tasknm, $loglvl, $logfile);
+my ($cachedir, $port1, $port2, $port3, $confpath, $is_project, $tasknm, $loglvl, $logfile);
 my @dirs;
 GetOptions ('cachedir=s'  => \$cachedir,
             'port1=i'     => \$port1,
             'port2=i'     => \$port2,
             'port3=i'     => \$port3,
-            'projectnm=s' => \$projectnm,
+            'confpath=s'  => \$confpath,
+            'project'     => \$is_project,
             'tasknm=s'    => \$tasknm,
             'rootdir=s'   => \@dirs,
             'loglevel=s'  => \$loglvl,
@@ -28,6 +29,7 @@ if ( ! -d $cachedir ) {
     logger->crit("Not exist cache directory [$cachedir]");
     exit 1;
 }
+setup_config($confpath) or exit 1;
 
 my $scli = PlSense::SocketClient->new({ mainport => $port1,
                                         workport => $port2,
@@ -43,6 +45,7 @@ $SIG{QUIT} = sub { logger->notice("Receive SIGQUIT"); resume_store(); exit 0; };
 $SIG{TERM} = sub { logger->notice("Receive SIGTERM"); resume_store(); exit 0; };
 
 my (@mdl_or_files, @needbuild, @firstbuild, %found_is, %lastmodified_of);
+my $projectnm = get_config("name");
 $mdlkeeper->set_project($projectnm);
 LIBPATH:
 foreach my $dir ( @dirs ) {
@@ -67,47 +70,51 @@ foreach my $dir ( @dirs ) {
                 $lastmodified_of{$filepath} = $lastmodified;
             }
 
-            my $mdl = $projectnm ? $mdlkeeper->get_project_module($mdlnm, $filepath)
-                    :              $mdlkeeper->get_module($mdlnm, $filepath);
-            if ( ! $mdl ) {
-                logger->info("Found not yet stored module [$mdlnm] in [$filepath]");
-                $mdl = PlSense::Symbol::Module->new({ name => $mdlnm,
-                                                      filepath => $filepath,
-                                                      projectnm => $projectnm,
-                                                      lastmodified => $lastmodified });
-                logger->notice("New module [".$mdl->get_name."] in [".$mdl->get_filepath."] belong [".$mdl->get_projectnm."]");
-                $nowstoringmdl = $mdl;
-                $mdlkeeper->store_module($mdl);
-                $nowstoringmdl = undef;
-                if ( $projectnm ) {
-                    my $mdlkey = $mdl->get_name eq "main" ? $mdl->get_filepath : $mdl->get_name;
-                    push @firstbuild, $mdlkey;
+            MDL:
+            foreach my $mdlnm ( "main", $mdlnm ) {
+
+                my $mdl = $is_project ? $mdlkeeper->get_project_module($mdlnm, $filepath)
+                        :               $mdlkeeper->get_module($mdlnm, $filepath);
+                if ( ! $mdl ) {
+                    logger->info("Found not yet stored module [$mdlnm] in [$filepath]");
+                    $mdl = PlSense::Symbol::Module->new({ name => $mdlnm,
+                                                          filepath => $filepath,
+                                                          projectnm => $is_project ? $projectnm : "",
+                                                          lastmodified => $lastmodified });
+                    logger->notice("New module [".$mdl->get_name."] in [".$mdl->get_filepath."] belong [".$mdl->get_projectnm."]");
+                    $nowstoringmdl = $mdl;
+                    $mdlkeeper->store_module($mdl);
+                    $nowstoringmdl = undef;
+                    if ( $is_project ) {
+                        my $mdlkey = $mdl->get_name eq "main" ? $mdl->get_filepath : $mdl->get_name;
+                        push @firstbuild, $mdlkey;
+                    }
                 }
+
+                my $mdlkey = $mdl->get_name eq "main" ? $mdl->get_filepath : $mdl->get_name;
+                if ( $found_is{$mdlkey} ) { next MDL; }
+
+                $found_is{$mdlkey} = 1;
+                push @mdl_or_files, $mdlkey;
+
+                my $needbuild = $mdl->is_initialized;
+                if ( $lastmodified != $mdl->get_lastmodified && $mdl->get_filepath eq $filepath && $needbuild ) {
+                    push @needbuild, $mdlkey;
+                }
+                elsif ( $mdl->get_filepath ne $filepath && $mdl->get_projectnm eq $projectnm ) {
+                    logger->info("Found moved module [$mdlnm] from [".$mdl->get_filepath."] to [$filepath]");
+                    $mdl = PlSense::Symbol::Module->new({ name => $mdlnm,
+                                                          filepath => $filepath,
+                                                          projectnm => $is_project ? $projectnm : "",
+                                                          lastmodified => $lastmodified });
+                    logger->notice("New module [".$mdl->get_name."] in [".$mdl->get_filepath."] belong [".$mdl->get_projectnm."]");
+                    $nowstoringmdl = $mdl;
+                    $mdlkeeper->store_module($mdl);
+                    $nowstoringmdl = undef;
+                    if ( $needbuild ) { push @needbuild, $mdlkey; }
+                }
+
             }
-
-            my $mdlkey = $mdl->get_name eq "main" ? $mdl->get_filepath : $mdl->get_name;
-            if ( $found_is{$mdlkey} ) { return; }
-
-            $found_is{$mdlkey} = 1;
-            push @mdl_or_files, $mdlkey;
-
-            my $needbuild = $mdl->is_initialized;
-            if ( $lastmodified != $mdl->get_lastmodified && $mdl->get_filepath eq $filepath && $needbuild ) {
-                push @needbuild, $mdlkey;
-            }
-            elsif ( $mdl->get_filepath ne $filepath && $mdl->get_projectnm eq $projectnm ) {
-                logger->info("Found moved module [$mdlnm] from [".$mdl->get_filepath."] to [$filepath]");
-                $mdl = PlSense::Symbol::Module->new({ name => $mdlnm,
-                                                      filepath => $filepath,
-                                                      projectnm => $projectnm,
-                                                      lastmodified => $lastmodified });
-                logger->notice("New module [".$mdl->get_name."] in [".$mdl->get_filepath."] belong [".$mdl->get_projectnm."]");
-                $nowstoringmdl = $mdl;
-                $mdlkeeper->store_module($mdl);
-                $nowstoringmdl = undef;
-                if ( $needbuild ) { push @needbuild, $mdlkey; }
-            }
-
         }
         catch {
             my $e = shift;
@@ -119,8 +126,8 @@ foreach my $dir ( @dirs ) {
 }
 
 if ( $#mdl_or_files >= 0 ) {
-    $projectnm ? $scli->request_main_server("foundp ".join("|", @mdl_or_files))
-               : $scli->request_main_server("found ".join("|", @mdl_or_files));
+    $is_project ? $scli->request_main_server("foundp ".join("|", @mdl_or_files))
+                : $scli->request_main_server("found ".join("|", @mdl_or_files));
 }
 
 if ( $#needbuild >= 0 ) {

@@ -16,9 +16,6 @@ use Class::Std;
     my %substbuilder_of :ATTR( :init_arg<substbuilder> );
     sub get_substbuilder : RESTRICTED { my ($self) = @_; return $substbuilder_of{ident $self}; }
 
-    my %libpath_of :ATTR( :init_arg<libpath> :default('') );
-    sub get_libpath : RESTRICTED { my ($self) = @_; return $libpath_of{ident $self}; }
-
     sub build {
         my ($self, $mdl) = @_;
     }

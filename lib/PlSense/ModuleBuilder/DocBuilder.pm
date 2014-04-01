@@ -5,6 +5,7 @@ use strict;
 use warnings;
 use Class::Std;
 use PlSense::Logger;
+use PlSense::Configure;
 {
     sub build {
         my ($self, $mdl) = @_;
@@ -12,7 +13,8 @@ use PlSense::Logger;
         if ( $mdlnm eq "main" ) { return; }
 
         my $filepath = $mdl->get_filepath;
-        my $mdlhelptext = qx{ perldoc -t $mdlnm 2>/dev/null } || qx{ perldoc -t '$filepath' 2>/dev/null };
+        my $perldoc = get_config("perldoc");
+        my $mdlhelptext = qx{ $perldoc -t $mdlnm 2>/dev/null } || qx{ $perldoc -t '$filepath' 2>/dev/null };
         if ( $mdlhelptext ne '' ) {
             $mdl->set_helptext($mdlhelptext);
         }

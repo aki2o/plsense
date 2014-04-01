@@ -7,6 +7,7 @@ use IO::Socket;
 use List::AllUtils qw{ uniq };
 use Try::Tiny;
 use PlSense::Logger;
+use PlSense::Configure;
 use PlSense::SocketClient;
 use PlSense::Builtin;
 use PlSense::ModuleKeeper;
@@ -19,13 +20,12 @@ use PlSense::ModuleBuilder::InheritBuilder;
 use PlSense::ModuleBuilder::DocBuilder;
 use PlSense::ModuleBuilder::PPIBuilder;
 
-my ($cachedir, $port1, $port2, $port3, $projectnm, $libpath, $mdl_or_file, $recursive, $force, $loglvl, $logfile);
+my ($cachedir, $port1, $port2, $port3, $confpath, $mdl_or_file, $recursive, $force, $loglvl, $logfile);
 GetOptions ('cachedir=s'  => \$cachedir,
             'port1=i'     => \$port1,
             'port2=i'     => \$port2,
             'port3=i'     => \$port3,
-            'projectnm=s' => \$projectnm,
-            'libpath=s'   => \$libpath,
+            'confpath=s'  => \$confpath,
             'target=s'    => \$mdl_or_file,
             'recursive'   => \$recursive,
             'force'       => \$force,
@@ -38,6 +38,7 @@ if ( ! -d $cachedir ) {
     logger->crit("Not exist cache directory [$cachedir]");
     exit 1;
 }
+setup_config($confpath) or exit 1;
 
 my $scli = PlSense::SocketClient->new({ mainport => $port1,
                                         workport => $port2,
@@ -61,23 +62,19 @@ my $srcupdater = PlSense::ModuleSrcUpdater->new({ mdlkeeper => $mdlkeeper });
 my $xrefbuilder = PlSense::ModuleBuilder::XrefBuilder->new({ builtin => $builtin,
                                                              mdlkeeper => $mdlkeeper,
                                                              substkeeper => $substkeeper,
-                                                             substbuilder => $substbuilder,
-                                                             libpath => $libpath });
+                                                             substbuilder => $substbuilder, });
 my $inheritbuilder = PlSense::ModuleBuilder::InheritBuilder->new({ builtin => $builtin,
                                                                    mdlkeeper => $mdlkeeper,
                                                                    substkeeper => $substkeeper,
-                                                                   substbuilder => $substbuilder,
-                                                                   libpath => $libpath });
+                                                                   substbuilder => $substbuilder, });
 my $docbuilder = PlSense::ModuleBuilder::DocBuilder->new({ builtin => $builtin,
                                                            mdlkeeper => $mdlkeeper,
                                                            substkeeper => $substkeeper,
-                                                           substbuilder => $substbuilder,
-                                                           libpath => $libpath });
+                                                           substbuilder => $substbuilder, });
 my $ppibuilder = PlSense::ModuleBuilder::PPIBuilder->new({ builtin => $builtin,
                                                            mdlkeeper => $mdlkeeper,
                                                            substkeeper => $substkeeper,
-                                                           substbuilder => $substbuilder,
-                                                           libpath => $libpath });
+                                                           substbuilder => $substbuilder, });
 my (@builtmdls, @builtmdlkeys, @extmdls);
 
 $SIG{INT} = sub { logger->notice("Receive SIGINT"); interrupt_build(); exit 0; };
@@ -85,7 +82,7 @@ $SIG{QUIT} = sub { logger->notice("Receive SIGQUIT"); interrupt_build(); exit 0;
 $SIG{TERM} = sub { logger->notice("Receive SIGTERM"); interrupt_build(); exit 0; };
 
 try {
-    if ( ! $projectnm ) { $projectnm = $mdlkeeper->get_default_project_name; }
+    my $projectnm = get_config("name") || $mdlkeeper->get_default_project_name;
     $builtin->build();
     $mdlkeeper->set_project($projectnm);
     $addrrouter->set_project($projectnm);
@@ -120,8 +117,9 @@ try {
         exit 0;
     }
 
-    my $libopt = $libpath ? "-I'".$libpath."'" : "";
-    if ( system("perl $libopt -c '$filepath' 2>/dev/null") ) {
+    my $perl = get_config("perl");
+    my $libopt = get_config("lib-path") ? "-I'".get_config("lib-path")."'" : "";
+    if ( system("$perl $libopt -c '$filepath' 2>/dev/null") ) {
         logger->error("Failed compile '$filepath'");
         finish_build();
         exit 1;
