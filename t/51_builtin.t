@@ -2,12 +2,15 @@ use Test::More;
 use FindBin;
 use lib "$FindBin::Bin/../tlib";
 use TestSupport;
+use PlSense::Configure;
 use PlSense::Builtin;
 
 my $tmpdir = get_tmp_dir();
 ok(-d $tmpdir, "get tmp directory");
 
-my $builtin = PlSense::Builtin->new({ cachedir => $tmpdir });
+set_primary_config(cachedir => $tmpdir);
+setup_config();
+my $builtin = PlSense::Builtin->new();
 ok($builtin->isa("PlSense::Builtin"), "new");
 
 $builtin->remove();
