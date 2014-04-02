@@ -75,6 +75,11 @@ if ( ! $cachedir || ! -d $cachedir ) {
     logger->fatal("Not exist cache directory [$cachedir]");
     exit 1;
 }
+set_primary_config( cachedir => $cachedir,
+                    port1    => $port1,
+                    port2    => $port2,
+                    port3    => $port3, );
+setup_config() or exit 1;
 
 my $scli = PlSense::SocketClient->new({ mainport => $port1,
                                         workport => $port2,

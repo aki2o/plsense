@@ -299,7 +299,18 @@ GetOptions ('help'        => sub { show_usage(); exit 0; },
             );
 
 setup_logger($loglvl, $logfile);
-if ( ! $cachedir ) {
+if ( ! $loglvl ) { $loglvl = ''; }
+if ( ! $logfile ) { $logfile = ''; }
+if ( ! $maxtasks || $maxtasks !~ m{ ^\d+$ }xms ) { $maxtasks = 20; }
+
+if ( $cachedir ) {
+    set_primary_config( cachedir => $cachedir,
+                        port1    => $port1,
+                        port2    => $port2,
+                        port3    => $port3,
+                        maxtasks => $maxtasks, );
+}
+else {
     logger->info("Read option from config file.");
     setup_config("", 0, 1) or exit 1;
     $cachedir   = get_config("cachedir");
@@ -311,9 +322,6 @@ if ( ! $cachedir ) {
     $logfile  ||= get_config("logfile");
     setup_logger($loglvl, $logfile);
 }
-if ( ! $loglvl ) { $loglvl = ''; }
-if ( ! $logfile ) { $logfile = ''; }
-if ( ! $maxtasks || $maxtasks !~ m{ ^\d+$ }xms ) { $maxtasks = 20; }
 
 my $scli = PlSense::SocketClient->new({ mainport => $port1,
                                         workport => $port2,

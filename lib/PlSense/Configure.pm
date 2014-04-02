@@ -8,6 +8,7 @@ use File::Spec;
 use PlSense::Logger;
 use Exporter 'import';
 our @EXPORT = qw( setup_config
+                  set_primary_config
                   get_config
                   get_default_config
                   exist_global_config
@@ -38,6 +39,7 @@ our @EXPORT = qw( setup_config
     my $pcnf;
     my %pcnf_of = ();
     my %bkenv_of = ();
+    my %primary_of = ();
 
     sub setup_config {
         my ($filepath, $reload, $interactive) = @_;
@@ -55,6 +57,7 @@ our @EXPORT = qw( setup_config
             if ( exist_global_config() ) {
                 $gcnf = load_config($global_config_path, @gkeys) or return;
             }
+            $gcnf->{$_} = $primary_of{$_} foreach grep { exists $primary_of{$_} } @gkeys;
         }
         $pcnf = {};
         if ( ! $filepath ) { return; }
@@ -64,12 +67,27 @@ our @EXPORT = qw( setup_config
         }
         else {
             $pcnf = load_config($pconfpath, @pkeys) or return;
+            $pcnf->{$_} = $primary_of{$_} foreach grep { exists $primary_of{$_} } @pkeys;
             $pcnf->{confpath} = $pconfpath;
             makeup_config();
             $pcnf_of{$pconfpath} = $pcnf;
         }
         fix_env();
         return 1;
+    }
+
+    sub set_primary_config {
+        my %conf = @_;
+        CONFIG:
+        foreach my $confignm ( keys %conf ) {
+            my $v = $conf{$confignm};
+            if ( ! defined $v ) { next CONFIG; }
+            if ( ! grep { $_ eq $confignm } ( @gkeys, @pkeys ) ) {
+                logger->error("Invalid config name : $confignm");
+                next CONFIG;
+            }
+            $primary_of{$confignm} = $v;
+        }
     }
 
     sub get_config {
