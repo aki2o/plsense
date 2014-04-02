@@ -45,6 +45,7 @@ our @EXPORT = qw( setup_config
         my ($filepath, $reload, $interactive) = @_;
         if ( ! $gcnf ) {
             $gcnf = {};
+            $gcnf->{$_} = $primary_of{$_} foreach grep { exists $primary_of{$_} } @gkeys;
             if ( ! exist_global_config() && $interactive ) {
                 my $ret = read_string("Not exist config file [$global_config_path]\nMaking? (Y/n) ") || "";
                 if ( lc($ret) eq 'y' || lc($ret) eq 'yes' ) {
@@ -56,10 +57,11 @@ our @EXPORT = qw( setup_config
             }
             if ( exist_global_config() ) {
                 $gcnf = load_config($global_config_path, @gkeys) or return;
+                $gcnf->{$_} = $primary_of{$_} foreach grep { exists $primary_of{$_} } @gkeys;
             }
-            $gcnf->{$_} = $primary_of{$_} foreach grep { exists $primary_of{$_} } @gkeys;
         }
         $pcnf = {};
+        $pcnf->{$_} = $primary_of{$_} foreach grep { exists $primary_of{$_} } @pkeys;
         if ( ! $filepath ) { return; }
         my $pconfpath = get_config_path($filepath) or return 1;
         if ( exists $pcnf_of{$pconfpath} && ! $reload ) {
