@@ -22,24 +22,22 @@ use PlSense::Configure;
         $class->reset_project_memory();
     }
 
-    sub setup_cache {
+    sub setup {
         my $self = shift;
         my $force = shift || 0;
 
-        my $projectnm = get_config("name");
-        if ( ! $force && $projectnm eq $self->get_project() ) {
-            logger->info("No need switch project data from [$projectnm]");
+        my $projnm = get_config("name");
+        if ( ! $force && $projnm eq $self->get_project() ) {
+            logger->info("No need switch project data from [$projnm]");
             return;
         }
 
-        logger->info("Switch project data to [$projectnm]");
-        if ( get_config("local") ) {
-            $cache_of{ident $self}->set_namespace("IModule.$projectnm");
-            $self->reset_installed_memory();
-        }
-        $projcache_of{ident $self}->set_namespace("Module.$projectnm");
+        logger->info("Switch project data to [$projnm]");
+        $cache_of{ident $self}->set_namespace( get_config("local") ? "IModule.$projnm" : "IModule" );
+        $projcache_of{ident $self}->set_namespace("Module.$projnm");
+        $self->reset_installed_memory();
         $self->reset_project_memory();
-        $self->SUPER::setup_cache($force);
+        $self->SUPER::setup($force);
         return 1;
     }
 

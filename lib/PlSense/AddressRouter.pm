@@ -30,30 +30,21 @@ use PlSense::Configure;
         $class->reset;
     }
 
-    sub setup_cache {
+    sub setup {
         my $self = shift;
         my $force = shift || 0;
 
-        my $projectnm = get_config("name");
-        if ( ! $force && $projectnm eq $self->get_project() ) {
-            logger->info("No need switch project data from [$projectnm]");
+        my $projnm = get_config("name");
+        if ( ! $force && $projnm eq $self->get_project() ) {
+            logger->info("No need switch project data from [$projnm]");
             return;
         }
 
-        my $nextkey = "perl.".$projectnm;
-        my $cacheh;
-        try   { $cacheh = $cache_of{ident $self}->get($nextkey); }
-        catch { $cacheh = $cache_of{ident $self}->get($nextkey); };
-        $routeh_of{ident $self} = $cacheh && $cacheh->{"route"} ? $cacheh->{"route"} : {};
-        $rrouteh_of{ident $self} = $cacheh && $cacheh->{"rroute"} ? $cacheh->{"rroute"} : {};
-        $self->init_common_key_hash;
-        $self->SUPER::setup_cache($force);
-        logger->info("Switched project routing to $projectnm");
-    }
-
-    sub reload_current_project {
-        my ($self) = @_;
-        $self->setup_cache(1);
+        $cache_of{ident $self}->set_namespace( get_config("local") ? "Resolve.$projnm" : "Resolve" );
+        $self->SUPER::setup($force);
+        $self->load_current_project();
+        logger->info("Switched project routing to $projnm");
+        return 1;
     }
 
     sub store_current_project {
@@ -62,6 +53,18 @@ use PlSense::Configure;
         try   { $cache_of{ident $self}->set($key, { route => $routeh_of{ident $self}, rroute => $rrouteh_of{ident $self} }); }
         catch { $cache_of{ident $self}->set($key, { route => $routeh_of{ident $self}, rroute => $rrouteh_of{ident $self} }); };
         logger->info("Stored project routing of $key");
+    }
+
+    sub load_current_project {
+        my $self = shift;
+        my $key = "perl.".$self->get_project();
+        my $cacheh;
+        try   { $cacheh = $cache_of{ident $self}->get($key); }
+        catch { $cacheh = $cache_of{ident $self}->get($key); };
+        $routeh_of{ident $self} = $cacheh && $cacheh->{"route"} ? $cacheh->{"route"} : {};
+        $rrouteh_of{ident $self} = $cacheh && $cacheh->{"rroute"} ? $cacheh->{"rroute"} : {};
+        $self->init_common_key_hash;
+        logger->info("Loaded project routing of $key");
     }
 
     sub store {

@@ -187,7 +187,7 @@ sub accept_client {
 }
 
 sub initialize {
-    $addrrouter->reload_current_project;
+    $addrrouter->load_current_project;
     return;
 }
 
@@ -322,10 +322,8 @@ sub set_currentfile {
     $currmtdnm = "";
     logger->notice("Set current file is [$currfilepath]");
     setup_config($currfilepath);
-    my $projnm = get_config("name") || "";
-    if ( ! $projnm ) { $projnm = $mdlkeeper->get_default_project_name; }
-    $mdlkeeper->switch_project($projnm);
-    $addrrouter->switch_project($projnm);
+    $mdlkeeper->setup();
+    $addrrouter->setup();
     return "Done\n";
 }
 
@@ -505,7 +503,7 @@ sub setup_built_module {
 }
 
 sub setup_resolved {
-    $addrrouter->reload_current_project;
+    $addrrouter->load_current_project;
     return;
 }
 

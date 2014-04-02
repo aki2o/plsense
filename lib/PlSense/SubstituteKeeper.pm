@@ -32,25 +32,25 @@ use PlSense::Entity::Array;
         $unknownargh_of{$ident} = {};
     }
 
-    sub setup_cache {
+    sub setup {
         my $self = shift;
         my $force = shift || 0;
 
-        my $projectnm = get_config("name");
-        if ( ! $force && $projectnm eq $self->get_project() ) {
-            logger->info("No need switch project data from [$projectnm]");
+        my $projnm = get_config("name");
+        if ( ! $force && $projnm eq $self->get_project() ) {
+            logger->info("No need switch project data from [$projnm]");
             return;
         }
 
-        logger->info("Switch project data to [$projectnm]");
-        $self->remove_project_all_sentinel(1);
-        if ( get_config("local") ) {
-            $cache_of{ident $self}->set_namespace("ISubst.$projectnm");
-        }
-        $projcache_of{ident $self}->set_namespace("Subst.$projectnm");
-        $self->load_project_all(1);
+        logger->info("Switch project data to [$projnm]");
+        $self->SUPER::setup($force);
+        my $local = get_config("local");
+        $local ? $self->reset : $self->remove_project_all_sentinel(1);
+        $cache_of{ident $self}->set_namespace( $local ? "ISubst.$projnm" : "ISubst" );
+        $projcache_of{ident $self}->set_namespace("Subst.$projnm");
         $addrrouter_of{ident $self}->update_project();
-        $self->SUPER::setup_cache($force);
+        if ( $local ) { $self->load_installed_all(1); }
+        $self->load_project_all(1);
         return 1;
     }
 

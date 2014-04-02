@@ -350,8 +350,9 @@ sub update_project_info {
     $currmdlnm = $loc =~ m{ ^ Module: \s+ ([^\n]*?) $ }xms ? $1 : "";
     $currmtdnm = $loc =~ m{ ^ Sub: \s+ ([^\n]*?) $ }xms ? $1 : "";
 
-    $mdlkeeper->switch_project($currprojnm);
-    $substkeeper->switch_project($currprojnm);
+    setup_config($currfilepath);
+    $mdlkeeper->setup();
+    $substkeeper->setup();
     return 1;
 }
 

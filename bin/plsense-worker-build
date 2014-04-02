@@ -82,11 +82,10 @@ $SIG{QUIT} = sub { logger->notice("Receive SIGQUIT"); interrupt_build(); exit 0;
 $SIG{TERM} = sub { logger->notice("Receive SIGTERM"); interrupt_build(); exit 0; };
 
 try {
-    my $projectnm = get_config("name") || $mdlkeeper->get_default_project_name;
     $builtin->build();
-    $mdlkeeper->set_project($projectnm);
-    $addrrouter->set_project($projectnm);
-    $substkeeper->set_project($projectnm);
+    $mdlkeeper->update_project();
+    $addrrouter->update_project();
+    $substkeeper->update_project();
 
     my ($filepath, $mdl);
     if ( -f $mdl_or_file ) {
@@ -125,7 +124,7 @@ try {
         exit 1;
     }
 
-    my @mdls = $srcupdater->update_or_create_modules($filepath, $mdl ? $mdl->get_projectnm : $projectnm);
+    my @mdls = $srcupdater->update_or_create_modules($filepath, $mdl ? $mdl->get_projectnm : get_config("name"));
     if ( ! -f $mdl_or_file ) { @mdls = ($mdl); }
 
     MDL:
