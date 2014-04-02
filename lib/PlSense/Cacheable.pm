@@ -5,39 +5,38 @@ use warnings;
 use Class::Std;
 use Cache::FileCache;
 use PlSense::Logger;
+use PlSense::Configure;
 {
-    my %cachedir_of :ATTR( :init_arg<cachedir> );
-    sub get_cachedir : RESTRICTED { my ($self) = @_; return $cachedir_of{ident $self}; }
-
     my %projectnm_of :ATTR();
-    sub set_project {
-        my ($self, $projectnm) = @_;
-        if ( ! $projectnm ) { return; }
-        $projectnm_of{ident $self} = $projectnm;
-        return 1;
-    }
-    sub get_project { my $self = shift; return $projectnm_of{ident $self}; }
-
-    sub get_default_project_name {
-        my $self = shift;
-        return "default";
-    }
+    sub get_project : RESTRICTED { my $self = shift; return $projectnm_of{ident $self}; }
 
     sub START {
         my ($class, $ident, $arg_ref) = @_;
-        $projectnm_of{$ident} = $class->get_default_project_name;
+        $projectnm_of{$ident} = get_default_config("name");
+    }
+
+    sub update_project {
+        my $self = shift;
+        $projectnm_of{ident $self} = get_config("name");
+    }
+
+    sub setup_cache {
+        my $self = shift;
+        my $force = shift || 0;
+        $self->update_project();
     }
 
     sub new_cache : RESTRICTED {
         my ($self, $namespace) = @_;
-        if ( ! -d $cachedir_of{ident $self} ) {
-            logger->error("Not exist directory[".$cachedir_of{ident $self}."]");
+        my $cachedir = get_config("cachedir");
+        if ( ! -d $cachedir ) {
+            logger->error("Not exist directory[".$cachedir."]");
             return;
         }
-        my $ret = Cache::FileCache->new({ cache_root => $cachedir_of{ident $self},
+        my $ret = Cache::FileCache->new({ cache_root => $cachedir,
                                           namespace => $namespace });
         if ( ! $ret ) {
-            logger->error("Can't available cache directory[".$cachedir_of{ident $self}."]");
+            logger->error("Can't available cache directory[".$cachedir."]");
         }
         return $ret;
     }

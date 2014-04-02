@@ -7,6 +7,7 @@ use Class::Std;
 use List::AllUtils qw{ uniq };
 use Try::Tiny;
 use PlSense::Logger;
+use PlSense::Configure;
 {
     my %cache_of :ATTR( :default(undef) );
     my %projcache_of :ATTR( :default(undef) );
@@ -15,30 +16,30 @@ use PlSense::Logger;
 
     sub START {
         my ($class, $ident, $arg_ref) = @_;
-        $cache_of{$ident} = $class->new_cache('Module');
-        $projcache_of{$ident} = $class->new_cache('Module.'.$class->get_default_project_name);
-        $class->reset;
+        $cache_of{$ident} = $class->new_cache('IModule');
+        $projcache_of{$ident} = $class->new_cache('Module.'.$class->get_project());
+        $class->reset_installed_memory();
+        $class->reset_project_memory();
     }
 
-    sub set_project {
-        my ($self, $projectnm) = @_;
-        $self->SUPER::set_project($projectnm) or return;
-        my $nextns = "Module.".$projectnm;
-        $projcache_of{ident $self}->set_namespace($nextns);
-    }
+    sub setup_cache {
+        my $self = shift;
+        my $force = shift || 0;
 
-    sub switch_project {
-        my ($self, $projectnm) = @_;
-
-        if ( ! $projectnm ) { return; }
-        if ( $projectnm eq $self->get_project() ) {
+        my $projectnm = get_config("name");
+        if ( ! $force && $projectnm eq $self->get_project() ) {
             logger->info("No need switch project data from [$projectnm]");
             return;
         }
 
         logger->info("Switch project data to [$projectnm]");
-        $self->set_project($projectnm);
-        $self->remove_project_memory();
+        if ( get_config("local") ) {
+            $cache_of{ident $self}->set_namespace("IModule.$projectnm");
+            $self->reset_installed_memory();
+        }
+        $projcache_of{ident $self}->set_namespace("Module.$projectnm");
+        $self->reset_project_memory();
+        $self->SUPER::setup_cache($force);
         return 1;
     }
 
@@ -77,7 +78,7 @@ use PlSense::Logger;
 
     sub remove_project_all_module {
         my ($self) = @_;
-        $self->remove_project_memory();
+        $self->reset_project_memory();
         try   { $projcache_of{ident $self}->clear; }
         catch { $projcache_of{ident $self}->clear; };
         logger->info("Removed all project module info of [".$projcache_of{ident $self}->get_namespace."]");
@@ -85,19 +86,13 @@ use PlSense::Logger;
 
     sub remove_all_module {
         my ($self) = @_;
-        $self->reset;
+        $self->reset_installed_memory();
+        $self->reset_project_memory();
         try   { $cache_of{ident $self}->clear; }
         catch { $cache_of{ident $self}->clear; };
         try   { $projcache_of{ident $self}->clear; }
         catch { $projcache_of{ident $self}->clear; };
         logger->info("Removed all module info");
-    }
-
-    sub reset {
-        my $self = shift;
-        $moduleh_of{ident $self} = {};
-        $projmoduleh_of{ident $self} = {};
-        return;
     }
 
     sub get_module {
@@ -171,7 +166,13 @@ use PlSense::Logger;
     }
 
 
-    sub remove_project_memory : PRIVATE {
+    sub reset_installed_memory : PRIVATE {
+        my ($self) = @_;
+        $moduleh_of{ident $self} = {};
+        return;
+    }
+
+    sub reset_project_memory : PRIVATE {
         my ($self) = @_;
         $projmoduleh_of{ident $self} = {};
         return;

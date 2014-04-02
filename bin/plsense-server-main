@@ -349,7 +349,7 @@ sub set_currentmethod {
 }
 
 sub get_current_location {
-    my $ret = "Project: ".$mdlkeeper->get_project."\n";
+    my $ret = "Project: ".get_config("name")."\n";
     $ret .= "File: $currfilepath\n";
     $ret .= "Module: $currmdlnm\n";
     $ret .= "Sub: $currmtdnm\n";

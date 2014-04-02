@@ -6,6 +6,7 @@ use warnings;
 use Class::Std;
 use Try::Tiny;
 use PlSense::Logger;
+use PlSense::Configure;
 use PlSense::Symbol::Method;
 use PlSense::Symbol::Variable;
 {

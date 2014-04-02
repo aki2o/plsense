@@ -7,6 +7,7 @@ use Class::Std;
 use List::AllUtils qw{ firstidx lastidx };
 use Try::Tiny;
 use PlSense::Logger;
+use PlSense::Configure;
 {
     my %cache_of :ATTR( :default(undef) );
     my %routeh_of :ATTR();
@@ -29,12 +30,11 @@ use PlSense::Logger;
         $class->reset;
     }
 
-    sub switch_project {
+    sub setup_cache {
         my $self = shift;
-        my $projectnm = shift || "";
         my $force = shift || 0;
 
-        if ( ! $projectnm ) { return; }
+        my $projectnm = get_config("name");
         if ( ! $force && $projectnm eq $self->get_project() ) {
             logger->info("No need switch project data from [$projectnm]");
             return;
@@ -47,13 +47,13 @@ use PlSense::Logger;
         $routeh_of{ident $self} = $cacheh && $cacheh->{"route"} ? $cacheh->{"route"} : {};
         $rrouteh_of{ident $self} = $cacheh && $cacheh->{"rroute"} ? $cacheh->{"rroute"} : {};
         $self->init_common_key_hash;
-        $self->set_project($projectnm);
+        $self->SUPER::setup_cache($force);
         logger->info("Switched project routing to $projectnm");
     }
 
     sub reload_current_project {
         my ($self) = @_;
-        $self->switch_project($self->get_project, 1);
+        $self->setup_cache(1);
     }
 
     sub store_current_project {

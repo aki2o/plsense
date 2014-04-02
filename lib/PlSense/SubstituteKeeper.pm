@@ -7,6 +7,7 @@ use Class::Std;
 use List::AllUtils qw{ any firstidx };
 use Try::Tiny;
 use PlSense::Logger;
+use PlSense::Configure;
 use PlSense::Entity::Scalar;
 use PlSense::Entity::Array;
 {
@@ -25,34 +26,31 @@ use PlSense::Entity::Array;
 
     sub START {
         my ($class, $ident, $arg_ref) = @_;
-        $cache_of{$ident} = $class->new_cache('Subst');
-        $projcache_of{$ident} = $class->new_cache('Subst.'.$class->get_default_project_name);
+        $cache_of{$ident} = $class->new_cache('ISubst');
+        $projcache_of{$ident} = $class->new_cache('Subst.'.$class->get_project());
         $substh_of{$ident} = {};
         $unknownargh_of{$ident} = {};
     }
 
-    sub set_project {
-        my ($self, $projectnm) = @_;
-        $self->SUPER::set_project($projectnm) or return;
-        my $nextns = "Subst.".$projectnm;
-        $projcache_of{ident $self}->set_namespace($nextns);
-    }
-
-    sub switch_project {
+    sub setup_cache {
         my $self = shift;
-        my $projectnm = shift || "";
+        my $force = shift || 0;
 
-        if ( ! $projectnm ) { return; }
-        if ( $projectnm eq $self->get_project() ) {
+        my $projectnm = get_config("name");
+        if ( ! $force && $projectnm eq $self->get_project() ) {
             logger->info("No need switch project data from [$projectnm]");
             return;
         }
 
         logger->info("Switch project data to [$projectnm]");
         $self->remove_project_all_sentinel(1);
-        $self->set_project($projectnm);
-        $addrrouter_of{ident $self}->set_project($projectnm);
+        if ( get_config("local") ) {
+            $cache_of{ident $self}->set_namespace("ISubst.$projectnm");
+        }
+        $projcache_of{ident $self}->set_namespace("Subst.$projectnm");
         $self->load_project_all(1);
+        $addrrouter_of{ident $self}->update_project();
+        $self->SUPER::setup_cache($force);
         return 1;
     }
 
@@ -640,7 +638,7 @@ use PlSense::Entity::Array;
     sub load_project_all : PRIVATE {
         my $self = shift;
         my $not_resolve_subst = shift || 0;
-        if ( $self->get_project eq $self->get_default_project_name ) { return; }
+        if ( $self->get_project eq get_default_config("name") ) { return; }
         my @keys;
         try   { @keys = $projcache_of{ident $self}->get_keys; }
         catch { @keys = $projcache_of{ident $self}->get_keys; };

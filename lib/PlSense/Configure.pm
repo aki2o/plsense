@@ -31,6 +31,7 @@ our @EXPORT = qw( setup_config
                        perl        => "perl",
                        perldoc     => "perldoc",
                        "clean-env" => 0,
+                       name        => "default",
                        local       => 0,
                        carton      => 0, );
     my $gcnf;
