@@ -42,7 +42,7 @@ my $scli = PlSense::SocketClient->new({ mainport => $port1,
                                         retryinterval => 0.5,
                                         maxretry => 200 });
 
-my $mdlkeeper = PlSense::ModuleKeeper->new({ cachedir => $cachedir });
+my $mdlkeeper = PlSense::ModuleKeeper->new();
 my $nowstoringmdl = undef;
 
 $SIG{INT} = sub { logger->notice("Receive SIGINT"); resume_store(); exit 0; };

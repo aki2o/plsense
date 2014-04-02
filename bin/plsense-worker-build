@@ -50,13 +50,11 @@ my $scli = PlSense::SocketClient->new({ mainport => $port1,
                                         retryinterval => 0.5,
                                         maxretry => 300 });
 
-my $builtin = PlSense::Builtin->new({ cachedir => $cachedir });
-my $mdlkeeper = PlSense::ModuleKeeper->new({ cachedir => $cachedir });
-my $addrrouter = PlSense::AddressRouter->new({ cachedir => $cachedir,
-                                               mdlkeeper => $mdlkeeper,
+my $builtin = PlSense::Builtin->new();
+my $mdlkeeper = PlSense::ModuleKeeper->new();
+my $addrrouter = PlSense::AddressRouter->new({ mdlkeeper => $mdlkeeper,
                                                with_build => 1, });
-my $substkeeper = PlSense::SubstituteKeeper->new({ cachedir => $cachedir,
-                                                   mdlkeeper => $mdlkeeper,
+my $substkeeper = PlSense::SubstituteKeeper->new({ mdlkeeper => $mdlkeeper,
                                                    addrrouter => $addrrouter, });
 my $substbuilder = PlSense::SubstituteBuilder->new({ builtin => $builtin,
                                                      mdlkeeper => $mdlkeeper,

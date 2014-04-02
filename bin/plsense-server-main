@@ -102,10 +102,9 @@ if ( ! $sock->listen ) {
     exit 1;
 }
 
-my $builtin = PlSense::Builtin->new({ cachedir => $cachedir });
-my $mdlkeeper = PlSense::ModuleKeeper->new({ cachedir => $cachedir });
-my $addrrouter = PlSense::AddressRouter->new({ cachedir => $cachedir,
-                                               mdlkeeper => $mdlkeeper,
+my $builtin = PlSense::Builtin->new();
+my $mdlkeeper = PlSense::ModuleKeeper->new();
+my $addrrouter = PlSense::AddressRouter->new({ mdlkeeper => $mdlkeeper,
                                                with_build => 0, });
 my $addrfinder = PlSense::SubstituteValueFinder->new({ builtin => $builtin,
                                                        mdlkeeper => $mdlkeeper,
