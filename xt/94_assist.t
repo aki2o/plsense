@@ -61,11 +61,12 @@ foreach my $f ( @testsrc ) {
             $cmdret =~ s{ \s+ }{ }xmsg;
             $cmdret =~ s{ \A \s+ }{}xms;
             $cmdret =~ s{ \s+ \z }{}xms;
+            my @rets = split m{ \s+ }xms, $cmdret;
             if ( $testmethod eq "equal" ) {
-                is($cmdret, $expected, "assist check $testmethod $testdesc");
+                is($cmdret, $expected, "assist check $testmethod $testdesc") or
+                print STDERR "Got: ".join(", ", @rets)."\n";
             }
             elsif ( $testmethod eq "include" ) {
-                my @rets = split m{ \s+ }xms, $cmdret;
                 my $include = 1;
                 EXPECT:
                 foreach my $e ( split m{ \s+ }xms, $expected ) {
@@ -76,10 +77,10 @@ foreach my $f ( @testsrc ) {
                         last EXPECT;
                     }
                 }
-                ok($include, "assist check $testmethod $testdesc");
+                ok($include, "assist check $testmethod $testdesc") or
+                print STDERR "Got: ".join(", ", @rets)."\n";
             }
             elsif ( $testmethod eq "exclude" ) {
-                my @rets = split m{ \s+ }xms, $cmdret;
                 my $exclude = 1;
                 EXPECT:
                 foreach my $e ( split m{ \s+ }xms, $expected ) {
@@ -90,7 +91,8 @@ foreach my $f ( @testsrc ) {
                         last EXPECT;
                     }
                 }
-                ok($exclude, "assist check $testmethod $testdesc");
+                ok($exclude, "assist check $testmethod $testdesc") or
+                print STDERR "Got: ".join(", ", @rets)."\n";
             }
         }
 
