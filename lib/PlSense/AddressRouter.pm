@@ -30,6 +30,13 @@ use PlSense::Configure;
         $class->reset;
     }
 
+    sub setup_without_reload {
+        my $self = shift;
+        $self->update_project();
+        my $projnm = $self->get_project();
+        $cache_of{ident $self}->set_namespace( get_config("local") ? "Resolve.$projnm" : "Resolve" );
+    }
+
     sub setup {
         my $self = shift;
         my $force = shift || 0;
@@ -40,8 +47,7 @@ use PlSense::Configure;
             return;
         }
 
-        $cache_of{ident $self}->set_namespace( get_config("local") ? "Resolve.$projnm" : "Resolve" );
-        $self->SUPER::setup($force);
+        $self->setup_without_reload();
         $self->load_current_project();
         logger->info("Switched project routing to $projnm");
         return 1;

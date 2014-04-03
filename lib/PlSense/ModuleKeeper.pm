@@ -21,6 +21,14 @@ use PlSense::Configure;
         $class->reset;
     }
 
+    sub setup_without_reload {
+        my $self = shift;
+        $self->update_project();
+        my $projnm = $self->get_project();
+        $cache_of{ident $self}->set_namespace( get_config("local") ? "IModule.$projnm" : "IModule" );
+        $projcache_of{ident $self}->set_namespace("Module.$projnm");
+    }
+
     sub setup {
         my $self = shift;
         my $force = shift || 0;
@@ -32,10 +40,8 @@ use PlSense::Configure;
         }
 
         logger->info("Switch project data to [$projnm]");
-        $cache_of{ident $self}->set_namespace( get_config("local") ? "IModule.$projnm" : "IModule" );
-        $projcache_of{ident $self}->set_namespace("Module.$projnm");
         $self->reset;
-        $self->SUPER::setup($force);
+        $self->setup_without_reload();
         return 1;
     }
 
@@ -244,7 +250,10 @@ use PlSense::Configure;
                                      || $cache_of{ident $self}->get($key);
         } catch {
         };
-        if ( ! $cachemdl || ! $cachemdl->isa("PlSense::Symbol::Module") ) { return; }
+        if ( ! $cachemdl || ! $cachemdl->isa("PlSense::Symbol::Module") ) {
+            logger->warn("Failed load cached module data of $key");
+            return;
+        }
 
         my $mdl = $cachemdl->get_projectnm ? $projmoduleh_of{ident $self}->{$key}
                 :                            $moduleh_of{ident $self}->{$key};

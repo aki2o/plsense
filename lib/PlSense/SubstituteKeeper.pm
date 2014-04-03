@@ -32,6 +32,15 @@ use PlSense::Entity::Array;
         $unknownargh_of{$ident} = {};
     }
 
+    sub setup_without_reload {
+        my $self = shift;
+        $self->update_project();
+        my $projnm = $self->get_project();
+        $cache_of{ident $self}->set_namespace( get_config("local") ? "ISubst.$projnm" : "ISubst" );
+        $projcache_of{ident $self}->set_namespace("Subst.$projnm");
+        $addrrouter_of{ident $self}->setup_without_reload();
+    }
+
     sub setup {
         my $self = shift;
         my $force = shift || 0;
@@ -43,12 +52,9 @@ use PlSense::Entity::Array;
         }
 
         logger->info("Switch project data to [$projnm]");
-        $self->SUPER::setup($force);
         my $local = get_config("local");
         $local ? $self->reset : $self->remove_project_all_sentinel(1);
-        $cache_of{ident $self}->set_namespace( $local ? "ISubst.$projnm" : "ISubst" );
-        $projcache_of{ident $self}->set_namespace("Subst.$projnm");
-        $addrrouter_of{ident $self}->update_project();
+        $self->setup_without_reload();
         if ( $local ) { $self->load_installed_all(1); }
         $self->load_project_all(1);
         return 1;

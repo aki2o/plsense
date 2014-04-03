@@ -85,9 +85,9 @@ $SIG{TERM} = sub { logger->notice("Receive SIGTERM"); interrupt_build(); exit 0;
 
 try {
     $builtin->build();
-    $mdlkeeper->update_project();
-    $addrrouter->update_project();
-    $substkeeper->update_project();
+    $mdlkeeper->setup_without_reload();
+    $addrrouter->setup_without_reload();
+    $substkeeper->setup_without_reload();
 
     my ($filepath, $mdl);
     if ( -f $mdl_or_file ) {

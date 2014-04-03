@@ -20,10 +20,13 @@ use PlSense::Configure;
         $projectnm_of{ident $self} = get_config("name");
     }
 
+    sub setup_without_reload {
+        my $self = shift;
+    }
+
     sub setup {
         my $self = shift;
         my $force = shift || 0;
-        $self->update_project();
     }
 
     sub new_cache : RESTRICTED {
