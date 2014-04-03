@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/aki2o/plsense.svg?branch=master)](https://travis-ci.org/aki2o/plsense)
+
 [Japanese](https://github.com/aki2o/plsense/blob/master/README-ja.md)
 
 What's this?

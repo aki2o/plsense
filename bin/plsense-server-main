@@ -213,14 +213,8 @@ sub remove {
         $mdl_or_file =~ s{ ^\s+ }{}xms;
         $mdl_or_file =~ s{ \s+$ }{}xms;
         if ( ! $mdl_or_file ) { next ENTRY; }
-        my ($mdlnm, $filepath) = ("", "");
-        if ( -f $mdl_or_file ) {
-            $mdlnm = "main";
-            $filepath = File::Spec->rel2abs($mdl_or_file);
-        }
-        else {
-            $mdlnm = $mdl_or_file;
-        }
+        my ($mdlnm, $filepath) = -f $mdl_or_file ? ("main", File::Spec->rel2abs($mdl_or_file))
+                               :                   ($mdl_or_file, "");
         my $mdl = $mdlkeeper->get_module($mdlnm, $filepath) or next ENTRY;
         if ( $filepath ) {
             foreach my $m ( $mdlkeeper->get_bundle_modules($filepath) ) {
@@ -368,21 +362,12 @@ sub is_ready {
     my $mdl_or_file = shift || "";
     $mdl_or_file =~ s{ ^\s+ }{}xms;
     $mdl_or_file =~ s{ \s+$ }{}xms;
-    my ($mdlnm, $filepath) = ("", "");
     if ( ! $mdl_or_file ) {
         return join("\n", map { $_->get_name } $mdlkeeper->get_built_modules)."\n";
     }
-    elsif ( -f $mdl_or_file ) {
-        $mdlnm = "main";
-        $filepath = File::Spec->rel2abs($mdl_or_file);
-    }
-    else {
-        $mdlnm = $mdl_or_file;
-    }
-    my $mdl = $mdlkeeper->get_module($mdlnm, $filepath);
-    if ( ! $mdl ) {
-        return "Not Found\n";
-    }
+    my ($mdlnm, $filepath) = -f $mdl_or_file ? ("main", File::Spec->rel2abs($mdl_or_file))
+                           :                   ($mdl_or_file, "");
+    my $mdl = $mdlkeeper->get_module($mdlnm, $filepath) or return "Not Found\n";
     if ( ! $mdl->is_initialized ) { return "No\n"; }
     return "Yes\n";
 }
@@ -397,14 +382,8 @@ sub debug_module {
     my $mdl_or_file = shift || "";
     $mdl_or_file =~ s{ ^\s+ }{}xms;
     $mdl_or_file =~ s{ \s+$ }{}xms;
-    my ($mdlnm, $filepath) = ("", "");
-    if ( -f $mdl_or_file ) {
-        $mdlnm = "main";
-        $filepath = File::Spec->rel2abs($mdl_or_file);
-    }
-    else {
-        $mdlnm = $mdl_or_file;
-    }
+    my ($mdlnm, $filepath) = -f $mdl_or_file ? ("main", File::Spec->rel2abs($mdl_or_file))
+                           :                   ($mdl_or_file, "");
     my $mdl = $mdlkeeper->get_module($mdlnm, $filepath) or return;
     return $mdl->to_detail_string;
 }
@@ -428,14 +407,8 @@ sub uninitialize_module {
     my $mdl_or_file = shift || "";
     $mdl_or_file =~ s{ ^\s+ }{}xms;
     $mdl_or_file =~ s{ \s+$ }{}xms;
-    my ($mdlnm, $filepath) = ("", "");
-    if ( -f $mdl_or_file ) {
-        $mdlnm = "main";
-        $filepath = File::Spec->rel2abs($mdl_or_file);
-    }
-    else {
-        $mdlnm = $mdl_or_file;
-    }
+    my ($mdlnm, $filepath) = -f $mdl_or_file ? ("main", File::Spec->rel2abs($mdl_or_file))
+                           :                   ($mdl_or_file, "");
     my $mdl = $mdlkeeper->get_module($mdlnm, $filepath) or return;
     if ( $filepath ) {
         foreach my $m ( $mdlkeeper->get_bundle_modules($filepath) ) {
@@ -463,14 +436,8 @@ sub setup_found_module {
         $mdl_or_file =~ s{ ^\s+ }{}xms;
         $mdl_or_file =~ s{ \s+$ }{}xms;
         if ( ! $mdl_or_file ) { next ENTRY; }
-        my ($mdlnm, $filepath) = ("", "");
-        if ( -f $mdl_or_file ) {
-            $mdlnm = "main";
-            $filepath = File::Spec->rel2abs($mdl_or_file);
-        }
-        else {
-            $mdlnm = $mdl_or_file;
-        }
+        my ($mdlnm, $filepath) = -f $mdl_or_file ? ("main", File::Spec->rel2abs($mdl_or_file))
+                               :                   ($mdl_or_file, "");
         $is_project ? $mdlkeeper->get_project_module($mdlnm, $filepath)
                     : $mdlkeeper->get_module($mdlnm, $filepath);
     }
@@ -492,14 +459,8 @@ sub setup_built_module {
         $mdl_or_file =~ s{ ^\s+ }{}xms;
         $mdl_or_file =~ s{ \s+$ }{}xms;
         if ( ! $mdl_or_file ) { next ENTRY; }
-        my ($mdlnm, $filepath) = ("", "");
-        if ( -f $mdl_or_file ) {
-            $mdlnm = "main";
-            $filepath = $mdl_or_file;
-        }
-        else {
-            $mdlnm = $mdl_or_file;
-        }
+        my ($mdlnm, $filepath) = -f $mdl_or_file ? ("main", File::Spec->rel2abs($mdl_or_file))
+                               :                   ($mdl_or_file, "");
         my $mdl = $mdlkeeper->load_module($mdlnm, $filepath) or next ENTRY;
         logger->notice("Finished reload module of '$mdl_or_file'");
     }

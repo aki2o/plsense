@@ -211,14 +211,8 @@ sub remove {
         $mdl_or_file =~ s{ ^\s+ }{}xms;
         $mdl_or_file =~ s{ \s+$ }{}xms;
         if ( ! $mdl_or_file ) { next ENTRY; }
-        my ($mdlnm, $filepath) = ("", "");
-        if ( -f $mdl_or_file ) {
-            $mdlnm = "main";
-            $filepath = File::Spec->rel2abs($mdl_or_file);
-        }
-        else {
-            $mdlnm = $mdl_or_file;
-        }
+        my ($mdlnm, $filepath) = -f $mdl_or_file ? ("main", File::Spec->rel2abs($mdl_or_file))
+                               :                   ($mdl_or_file, "");
         my $mdl = $mdlkeeper->get_module($mdlnm, $filepath) or next ENTRY;
         $substkeeper->remove($mdl->get_name, $mdl->get_filepath, $mdl->get_projectnm);
     }
@@ -297,14 +291,8 @@ sub setup_built_module {
         $mdl_or_file =~ s{ ^\s+ }{}xms;
         $mdl_or_file =~ s{ \s+$ }{}xms;
         if ( ! $mdl_or_file ) { next ENTRY; }
-        my ($mdlnm, $filepath) = ("", "");
-        if ( -f $mdl_or_file ) {
-            $mdlnm = "main";
-            $filepath = $mdl_or_file;
-        }
-        else {
-            $mdlnm = $mdl_or_file;
-        }
+        my ($mdlnm, $filepath) = -f $mdl_or_file ? ("main", $mdl_or_file)
+                               :                   ($mdl_or_file, "");
         my $mdl = $mdlkeeper->load_module($mdlnm, $filepath) or next ENTRY;
         $substkeeper->load($mdl->get_name, $mdl->get_filepath, $mdl->get_projectnm);
         logger->notice("Finished reload module of '$mdl_or_file'");

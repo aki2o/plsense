@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/aki2o/plsense.svg?branch=master)](https://travis-ci.org/aki2o/plsense)
+
 これは何？
 ==========
 

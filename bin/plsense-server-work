@@ -354,15 +354,7 @@ sub build_sentinel {
         $mdl_or_file =~ s{ ^\s+ }{}xms;
         $mdl_or_file =~ s{ \s+$ }{}xms;
         if ( ! $mdl_or_file ) { next ENTRY; }
-        my ($mdlnm, $target) = ("", "", "");
-        if ( -f $mdl_or_file ) {
-            $mdlnm = "main";
-            $target = File::Spec->rel2abs($mdl_or_file);
-        }
-        else {
-            $mdlnm = $mdl_or_file;
-            $target = $mdlnm;
-        }
+        my $target = -f $mdl_or_file ? File::Spec->rel2abs($mdl_or_file) : $mdl_or_file;
         my $taskkey = "build ".$target;
         if ( is_running($taskkey) ) {
             logger->info("Quit build '$mdl_or_file'. It's now building or build already");
