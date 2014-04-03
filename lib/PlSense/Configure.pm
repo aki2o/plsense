@@ -154,9 +154,9 @@ our @EXPORT = qw( setup_config
         if ( $carton ) {
             $pcnf->{local} = 1;
             my $perl = get_config("perl");
-            if ( $perl eq get_default_config("perl") ) { $perl = "carton exec perl"; }
+            if ( $perl eq get_default_config("perl") ) { $perl = "carton exec -- perl"; }
             my $perldoc = get_config("perldoc");
-            if ( $perldoc eq get_default_config("perldoc") ) { $perldoc = "carton exec perldoc"; }
+            if ( $perldoc eq get_default_config("perldoc") ) { $perldoc = "carton exec -- perldoc"; }
             $pcnf->{perl} = "cd '$prootdir' ; $perl";
             $pcnf->{perldoc} = "cd '$prootdir' ; $perldoc";
         }
@@ -185,10 +185,11 @@ our @EXPORT = qw( setup_config
         CONFIG:
         foreach my $confignm ( @keys ) {
             my $desc = $desc_of{$confignm};
-            my $default = $default_of{$confignm} || "";
+            my $default = $default_of{$confignm};
             $c->{_}{$confignm} = $desc                    ? read_string("Input ${desc}: ($default) ") || $default
                                : exists $old->{$confignm} ? $old->{$confignm}
-                               :                            $default;
+                               : defined $default         ? $default
+                               :                            "";
         }
         my $fh;
         if ( ! open($fh, '>:utf8', $confpath) ) {

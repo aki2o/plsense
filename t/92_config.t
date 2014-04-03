@@ -51,14 +51,17 @@ ok($fh, "open config") or done_mytest();
 my @confvalues = <$fh>;
 close $fh;
 
-is($#confvalues, 6, "default config entry count");
+is($#confvalues, 9, "default config entry count");
 is($confvalues[0], "cachedir=$workpath/.plsense.d\n", "default config about cache directory");
-is($confvalues[1], "logfile=\n", "default config about log file");
-is($confvalues[2], "loglevel=\n", "default config about log level");
-is($confvalues[3], "maxtasks=20\n", "default config about task limit");
-is($confvalues[4], "port1=33333\n", "default config about main port");
-is($confvalues[5], "port2=33334\n", "default config about work port");
-is($confvalues[6], "port3=33335\n", "default config about resolve port");
+is($confvalues[1], "clean-env=\n", "default config about whether clean env");
+is($confvalues[2], "logfile=\n", "default config about log file");
+is($confvalues[3], "loglevel=\n", "default config about log level");
+is($confvalues[4], "maxtasks=20\n", "default config about task limit");
+is($confvalues[5], "perl=perl\n", "default config about perl");
+is($confvalues[6], "perldoc=perldoc\n", "default config about perldoc");
+is($confvalues[7], "port1=33333\n", "default config about main port");
+is($confvalues[8], "port2=33334\n", "default config about work port");
+is($confvalues[9], "port3=33335\n", "default config about resolve port");
 
 # update
 open $fh, '>', "$workpath/.param";
@@ -80,14 +83,17 @@ ok($fh, "open config") or done_mytest();
 @confvalues = <$fh>;
 close $fh;
 
-is($#confvalues, 6, "config entry count");
+is($#confvalues, 9, "config entry count");
 is($confvalues[0], "cachedir=$tmpdir\n", "config about cache directory");
-is($confvalues[1], "logfile=\n", "config about log file");
-is($confvalues[2], "loglevel=\n", "config about log level");
-is($confvalues[3], "maxtasks=19\n", "config about task limit");
-is($confvalues[4], "port1=$mainport\n", "config about main port");
-is($confvalues[5], "port2=$workport\n", "config about work port");
-is($confvalues[6], "port3=$resolveport\n", "config about resolve port");
+is($confvalues[1], "clean-env=\n", "config about whether clean env");
+is($confvalues[2], "logfile=\n", "config about log file");
+is($confvalues[3], "loglevel=\n", "config about log level");
+is($confvalues[4], "maxtasks=19\n", "config about task limit");
+is($confvalues[5], "perl=perl\n", "config about perl");
+is($confvalues[6], "perldoc=perldoc\n", "config about perldoc");
+is($confvalues[7], "port1=$mainport\n", "config about main port");
+is($confvalues[8], "port2=$workport\n", "config about work port");
+is($confvalues[9], "port3=$resolveport\n", "config about resolve port");
 
 
 done_testing();
