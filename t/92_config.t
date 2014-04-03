@@ -53,7 +53,7 @@ close $fh;
 
 is($#confvalues, 9, "default config entry count");
 is($confvalues[0], "cachedir=$workpath/.plsense.d\n", "default config about cache directory");
-is($confvalues[1], "clean-env=\n", "default config about whether clean env");
+is($confvalues[1], "clean-env=0\n", "default config about whether clean env");
 is($confvalues[2], "logfile=\n", "default config about log file");
 is($confvalues[3], "loglevel=\n", "default config about log level");
 is($confvalues[4], "maxtasks=20\n", "default config about task limit");
@@ -85,7 +85,7 @@ close $fh;
 
 is($#confvalues, 9, "config entry count");
 is($confvalues[0], "cachedir=$tmpdir\n", "config about cache directory");
-is($confvalues[1], "clean-env=\n", "config about whether clean env");
+is($confvalues[1], "clean-env=0\n", "config about whether clean env");
 is($confvalues[2], "logfile=\n", "config about log file");
 is($confvalues[3], "loglevel=\n", "config about log level");
 is($confvalues[4], "maxtasks=19\n", "config about task limit");

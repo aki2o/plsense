@@ -318,8 +318,8 @@ else {
     $port2    ||= get_config("port2");
     $port3    ||= get_config("port3");
     $maxtasks ||= get_config("maxtasks");
-    $loglvl   ||= get_config("loglevel");
-    $logfile  ||= get_config("logfile");
+    $loglvl   ||= get_config("loglevel") || "";
+    $logfile  ||= get_config("logfile") || "";
     setup_logger($loglvl, $logfile);
 }
 
