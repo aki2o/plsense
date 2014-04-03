@@ -63,8 +63,7 @@ foreach my $f ( @testsrc ) {
             $cmdret =~ s{ \s+ \z }{}xms;
             my @rets = split m{ \s+ }xms, $cmdret;
             if ( $testmethod eq "equal" ) {
-                is($cmdret, $expected, "assist check $testmethod $testdesc") or
-                print STDERR "Got: ".join(", ", @rets)."\n";
+                is($cmdret, $expected, "assist check $testmethod $testdesc");
             }
             elsif ( $testmethod eq "include" ) {
                 my $include = 1;

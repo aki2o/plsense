@@ -25,7 +25,7 @@ for ( my $i = 0; $i <= 500; $i++ ) {
     foreach my $f ( @testsrc ) {
         my $readyret = get_plsense_testcmd_result("ready '$f'");
         chomp $readyret;
-        if ( $readyret != "Yes" ) {
+        if ( $readyret ne "Yes" ) {
             $notyet = 1;
             last CHK_READY;
         }
