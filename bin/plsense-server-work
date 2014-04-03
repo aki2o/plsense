@@ -85,7 +85,7 @@ if ( ! $sock->listen ) {
 
 my %taskinfo_of;
 my @taskqueue;
-my $reqprojnm = undef;
+my $local;
 
 $SIG{WINCH} = sub { logger->notice("Receive SIGWINCH"); kill_all_task(); exit 0; };
 $SIG{TERM} = sub { logger->notice("Receive SIGTERM"); kill_all_task(); exit 0; };
@@ -282,7 +282,6 @@ sub add_find_installed_task {
 
 sub update_current_project {
     my $filepath = shift || "";
-    my $add_find_task = shift || 0;
     if ( ! -f $filepath ) { return; }
 
     my $oldconfpath = get_config("confpath") || "";
@@ -290,14 +289,12 @@ sub update_current_project {
     my $newconfpath = get_config("confpath") || "";
     if ( $oldconfpath eq $newconfpath ) { return; }
 
-    if ( get_config("local") && $add_find_task ) {
-        add_find_installed_task();
-    }
+    my $newlocal = get_config("local");
+    if ( $local || $newlocal ) { add_find_installed_task(); }
+    $local = $newlocal;
 
     my $newlibpath = get_config("lib-path") || "";
-    if ( -d $newlibpath && $add_find_task ) {
-        add_find_task(0, get_config("name"), $newlibpath);
-    }
+    if ( -d $newlibpath ) { add_find_task(0, get_config("name"), $newlibpath); }
 
     return 1;
 }
@@ -377,7 +374,7 @@ sub open_file {
         logger->error("Not exist file[$filepath]");
         return "Failed\n";
     }
-    update_current_project($filepath, 1);
+    update_current_project($filepath);
     build_sentinel($filepath, 1, 0);
     return sync_location($filepath) ? "Done\n" : "Failed\n";
 }
@@ -390,7 +387,7 @@ sub current_file {
         logger->error("Not exist file[$filepath]");
         return "Failed\n";
     }
-    update_current_project($filepath, 1);
+    update_current_project($filepath);
     return sync_location($filepath) ? "Done\n" : "Failed\n";
 }
 

@@ -13,6 +13,7 @@ use PlSense::Configure;
     my %projcache_of :ATTR( :default(undef) );
     my %moduleh_of :ATTR();
     my %projmoduleh_of :ATTR();
+    my %current_local_is :ATTR();
 
     sub START {
         my ($class, $ident, $arg_ref) = @_;
@@ -25,8 +26,10 @@ use PlSense::Configure;
         my $self = shift;
         $self->update_project();
         my $projnm = $self->get_project();
-        $cache_of{ident $self}->set_namespace( get_config("local") ? "IModule.$projnm" : "IModule" );
+        my $local = get_config("local");
+        $cache_of{ident $self}->set_namespace( $local ? "IModule.$projnm" : "IModule" );
         $projcache_of{ident $self}->set_namespace("Module.$projnm");
+        $current_local_is{ident $self} = $local;
     }
 
     sub setup {
@@ -40,8 +43,11 @@ use PlSense::Configure;
         }
 
         logger->info("Switch project data to [$projnm]");
-        $self->reset;
+        my $local = get_config("local");
+        if ( $current_local_is{ident $self} || $local ) { $self->reset_installed_memory(); }
+        $self->reset_project_memory();
         $self->setup_without_reload();
+        # Loading is entrusted to plsense-server-work
         return 1;
     }
 

@@ -17,6 +17,7 @@ use PlSense::Entity::Array;
     my %unknownargh_of :ATTR();
     my %max_entry_of :ATTR( :init_arg<max_entry> :default(50) );
     my %max_address_entry_of :ATTR( :init_arg<max_address_entry> :default(3) );
+    my %current_local_is :ATTR();
 
     my %mdlkeeper_of :ATTR( :init_arg<mdlkeeper> );
     sub get_mdlkeeper { my ($self) = @_; return $mdlkeeper_of{ident $self}; }
@@ -36,9 +37,11 @@ use PlSense::Entity::Array;
         my $self = shift;
         $self->update_project();
         my $projnm = $self->get_project();
-        $cache_of{ident $self}->set_namespace( get_config("local") ? "ISubst.$projnm" : "ISubst" );
+        my $local = get_config("local");
+        $cache_of{ident $self}->set_namespace( $local ? "ISubst.$projnm" : "ISubst" );
         $projcache_of{ident $self}->set_namespace("Subst.$projnm");
         $addrrouter_of{ident $self}->setup_without_reload();
+        $current_local_is{ident $self} = $local;
     }
 
     sub setup {
@@ -53,7 +56,8 @@ use PlSense::Entity::Array;
 
         logger->info("Switch project data to [$projnm]");
         my $local = get_config("local");
-        $local ? $self->reset : $self->remove_project_all_sentinel(1);
+        $current_local_is{ident $self} || $local ? $self->reset
+                                                 : $self->remove_project_all_sentinel(1);
         $self->setup_without_reload();
         if ( $local ) { $self->load_installed_all(1); }
         $self->load_project_all(1);
