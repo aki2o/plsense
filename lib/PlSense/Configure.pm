@@ -62,7 +62,7 @@ our @EXPORT = qw( setup_config
         }
         $pcnf = {};
         $pcnf->{$_} = $primary_of{$_} foreach grep { exists $primary_of{$_} } @pkeys;
-        if ( ! $filepath ) { return; }
+        if ( ! $filepath ) { return 1; }
         my $pconfpath = get_config_path($filepath) or return 1;
         if ( exists $pcnf_of{$pconfpath} && ! $reload ) {
             $pcnf = $pcnf_of{$pconfpath};
@@ -222,7 +222,8 @@ our @EXPORT = qw( setup_config
         my $cnf = {};
         CONFIG:
         foreach my $confignm ( @keys ) {
-            my $v = $c->{_}{$confignm} or next CONFIG;
+            my $v = $c->{_}{$confignm};
+            if ( ! defined $v || $v eq '' ) { next CONFIG; }
             $v =~ s{ ^ \s+ }{}xms;
             $v =~ s{ \s+ $ }{}xms;
             $cnf->{$confignm} = $v;
