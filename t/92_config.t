@@ -25,7 +25,7 @@ my $chhome = "HOME=$workpath ; export HOME";
 
 # cancel
 my $ret = qx{ $addpath ; $chhome ; echo n | plsense 2> /dev/null };
-ok($ret =~ m{ ^ Making\? \s+ \(Y/n\) \s+ Not \s+ create/update }xms, "show message about not created");
+ok($ret =~ m{ ^ Making\? \s+ \(Y/n\) \s+ Not \s+ create }xms, "show message about not created");
 ok(! -f $confpath, "not created config");
 
 my $fh;

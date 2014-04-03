@@ -48,7 +48,7 @@ our @EXPORT = qw( setup_config
             $gcnf->{$_} = $primary_of{$_} foreach grep { exists $primary_of{$_} } @gkeys;
             if ( ! exist_global_config() && $interactive ) {
                 my $ret = read_string("Not exist config file [$global_config_path]\nMaking? (Y/n) ") || "";
-                if ( lc($ret) eq 'y' || lc($ret) eq 'yes' ) {
+                if ( ! $ret || lc($ret) eq 'y' || lc($ret) eq 'yes' ) {
                     create_global_config();
                 }
                 else {

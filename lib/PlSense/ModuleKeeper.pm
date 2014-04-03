@@ -18,8 +18,7 @@ use PlSense::Configure;
         my ($class, $ident, $arg_ref) = @_;
         $cache_of{$ident} = $class->new_cache('IModule');
         $projcache_of{$ident} = $class->new_cache('Module.'.$class->get_project());
-        $class->reset_installed_memory();
-        $class->reset_project_memory();
+        $class->reset;
     }
 
     sub setup {
@@ -35,8 +34,7 @@ use PlSense::Configure;
         logger->info("Switch project data to [$projnm]");
         $cache_of{ident $self}->set_namespace( get_config("local") ? "IModule.$projnm" : "IModule" );
         $projcache_of{ident $self}->set_namespace("Module.$projnm");
-        $self->reset_installed_memory();
-        $self->reset_project_memory();
+        $self->reset;
         $self->SUPER::setup($force);
         return 1;
     }
@@ -84,13 +82,18 @@ use PlSense::Configure;
 
     sub remove_all_module {
         my ($self) = @_;
-        $self->reset_installed_memory();
-        $self->reset_project_memory();
+        $self->reset;
         try   { $cache_of{ident $self}->clear; }
         catch { $cache_of{ident $self}->clear; };
         try   { $projcache_of{ident $self}->clear; }
         catch { $projcache_of{ident $self}->clear; };
         logger->info("Removed all module info");
+    }
+
+    sub reset {
+        my $self = shift;
+        $self->reset_installed_memory();
+        $self->reset_project_memory();
     }
 
     sub get_module {
