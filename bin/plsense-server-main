@@ -98,6 +98,7 @@ if ( ! $sock->listen ) {
 
 my $scli = PlSense::SocketClient->new({ retryinterval => 0.2, maxretry => 5 });
 my $builtin = PlSense::Builtin->new();
+$builtin->setup_without_reload();
 my $mdlkeeper = PlSense::ModuleKeeper->new();
 my $addrrouter = PlSense::AddressRouter->new({ mdlkeeper => $mdlkeeper,
                                                with_build => 0, });
