@@ -30,6 +30,24 @@ if ( $#testsrc == 0 ) {
     wait_fin_task(2, 60);
 }
 
+WAIT_MDL_READY:
+for ( my $i = 0; $i <= 100; $i++ ) {
+    my @readys = split m{ \s+ }xms, get_plsense_testcmd_result("ready");
+    my $notyet = 0;
+    MDL:
+    foreach my $mdl ( qw{ File::Spec File::Basename File::Copy FindBin Class::Std Exporter
+                          List::Util List::MoreUtils List::AllUtils IO::File IO::Socket
+                          MtdExport BlessParent BlessChild ClassStdParent ClassStdChild } ) {
+        if ( ! grep { $_ eq $mdl } @readys ) {
+            $notyet = 1;
+            last MDL;
+        }
+    }
+    if ( ! $notyet ) { last WAIT_MDL_READY; }
+    sleep 6;
+}
+wait_fin_task();
+
 my $notready;
 CHK_READY:
 foreach my $f ( @testsrc ) {
@@ -41,7 +59,6 @@ if ( $notready ) {
     print STDERR "The result of ready\n".get_plsense_testcmd_result("ready")."\n";
 }
 
-wait_fin_task();
 done_mytest();
 exit 0;
 
