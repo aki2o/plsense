@@ -59,14 +59,8 @@ set_primary_config( cachedir => $cachedir,
                     port3    => $port3, );
 setup_config() or exit 1;
 
-my $scli = PlSense::SocketClient->new({ mainport => $port1,
-                                        workport => $port2,
-                                        resolveport => $port3,
-                                        retryinterval => 0.2,
-                                        maxretry => 100 });
-
 my $sock = IO::Socket::INET->new(LocalAddr => "localhost",
-                                 LocalPort => $scli->get_resolveport,
+                                 LocalPort => $port3,
                                  Proto => "tcp",
                                  Listen => 1,
                                  ReUse => 1,
@@ -80,6 +74,7 @@ if ( ! $sock->listen ) {
     exit 1;
 }
 
+my $scli = PlSense::SocketClient->new({ retryinterval => 0.2, maxretry => 100 });
 my $builtin = PlSense::Builtin->new();
 my $mdlkeeper = PlSense::ModuleKeeper->new();
 my $addrrouter = PlSense::AddressRouter->new({ mdlkeeper => $mdlkeeper,
@@ -174,8 +169,8 @@ sub accept_client {
 }
 
 sub initialize {
-    $builtin->build;
-    $scli->request_main_server("builtin");
+    # $builtin->build;
+    # $scli->request_main_server("builtin");
     $substkeeper->load_all;
     return;
 }
@@ -334,6 +329,7 @@ sub get_needbuild_extmodules {
 }
 
 sub update_project_info {
+    # TODO: Location is needed to sync with other server correctly
     my $loc = $scli->get_main_server_response("location") or return;
     $currprojnm = $loc =~ m{ ^ Project: \s+ ([^\n]*?) $ }xms ? $1 : "";
     $currfilepath = $loc =~ m{ ^ File: \s+ ([^\n]*?) $ }xms ? $1 : "";
@@ -341,6 +337,7 @@ sub update_project_info {
     $currmtdnm = $loc =~ m{ ^ Sub: \s+ ([^\n]*?) $ }xms ? $1 : "";
 
     setup_config($currfilepath);
+    $builtin->setup() and $builtin->load();
     $mdlkeeper->setup();
     $substkeeper->setup();
     return 1;

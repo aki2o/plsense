@@ -81,14 +81,8 @@ set_primary_config( cachedir => $cachedir,
                     port3    => $port3, );
 setup_config() or exit 1;
 
-my $scli = PlSense::SocketClient->new({ mainport => $port1,
-                                        workport => $port2,
-                                        resolveport => $port3,
-                                        retryinterval => 0.2,
-                                        maxretry => 5 });
-
 my $sock = IO::Socket::INET->new(LocalAddr => "localhost",
-                                 LocalPort => $scli->get_mainport,
+                                 LocalPort => $port1,
                                  Proto => "tcp",
                                  Listen => 1,
                                  ReUse => 1,
@@ -102,6 +96,7 @@ if ( ! $sock->listen ) {
     exit 1;
 }
 
+my $scli = PlSense::SocketClient->new({ retryinterval => 0.2, maxretry => 5 });
 my $builtin = PlSense::Builtin->new();
 my $mdlkeeper = PlSense::ModuleKeeper->new();
 my $addrrouter = PlSense::AddressRouter->new({ mdlkeeper => $mdlkeeper,
@@ -320,6 +315,7 @@ sub set_currentfile {
     $currmtdnm = "";
     logger->notice("Set current file is [$currfilepath]");
     setup_config($currfilepath);
+    $builtin->setup();
     $mdlkeeper->setup();
     $addrrouter->setup();
     return "Done\n";

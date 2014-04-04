@@ -323,11 +323,7 @@ else {
     setup_logger($loglvl, $logfile);
 }
 
-my $scli = PlSense::SocketClient->new({ mainport => $port1,
-                                        workport => $port2,
-                                        resolveport => $port3,
-                                        retryinterval => 0.2,
-                                        maxretry => 10 });
+my $scli = PlSense::SocketClient->new({ retryinterval => 0.2, maxretry => 10 });
 my %pid_of;
 
 if ( $interactive ) {
@@ -433,9 +429,9 @@ sub show_help {
 
 sub get_common_option {
     my $ret = "--cachedir '$cachedir' --loglevel '$loglvl' --logfile '$logfile'";
-    $ret .= " --port1 ".$scli->get_mainport;
-    $ret .= " --port2 ".$scli->get_workport;
-    $ret .= " --port3 ".$scli->get_resolveport;
+    $ret .= " --port1 $port1";
+    $ret .= " --port2 $port2";
+    $ret .= " --port3 $port3";
     return $ret;
 }
 

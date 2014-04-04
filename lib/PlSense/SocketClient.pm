@@ -5,16 +5,8 @@ use warnings;
 use Class::Std;
 use IO::Socket;
 use PlSense::Logger;
+use PlSense::Configure;
 {
-    my %mainport_of :ATTR( :init_arg<mainport> :default(33333) );
-    sub get_mainport { my ($self) = @_; return $mainport_of{ident $self} || 33333; }
-
-    my %workport_of :ATTR( :init_arg<workport> :default(33334) );
-    sub get_workport { my ($self) = @_; return $workport_of{ident $self} || 33334; }
-
-    my %resolveport_of :ATTR( :init_arg<resolveport> :default(33335) );
-    sub get_resolveport { my ($self) = @_; return $resolveport_of{ident $self} || 33335; }
-
     my %retryinterval_of :ATTR( :init_arg<retryinterval> :default(1) );
     my %maxretry_of :ATTR( :init_arg<maxretry> :default(10) );
 
@@ -56,17 +48,17 @@ use PlSense::Logger;
 
     sub connect_main_server {
         my ($self, $opt_ref) = @_;
-        return $self->connect_server("main", $self->get_mainport, $opt_ref);
+        return $self->connect_server("main", get_config("port1"), $opt_ref);
     }
 
     sub connect_work_server {
         my ($self, $opt_ref) = @_;
-        return $self->connect_server("work", $self->get_workport, $opt_ref);
+        return $self->connect_server("work", get_config("port2"), $opt_ref);
     }
 
     sub connect_resolve_server {
         my ($self, $opt_ref) = @_;
-        return $self->connect_server("resolve", $self->get_resolveport, $opt_ref);
+        return $self->connect_server("resolve", get_config("port3"), $opt_ref);
     }
 
     sub connect_server : PRIVATE {

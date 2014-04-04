@@ -11,6 +11,7 @@ use PlSense::Symbol::Method;
 use PlSense::Symbol::Variable;
 {
     my %cache_of :ATTR( :default(undef) );
+    my %current_local_is :ATTR();
 
     my %variableh_of :ATTR( :default(undef) );
     sub set_variable : PRIVATE {
@@ -72,8 +73,35 @@ use PlSense::Symbol::Variable;
     sub START {
         my ($class, $ident, $arg_ref) = @_;
         $cache_of{$ident} = $class->new_cache('Builtin');
-        $variableh_of{$ident} = {};
-        $methodh_of{$ident} = {};
+        $class->reset;
+    }
+
+    sub setup_without_reload {
+        my $self = shift;
+        $self->update_project();
+        my $projnm = $self->get_project();
+        my $local = get_config("local");
+        $cache_of{ident $self}->set_namespace( $local ? "Builtin.$projnm" : "Builtin" );
+        $current_local_is{ident $self} = $local;
+    }
+
+    sub setup {
+        my $self = shift;
+        my $force = shift || 0;
+
+        my $projnm = get_config("name");
+        my $local = get_config("local");
+        if ( ( ! $force && $projnm eq $self->get_project() ) ||
+             ( ! $current_local_is{ident $self} && ! $local ) ) {
+            logger->info("No need switch project data from [$projnm]");
+            return;
+        }
+
+        logger->info("Switch project data to [$projnm]");
+        $self->reset;
+        $self->setup_without_reload();
+        # Loading is entrusted to server process
+        return 1;
     }
 
     sub build {
@@ -81,29 +109,35 @@ use PlSense::Symbol::Variable;
         if ( ! $force && $self->load ) { return; }
         $self->build_builtin_variables();
         $self->build_builtin_functions();
-        my $c = $cache_of{ident $self}->get("perl") || {};
-        $c->{variable} = $variableh_of{ident $self};
-        $c->{method} = $methodh_of{ident $self};
-        $cache_of{ident $self}->set("perl", $c);
-    }
-
-    sub remove {
-        my ($self) = @_;
-        $variableh_of{ident $self} = {};
-        $methodh_of{ident $self} = {};
-        try   { $cache_of{ident $self}->clear; }
-        catch { $cache_of{ident $self}->clear; };
-        logger->info("Removed all builtin info");
+        my $c = { variable => $variableh_of{ident $self},
+                  method   => $methodh_of{ident $self}, };
+        try   { $cache_of{ident $self}->set("perl", $c); }
+        catch { $cache_of{ident $self}->set("perl", $c); };
     }
 
     sub load {
         my ($self) = @_;
-        my $cache = $cache_of{ident $self} or return;
-        my $c = $cache->get("perl") || {};
+        my $c = {};
+        try   { $c = $cache_of{ident $self}->get("perl"); }
+        catch { $c = $cache_of{ident $self}->get("perl"); };
         if ( ! exists $c->{variable} || ! exists $c->{method} ) { return; }
         $variableh_of{ident $self} = $c->{variable};
         $methodh_of{ident $self} = $c->{method};
         return 1;
+    }
+
+    sub reset {
+        my ($self) = @_;
+        $variableh_of{ident $self} = {};
+        $methodh_of{ident $self} = {};
+    }
+
+    sub remove {
+        my ($self) = @_;
+        $self->reset;
+        try   { $cache_of{ident $self}->clear; }
+        catch { $cache_of{ident $self}->clear; };
+        logger->info("Removed all builtin info");
     }
 
     sub build_builtin_variables : PRIVATE {

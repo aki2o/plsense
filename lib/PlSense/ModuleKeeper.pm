@@ -47,7 +47,7 @@ use PlSense::Configure;
         if ( $current_local_is{ident $self} || $local ) { $self->reset_installed_memory(); }
         $self->reset_project_memory();
         $self->setup_without_reload();
-        # Loading is entrusted to plsense-server-work
+        # Loading is entrusted to server process
         return 1;
     }
 

@@ -36,12 +36,7 @@ set_primary_config( cachedir => $cachedir,
                     port3    => $port3, );
 setup_config($confpath) or exit 1;
 
-my $scli = PlSense::SocketClient->new({ mainport => $port1,
-                                        workport => $port2,
-                                        resolveport => $port3,
-                                        retryinterval => 0.5,
-                                        maxretry => 200 });
-
+my $scli = PlSense::SocketClient->new({ retryinterval => 0.5, maxretry => 200 });
 my $mdlkeeper = PlSense::ModuleKeeper->new();
 $mdlkeeper->setup_without_reload();
 

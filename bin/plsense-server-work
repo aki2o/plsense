@@ -11,6 +11,7 @@ use Try::Tiny;
 use PlSense::Logger;
 use PlSense::Configure;
 use PlSense::SocketClient;
+use PlSense::Builtin;
 
 my %opthelp_of = ("-h, --help"     => "Show this message.",
                   "-c, --cachedir" => "Path of directory caching information for Completion/Help.",
@@ -62,14 +63,8 @@ set_primary_config( cachedir => $cachedir,
                     maxtasks => $maxtasks, );
 setup_config() or exit 1;
 
-my $scli = PlSense::SocketClient->new({ mainport => $port1,
-                                        workport => $port2,
-                                        resolveport => $port3,
-                                        retryinterval => 0.2,
-                                        maxretry => 10 });
-
 my $sock = IO::Socket::INET->new(LocalAddr => "localhost",
-                                 LocalPort => $scli->get_workport,
+                                 LocalPort => $port2,
                                  Proto => "tcp",
                                  Listen => 1,
                                  ReUse => 1,
@@ -83,6 +78,8 @@ if ( ! $sock->listen ) {
     exit 1;
 }
 
+my $scli = PlSense::SocketClient->new({ retryinterval => 0.2, maxretry => 10 });
+my $builtin = PlSense::Builtin->new();
 my %taskinfo_of;
 my @taskqueue;
 my $local;
@@ -164,6 +161,9 @@ sub initialize {
     setup_config();
     add_find_installed_task();
     run_task();
+    $builtin->setup_without_reload();
+    $builtin->build;
+    $scli->request_main_server("builtin");
     return;
 }
 
@@ -250,9 +250,9 @@ sub get_common_option {
     my $confpath = get_config("confpath") || "";
     my $ret = "--cachedir '$cachedir' --loglevel '$loglvl' --logfile '$logfile' --confpath '$confpath'";
     if ( $is_project ) { $ret .= " --project" }
-    $ret .= " --port1 ".$scli->get_mainport;
-    $ret .= " --port2 ".$scli->get_workport;
-    $ret .= " --port3 ".$scli->get_resolveport;
+    $ret .= " --port1 $port1";
+    $ret .= " --port2 $port2";
+    $ret .= " --port3 $port3";
     return $ret;
 }
 
@@ -280,14 +280,21 @@ sub add_find_installed_task {
     add_find_task(1, "installed", @dirs);
 }
 
-sub update_current_project {
+sub update_location {
     my $filepath = shift || "";
     if ( ! -f $filepath ) { return; }
+
+    $scli->request_main_server("onfile ".$filepath);
 
     my $oldconfpath = get_config("confpath") || "";
     setup_config($filepath) or return;
     my $newconfpath = get_config("confpath") || "";
     if ( $oldconfpath eq $newconfpath ) { return; }
+
+    if ( $builtin->setup() ) {
+        $builtin->build;
+        $scli->request_main_server("builtin");
+    }
 
     my $newlocal = get_config("local");
     if ( $local || $newlocal ) { add_find_installed_task(); }
@@ -296,12 +303,6 @@ sub update_current_project {
     my $newlibpath = get_config("lib-path") || "";
     if ( -d $newlibpath ) { add_find_task(0, get_config("name"), $newlibpath); }
 
-    return 1;
-}
-
-sub sync_location {
-    my $filepath = shift || "";
-    $scli->request_main_server("onfile ".$filepath) or return;
     return 1;
 }
 
@@ -374,9 +375,9 @@ sub open_file {
         logger->error("Not exist file[$filepath]");
         return "Failed\n";
     }
-    update_current_project($filepath);
+    update_location($filepath);
     build_sentinel($filepath, 1, 0);
-    return sync_location($filepath) ? "Done\n" : "Failed\n";
+    return "Done\n";
 }
 
 sub current_file {
@@ -387,8 +388,8 @@ sub current_file {
         logger->error("Not exist file[$filepath]");
         return "Failed\n";
     }
-    update_current_project($filepath);
-    return sync_location($filepath) ? "Done\n" : "Failed\n";
+    update_location($filepath);
+    return "Done\n";
 }
 
 sub get_process_list {

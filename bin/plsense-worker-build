@@ -44,12 +44,7 @@ set_primary_config( cachedir => $cachedir,
                     port3    => $port3, );
 setup_config($confpath) or exit 1;
 
-my $scli = PlSense::SocketClient->new({ mainport => $port1,
-                                        workport => $port2,
-                                        resolveport => $port3,
-                                        retryinterval => 0.5,
-                                        maxretry => 300 });
-
+my $scli = PlSense::SocketClient->new({ retryinterval => 0.5, maxretry => 300 });
 my $builtin = PlSense::Builtin->new();
 my $mdlkeeper = PlSense::ModuleKeeper->new();
 my $addrrouter = PlSense::AddressRouter->new({ mdlkeeper => $mdlkeeper,
@@ -84,6 +79,7 @@ $SIG{QUIT} = sub { logger->notice("Receive SIGQUIT"); interrupt_build(); exit 0;
 $SIG{TERM} = sub { logger->notice("Receive SIGTERM"); interrupt_build(); exit 0; };
 
 try {
+    $builtin->setup_without_reload();
     $builtin->build();
     $mdlkeeper->setup_without_reload();
     $addrrouter->setup_without_reload();
