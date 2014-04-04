@@ -15,6 +15,12 @@ foreach my $f ( glob("$FindBin::Bin/sample/*.pl") ) {
 }
 sleep 2;
 
+WAIT_SWITCH:
+for ( my $i = 0; $i <= 50; $i++ ) {
+    if ( is_server_running() ) { last WAIT_SWITCH; }
+    sleep 6;
+}
+
 my $expect = 'BlessChild \s .+/BlessChild\.pm \s 11:1\n';
 $expect .= '\s\s &get_bar \s 32:1\n';
 $expect .= '\s\s &get_foo \s 41:1\n';
