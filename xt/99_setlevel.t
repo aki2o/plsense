@@ -24,7 +24,13 @@ my $wait = wait_fin_timeout() || "";
 ok($wait, "wait $wait for network timeout") or done_mytest();
 run_plsense_testcmd("svstart > /dev/null");
 ok(is_server_running(), "start server process") or done_mytest();
-sleep 2;
+sleep 5;
+
+WAIT_SWITCH:
+for ( my $i = 0; $i <= 50; $i++ ) {
+    if ( is_server_running() ) { last WAIT_SWITCH; }
+    sleep 6;
+}
 
 my (@logs, @founds);
 
