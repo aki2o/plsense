@@ -6,6 +6,7 @@ use warnings;
 use Class::Std;
 use List::AllUtils qw{ uniq };
 use PlSense::Logger;
+use PlSense::Util;
 {
     sub is_only_valid_context {
         my ($self, $code, $tok) = @_;
@@ -38,7 +39,7 @@ use PlSense::Logger;
         my $mtdnm = $currmtd ? $currmtd->get_name : "";
         logger->notice("Found variable of ".$currmdl->get_fullnm." $mtdnm");
         VAR:
-        foreach my $var ( $currmdl->get_current_any_variables($mtdnm), $self->get_builtin->get_variables ) {
+        foreach my $var ( $currmdl->get_current_any_variables($mtdnm), builtin->get_variables ) {
             my $currtype = substr($var->get_name, 0, 1);
             my $currnm = substr($var->get_name, 1);
             if ( $vartype eq '@' || $vartype eq '%' ) {

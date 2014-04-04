@@ -12,6 +12,7 @@ use Try::Tiny;
 use PlSense::Logger;
 use PlSense::Configure;
 use PlSense::SocketClient;
+use PlSense::Util;
 use PlSense::Builtin;
 use PlSense::ModuleKeeper;
 use PlSense::AddressRouter;
@@ -97,16 +98,14 @@ if ( ! $sock->listen ) {
 }
 
 my $scli = PlSense::SocketClient->new({ retryinterval => 0.2, maxretry => 5 });
-my $builtin = PlSense::Builtin->new();
-$builtin->setup_without_reload();
+set_builtin( PlSense::Builtin->new() );
+builtin->setup_without_reload();
 my $mdlkeeper = PlSense::ModuleKeeper->new();
 my $addrrouter = PlSense::AddressRouter->new({ mdlkeeper => $mdlkeeper,
                                                with_build => 0, });
-my $addrfinder = PlSense::SubstituteValueFinder->new({ builtin => $builtin,
-                                                       mdlkeeper => $mdlkeeper,
+my $addrfinder = PlSense::SubstituteValueFinder->new({ mdlkeeper => $mdlkeeper,
                                                        with_build => 0, });
-my $assist = PlSense::CodeAssist->new({ builtin => $builtin,
-                                        mdlkeeper => $mdlkeeper,
+my $assist = PlSense::CodeAssist->new({ mdlkeeper => $mdlkeeper,
                                         addrrouter => $addrrouter,
                                         addrfinder => $addrfinder });
 my $helper = PlSense::Helper->new({ addrrouter => $addrrouter, addrfinder => $addrfinder });
@@ -256,8 +255,8 @@ sub help_method {
     my $mdl = $mdlkeeper->get_module($mdlnm);
     my $mtd = $mdl ? $mdl->get_any_method($mtdnm) : undef;
     if ( $mtd ) { return $helper->get_symbol_help_text($mtd); }
-    if ( $builtin->exist_method($mtdnm) ) {
-        my $mtd = $builtin->get_method($mtdnm);
+    if ( builtin->exist_method($mtdnm) ) {
+        my $mtd = builtin->get_method($mtdnm);
         return $helper->get_symbol_help_text($mtd);
     }
     my $fullnm = $mdlnm ? $mdlnm."::".$mtdnm : $mtdnm;
@@ -274,8 +273,8 @@ sub help_variable {
     my $mdl = $mdlkeeper->get_module($mdlnm);
     my $var = $mdl && $mdl->exist_member($varnm) ? $mdl->get_member($varnm) : undef;
     if ( $var ) { return $helper->get_symbol_help_text($var); }
-    if ( $builtin->exist_variable($varnm) ) {
-        my $var = $builtin->get_variable($varnm);
+    if ( builtin->exist_variable($varnm) ) {
+        my $var = builtin->get_variable($varnm);
         return $helper->get_symbol_help_text($var);
     }
     my $fullnm = $mdlnm ? $mdlnm."::".$varnm : $varnm;
@@ -316,7 +315,7 @@ sub set_currentfile {
     $currmtdnm = "";
     logger->notice("Set current file is [$currfilepath]");
     setup_config($currfilepath);
-    $builtin->setup();
+    builtin->setup();
     $mdlkeeper->setup();
     $addrrouter->setup();
     return "Done\n";
@@ -420,7 +419,7 @@ sub uninitialize_module {
 }
 
 sub setup_builtin {
-    $builtin->load;
+    builtin->load;
     return;
 }
 

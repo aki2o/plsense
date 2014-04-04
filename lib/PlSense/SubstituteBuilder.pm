@@ -6,9 +6,6 @@ use Class::Std;
 use PlSense::Logger;
 use PlSense::SubstituteValueFinder;
 {
-    my %builtin_of :ATTR( :init_arg<builtin> );
-    sub get_builtin : PRIVATE { my ($self) = @_; return $builtin_of{ident $self}; }
-
     my %mdlkeeper_of :ATTR( :init_arg<mdlkeeper> );
     sub get_mdlkeeper : PRIVATE { my ($self) = @_; return $mdlkeeper_of{ident $self}; }
 
@@ -20,8 +17,7 @@ use PlSense::SubstituteValueFinder;
 
     sub START {
         my ($class, $ident, $arg_ref) = @_;
-        $finder_of{$ident} = PlSense::SubstituteValueFinder->new({ builtin => $class->get_builtin,
-                                                                   mdlkeeper => $class->get_mdlkeeper,
+        $finder_of{$ident} = PlSense::SubstituteValueFinder->new({ mdlkeeper => $class->get_mdlkeeper,
                                                                    substkeeper => $class->get_substkeeper,
                                                                    with_build => 1, });
     }

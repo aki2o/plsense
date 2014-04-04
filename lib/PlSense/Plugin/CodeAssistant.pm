@@ -5,9 +5,6 @@ use warnings;
 use Class::Std;
 use PlSense::Logger;
 {
-    my %builtin_of :ATTR( :init_arg<builtin> );
-    sub get_builtin : RESTRICTED { my ($self) = @_; return $builtin_of{ident $self}; }
-
     my %mdlkeeper_of :ATTR( :init_arg<mdlkeeper> );
     sub get_mdlkeeper : RESTRICTED { my ($self) = @_; return $mdlkeeper_of{ident $self}; }
 

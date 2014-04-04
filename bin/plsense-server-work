@@ -11,6 +11,7 @@ use Try::Tiny;
 use PlSense::Logger;
 use PlSense::Configure;
 use PlSense::SocketClient;
+use PlSense::Util;
 use PlSense::Builtin;
 
 my %opthelp_of = ("-h, --help"     => "Show this message.",
@@ -79,7 +80,7 @@ if ( ! $sock->listen ) {
 }
 
 my $scli = PlSense::SocketClient->new({ retryinterval => 0.2, maxretry => 10 });
-my $builtin = PlSense::Builtin->new();
+set_builtin( PlSense::Builtin->new() );
 my %taskinfo_of;
 my @taskqueue;
 my $local;
@@ -161,8 +162,8 @@ sub initialize {
     setup_config();
     add_find_installed_task();
     run_task();
-    $builtin->setup_without_reload();
-    $builtin->build;
+    builtin->setup_without_reload();
+    builtin->build;
     $scli->request_main_server("builtin");
     return;
 }
@@ -291,8 +292,8 @@ sub update_location {
     my $newconfpath = get_config("confpath") || "";
     if ( $oldconfpath eq $newconfpath ) { return; }
 
-    if ( $builtin->setup() ) {
-        $builtin->build;
+    if ( builtin->setup() ) {
+        builtin->build;
         $scli->request_main_server("builtin");
     }
 

@@ -6,6 +6,7 @@ use Class::Std;
 use PPI::Lexer;
 use List::AllUtils qw{ first };
 use PlSense::Logger;
+use PlSense::Util;
 {
     my %addrrouter_of :ATTR( :init_arg<addrrouter> );
     my %addrfinder_of :ATTR( :init_arg<addrfinder> );
@@ -59,8 +60,8 @@ use PlSense::Logger;
         my $addrfinder = $addrfinder_of{ident $self};
         if ( ! $pretok || $pretok->isa("PPI::Token::Whitespace") ) {
             $mtd = $self->get_currentmodule->get_any_original_method($word);
-            if ( ! $mtd && $addrfinder->get_builtin->exist_method($word) ) {
-                $mtd = $addrfinder->get_builtin->get_method($word);
+            if ( ! $mtd && builtin->exist_method($word) ) {
+                $mtd = builtin->get_method($word);
             }
         }
         elsif ( $pretok->isa("PPI::Token::Operator") && $pretok->content eq '->' ) {
@@ -130,9 +131,9 @@ use PlSense::Logger;
                 # Word is Module
                 return $self->get_symbol_help_text($mdl);
             }
-            elsif ( $addrfinder->get_builtin->exist_method($word) ) {
+            elsif ( builtin->exist_method($word) ) {
                 # Word is Builtin method
-                my $mtd = $addrfinder->get_builtin->get_method($word);
+                my $mtd = builtin->get_method($word);
                 return $self->get_symbol_help_text($mtd);
             }
             else {
@@ -157,7 +158,7 @@ use PlSense::Logger;
             my $var;
             SEEK:
             foreach my $varnm ( @varnms ) {
-                $var = $addrfinder->get_builtin->exist_variable($varnm) ? $addrfinder->get_builtin->get_variable($varnm)
+                $var = builtin->exist_variable($varnm) ? builtin->get_variable($varnm)
                      : $mtd && $mtd->exist_variable($varnm)             ? $mtd->get_variable($varnm)
                      : $mdl->exist_member($varnm)                       ? $mdl->get_member($varnm)
                      :                                                    first { $_->get_fullnm eq $varnm } $mdl->get_external_any_variables;

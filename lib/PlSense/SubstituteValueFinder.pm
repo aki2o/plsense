@@ -17,9 +17,6 @@ use PlSense::Entity::Reference;
     my %epluginh_of :ATTR();
     my %lexer_of :ATTR();
 
-    my %builtin_of :ATTR( :init_arg<builtin> );
-    sub get_builtin { my ($self) = @_; return $builtin_of{ident $self}; }
-
     my %mdlkeeper_of :ATTR( :init_arg<mdlkeeper> );
     sub get_mdlkeeper { my ($self) = @_; return $mdlkeeper_of{ident $self}; }
 

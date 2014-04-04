@@ -23,8 +23,7 @@ use PlSense::Symbol::Variable;
 
     sub START {
         my ($class, $ident, $arg_ref) = @_;
-        my @plugins = $class->plugins({ builtin => $class->get_builtin,
-                                        mdlkeeper => $class->get_mdlkeeper,
+        my @plugins = $class->plugins({ mdlkeeper => $class->get_mdlkeeper,
                                         substkeeper => $class->get_substkeeper,
                                         substbuilder => $class->get_substbuilder, });
         PLUGIN:

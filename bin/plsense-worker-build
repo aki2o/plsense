@@ -9,6 +9,7 @@ use Try::Tiny;
 use PlSense::Logger;
 use PlSense::Configure;
 use PlSense::SocketClient;
+use PlSense::Util;
 use PlSense::Builtin;
 use PlSense::ModuleKeeper;
 use PlSense::AddressRouter;
@@ -45,30 +46,27 @@ set_primary_config( cachedir => $cachedir,
 setup_config($confpath) or exit 1;
 
 my $scli = PlSense::SocketClient->new({ retryinterval => 0.5, maxretry => 300 });
-my $builtin = PlSense::Builtin->new();
+set_builtin( PlSense::Builtin->new() );
 my $mdlkeeper = PlSense::ModuleKeeper->new();
 my $addrrouter = PlSense::AddressRouter->new({ mdlkeeper => $mdlkeeper,
                                                with_build => 1, });
 my $substkeeper = PlSense::SubstituteKeeper->new({ mdlkeeper => $mdlkeeper,
                                                    addrrouter => $addrrouter, });
-my $substbuilder = PlSense::SubstituteBuilder->new({ builtin => $builtin,
-                                                     mdlkeeper => $mdlkeeper,
+my $substbuilder = PlSense::SubstituteBuilder->new({ mdlkeeper => $mdlkeeper,
                                                      substkeeper => $substkeeper });
 
 my $srcupdater = PlSense::ModuleSrcUpdater->new({ mdlkeeper => $mdlkeeper });
-my $xrefbuilder = PlSense::ModuleBuilder::XrefBuilder->new({ builtin => $builtin,
-                                                             mdlkeeper => $mdlkeeper,
+my $xrefbuilder = PlSense::ModuleBuilder::XrefBuilder->new({ mdlkeeper => $mdlkeeper,
                                                              substkeeper => $substkeeper,
                                                              substbuilder => $substbuilder, });
-my $inheritbuilder = PlSense::ModuleBuilder::InheritBuilder->new({ builtin => $builtin,
-                                                                   mdlkeeper => $mdlkeeper,
+my $inheritbuilder = PlSense::ModuleBuilder::InheritBuilder->new({ mdlkeeper => $mdlkeeper,
                                                                    substkeeper => $substkeeper,
                                                                    substbuilder => $substbuilder, });
-my $docbuilder = PlSense::ModuleBuilder::DocBuilder->new({ builtin => $builtin,
+my $docbuilder = PlSense::ModuleBuilder::DocBuilder->new({ 
                                                            mdlkeeper => $mdlkeeper,
                                                            substkeeper => $substkeeper,
                                                            substbuilder => $substbuilder, });
-my $ppibuilder = PlSense::ModuleBuilder::PPIBuilder->new({ builtin => $builtin,
+my $ppibuilder = PlSense::ModuleBuilder::PPIBuilder->new({ 
                                                            mdlkeeper => $mdlkeeper,
                                                            substkeeper => $substkeeper,
                                                            substbuilder => $substbuilder, });
@@ -79,8 +77,8 @@ $SIG{QUIT} = sub { logger->notice("Receive SIGQUIT"); interrupt_build(); exit 0;
 $SIG{TERM} = sub { logger->notice("Receive SIGTERM"); interrupt_build(); exit 0; };
 
 try {
-    $builtin->setup_without_reload();
-    $builtin->build();
+    builtin->setup_without_reload();
+    builtin->build();
     $mdlkeeper->setup_without_reload();
     $addrrouter->setup_without_reload();
     $substkeeper->setup_without_reload();

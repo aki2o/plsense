@@ -6,6 +6,7 @@ use warnings;
 use Class::Std;
 use PlSense::Logger;
 use PlSense::Configure;
+use PlSense::Util;
 use PlSense::Symbol::Method;
 use PlSense::Symbol::Variable;
 {
@@ -71,7 +72,7 @@ use PlSense::Symbol::Variable;
                                                          reserved => $reserved, });
             }
         }
-        elsif ( ! $self->get_builtin->exist_variable($idtype.$idvalue) ) {
+        elsif ( ! builtin->exist_variable($idtype.$idvalue) ) {
             my $varnm = $idtype.$idvalue;
             my $lexical = $etcinfo =~ m{ i }xms ? 1 : 0;
             my $var;
