@@ -309,6 +309,7 @@ if ( $cachedir ) {
                         port2    => $port2,
                         port3    => $port3,
                         maxtasks => $maxtasks, );
+    setup_config();
 }
 else {
     logger->info("Read option from config file.");
