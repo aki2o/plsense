@@ -3,8 +3,8 @@
 # astart scalar
 #$
 # aend include: _ / , ARGV ENV
-# ahelp ARGV : ^ $ARGV \s is \s Builtin \s Variable\. $
-# ahelp ARGV : ^ ===== \s Part \s of \s PerlDoc \s ===== \n .
+# ahelp ENV : ^ %ENV \s is \s Builtin \s Variable\. $
+# ahelp ENV : ^ ===== \s Part \s of \s PerlDoc \s ===== \n .
 
 # astart array
 #@
