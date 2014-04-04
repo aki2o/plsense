@@ -11,8 +11,8 @@ my $fh;
 open $fh, '<', "$confpath";
 ok($fh, "read config") or done_mytest();
 my @confvalues = <$fh>;
-$confvalues[1] = "logfile=$logpath\n";
-$confvalues[2] = "loglevel=debug\n";
+$confvalues[2] = "logfile=$logpath\n";
+$confvalues[3] = "loglevel=debug\n";
 close $fh;
 
 open $fh, '>', "$confpath";
