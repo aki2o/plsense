@@ -17,11 +17,11 @@ foreach my $f ( @testsrc ) {
     run_plsense_testcmd("open '$f' > /dev/null");
     sleep 1;
     WAIT_READY:
-    for ( my $i = 0; $i <= 20; $i++ ) {
+    for ( my $i = 0; $i <= 40; $i++ ) {
         my $readyret = get_plsense_testcmd_result("ready '$f'");
         chomp $readyret;
         if ( $readyret eq "Yes" ) { last WAIT_READY; }
-        sleep 6;
+        sleep 3;
     }
 }
 

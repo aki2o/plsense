@@ -43,7 +43,7 @@ my $scli = PlSense::SocketClient->new({ mainport => $port1,
                                         maxretry => 200 });
 
 my $mdlkeeper = PlSense::ModuleKeeper->new();
-my $nowstoringmdl = undef;
+$mdlkeeper->setup_without_reload();
 
 $SIG{INT} = sub { logger->notice("Receive SIGINT"); resume_store(); exit 0; };
 $SIG{QUIT} = sub { logger->notice("Receive SIGQUIT"); resume_store(); exit 0; };
@@ -51,7 +51,7 @@ $SIG{TERM} = sub { logger->notice("Receive SIGTERM"); resume_store(); exit 0; };
 
 my (@mdl_or_files, @needbuild, @firstbuild, %found_is, %lastmodified_of);
 my $projectnm = get_config("name");
-$mdlkeeper->update_project();
+my $nowstoringmdl = undef;
 LIBPATH:
 foreach my $dir ( @dirs ) {
     chomp $dir;
