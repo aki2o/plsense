@@ -15,14 +15,7 @@ if ( $#testsrc < 0 ) { @testsrc = glob("$FindBin::Bin/sample/*.pl"); }
 BUILD:
 foreach my $f ( @testsrc ) {
     run_plsense_testcmd("open '$f' > /dev/null");
-    sleep 1;
-    WAIT_READY:
-    for ( my $i = 0; $i <= 40; $i++ ) {
-        my $readyret = get_plsense_testcmd_result("ready '$f'");
-        chomp $readyret;
-        if ( $readyret eq "Yes" ) { last WAIT_READY; }
-        sleep 3;
-    }
+    wait_ready($f, 3, 40);
 }
 
 if ( $#testsrc == 0 ) {
@@ -35,9 +28,7 @@ for ( my $i = 0; $i <= 100; $i++ ) {
     my @readys = split m{ \s+ }xms, get_plsense_testcmd_result("ready");
     my $notyet = 0;
     MDL:
-    foreach my $mdl ( qw{ File::Spec File::Basename File::Copy FindBin Class::Std Exporter
-                          List::Util List::MoreUtils List::AllUtils IO::File IO::Socket
-                          MtdExport BlessParent BlessChild ClassStdParent ClassStdChild } ) {
+    foreach my $mdl ( used_modules() ) {
         if ( ! grep { $_ eq $mdl } @readys ) {
             $notyet = 1;
             last MDL;

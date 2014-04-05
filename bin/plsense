@@ -553,49 +553,64 @@ sub stop_server {
 }
 
 sub refresh_server {
-    # SVTYPE:
-    # foreach my $svtype ( "main", "work", "resolve" ) {
-    #     my $pid = $pid_of{$svtype};
-    #     if ( ! $pid ) {
-    #         $pid = $svtype eq "main"    ? $scli->get_main_server_response("pid", { maxretry => 20 })
-    #              : $svtype eq "work"    ? $scli->get_work_server_response("pid", { maxretry => 20 })
-    #              : $svtype eq "resolve" ? $scli->get_resolve_server_response("pid", { maxretry => 20 })
-    #              :                        0;
-    #         $pid_of{$svtype} = $pid;
-    #     }
-    #     if ( ! $pid ) { last SVTYPE; }
-    #     kill 'USR1', $pid;
-    # }
-
-    my $mainpid = $pid_of{main} || $scli->get_main_server_response("pid", { maxretry => 20 });
-    my $workpid = $pid_of{work} || $scli->get_work_server_response("pid", { maxretry => 20 });
-    my $resolvepid = $pid_of{resolve} || $scli->get_resolve_server_response("pid", { maxretry => 20 });
-    if ( ! $mainpid || ! $workpid || ! $resolvepid ) { return "Failed\n"; }
-
     my $loc = get_current_location() or return "Failed\n";
     my $currfilepath = $loc =~ m{ ^ File: \s+ ([^\n]*?) $ }xms ? $1 : "";
     my $currmdlnm = $loc =~ m{ ^ Module: \s+ ([^\n]*?) $ }xms ? $1 : "";
     my $currmtdnm = $loc =~ m{ ^ Sub: \s+ ([^\n]*?) $ }xms ? $1 : "";
 
-    kill 'WINCH', $mainpid;
-    WAIT:
-    for my $i ( 1..5 ) {
-        if ( ! kill(0, $mainpid) ) { last WAIT; }
-        sleep 1;
+    SVTYPE:
+    foreach my $svtype ( "main", "work", "resolve" ) {
+        my $pid = $pid_of{$svtype};
+        if ( ! $pid ) {
+            $pid = $svtype eq "main"    ? $scli->get_main_server_response("pid", { maxretry => 20 })
+                 : $svtype eq "work"    ? $scli->get_work_server_response("pid", { maxretry => 20 })
+                 : $svtype eq "resolve" ? $scli->get_resolve_server_response("pid", { maxretry => 20 })
+                 :                        0;
+            $pid_of{$svtype} = $pid;
+        }
+        if ( ! $pid ) {
+            logger->error("Can't restart $svtype server cause failed to get pid");
+            next SVTYPE;
+        }
+        kill 'USR1', $pid;
     }
-    my $mainret = start_main_server(1);
 
-    kill 'HUP', $workpid;
-
-    kill 'WINCH', $resolvepid;
-    WAIT:
-    for my $i ( 1..5 ) {
-        if ( ! kill(0, $resolvepid) ) { last WAIT; }
-        sleep 1;
+    SVTYPE:
+    foreach my $svtype ( "main", "work", "resolve" ) {
+        my $pid = $svtype eq "main"    ? $scli->get_main_server_response("pid", { maxretry => 20 })
+                : $svtype eq "work"    ? $scli->get_work_server_response("pid", { maxretry => 20 })
+                : $svtype eq "resolve" ? $scli->get_resolve_server_response("pid", { maxretry => 20 })
+                :                        0;
+        if ( ! $pid ) {
+            logger->warn("Can't check $svtype server alive cause failed to get pid");
+        }
+        $pid_of{$svtype} = $pid;
     }
-    my $resolveret = start_resolve_server(1);
 
-    if ( ! $mainret || ! $resolveret ) { return "Failed\n"; }
+    # my $mainpid = $pid_of{main} || $scli->get_main_server_response("pid", { maxretry => 20 });
+    # my $workpid = $pid_of{work} || $scli->get_work_server_response("pid", { maxretry => 20 });
+    # my $resolvepid = $pid_of{resolve} || $scli->get_resolve_server_response("pid", { maxretry => 20 });
+    # if ( ! $mainpid || ! $workpid || ! $resolvepid ) { return "Failed\n"; }
+
+    # kill 'WINCH', $mainpid;
+    # WAIT:
+    # for my $i ( 1..5 ) {
+    #     if ( ! kill(0, $mainpid) ) { last WAIT; }
+    #     sleep 1;
+    # }
+    # my $mainret = start_main_server(1);
+
+    # kill 'HUP', $workpid;
+
+    # kill 'WINCH', $resolvepid;
+    # WAIT:
+    # for my $i ( 1..5 ) {
+    #     if ( ! kill(0, $resolvepid) ) { last WAIT; }
+    #     sleep 1;
+    # }
+    # my $resolveret = start_resolve_server(1);
+
+    # if ( ! $mainret || ! $resolveret ) { return "Failed\n"; }
 
     set_currentfile($currfilepath);
     set_currentmodule($currmdlnm);

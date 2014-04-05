@@ -18,7 +18,9 @@ our @EXPORT = qw( get_tmp_dir
                   is_server_running
                   is_server_stopping
                   wait_fin_task
-                  wait_fin_timeout );
+                  wait_fin_timeout
+                  wait_ready
+                  used_modules );
 {
     sub get_tmp_dir {
         my $ret = $ENV{TMP} || $ENV{TMPDIR} || "/tmp";
@@ -168,6 +170,25 @@ our @EXPORT = qw( get_tmp_dir
         if ( ! defined $waitsec ) { return; }
         sleep $waitsec;
         return $waitsec;
+    }
+
+    sub wait_ready {
+        my $mdl_or_file = shift or return;
+        my $chk_interval = shift || 3;
+        my $chk_max = shift || 100;
+        WAIT_READY:
+        for ( my $i = 0; $i <= $chk_max; $i++ ) {
+            my $readyret = get_plsense_testcmd_result("ready '$mdl_or_file'");
+            chomp $readyret;
+            if ( $readyret eq "Yes" ) { last WAIT_READY; }
+            sleep $chk_interval;
+        }
+    }
+
+    sub used_modules {
+        return qw{ File::Spec File::Basename File::Copy FindBin Class::Std Exporter
+                   List::Util List::MoreUtils List::AllUtils IO::File IO::Socket
+                   MtdExport BlessParent BlessChild ClassStdParent ClassStdChild };
     }
 }
 
