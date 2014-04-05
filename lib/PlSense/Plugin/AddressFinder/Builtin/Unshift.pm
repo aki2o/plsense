@@ -1,10 +1,11 @@
-package PlSense::Plugin::SubstituteValueFinder::Builtin::Unshift;
+package PlSense::Plugin::AddressFinder::Builtin::Unshift;
 
-use parent qw{ PlSense::Plugin::SubstituteValueFinder::Builtin };
+use parent qw{ PlSense::Plugin::AddressFinder::Builtin };
 use strict;
 use warnings;
 use Class::Std;
 use PlSense::Logger;
+use PlSense::Util;
 {
     sub get_builtin_name {
         my ($self) = @_;
@@ -41,7 +42,7 @@ use PlSense::Logger;
         if ( ! $addr || $#tokens < 0 ) { return; }
 
         my $value = $mediator->find_address_or_entity(@tokens) or return;
-        $mediator->get_substkeeper->add_substitute($addr.".A", $value);
+        substkeeper->add_substitute($addr.".A", $value);
         return;
     }
 }

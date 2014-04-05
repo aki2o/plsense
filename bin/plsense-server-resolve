@@ -75,19 +75,14 @@ if ( ! $sock->listen ) {
     exit 1;
 }
 
-my $scli = PlSense::SocketClient->new({ retryinterval => 0.2, maxretry => 100 });
 set_builtin( PlSense::Builtin->new() );
 set_mdlkeeper( PlSense::ModuleKeeper->new() );
-my $addrrouter = PlSense::AddressRouter->new({ 
-                                               with_build => 1 });
-my $substkeeper = PlSense::SubstituteKeeper->new({ 
-                                                   addrrouter => $addrrouter,
-                                                   max_entry => 500 });
-my $substbuilder = PlSense::SubstituteBuilder->new({ 
-                                                     substkeeper => $substkeeper });
-my $ppibuilder = PlSense::ModuleBuilder::PPIBuilder->new({ 
-                                                           substkeeper => $substkeeper,
-                                                           substbuilder => $substbuilder, });
+set_addrrouter( PlSense::AddressRouter->new({ with_build => 1 }) );
+set_substkeeper( PlSense::SubstituteKeeper->new({ max_entry => 500 }) );
+set_substbuilder( PlSense::SubstituteBuilder->new() );
+
+my $scli = PlSense::SocketClient->new({ retryinterval => 0.2, maxretry => 100 });
+my $ppibuilder = PlSense::ModuleBuilder::PPIBuilder->new();
 my $currprojnm = "";
 my $currfilepath = "";
 my $currmdlnm = "";
@@ -170,7 +165,7 @@ sub accept_client {
 sub initialize {
     # builtin->build;
     # $scli->request_main_server("builtin");
-    $substkeeper->load_all;
+    substkeeper->load_all;
     return;
 }
 
@@ -186,14 +181,14 @@ sub get_own_pid {
 
 sub debug_stocked {
     my $ret = mdlkeeper->describe_keep_value;
-    $ret .= $addrrouter->describe_keep_value;
-    $ret .= $substkeeper->describe_keep_value;
+    $ret .= addrrouter->describe_keep_value;
+    $ret .= substkeeper->describe_keep_value;
     return $ret;
 }
 
 sub debug_substitute {
     my $regexp = shift || "";
-    return $substkeeper->to_string_by_regexp($regexp);
+    return substkeeper->to_string_by_regexp($regexp);
 }
 
 sub remove {
@@ -208,13 +203,13 @@ sub remove {
         my ($mdlnm, $filepath) = -f $mdl_or_file ? ("main", File::Spec->rel2abs($mdl_or_file))
                                :                   ($mdl_or_file, "");
         my $mdl = mdlkeeper->get_module($mdlnm, $filepath) or next ENTRY;
-        $substkeeper->remove($mdl->get_name, $mdl->get_filepath, $mdl->get_projectnm);
+        substkeeper->remove($mdl->get_name, $mdl->get_filepath, $mdl->get_projectnm);
     }
     return "Done\n";
 }
 
 sub remove_all {
-    $substkeeper->remove_all;
+    substkeeper->remove_all;
     builtin->remove;
     initialize();
     return "Done\n";
@@ -222,7 +217,7 @@ sub remove_all {
 
 sub remove_project_all {
     mdlkeeper->remove_project_all_module;
-    $substkeeper->remove_project_all;
+    substkeeper->remove_project_all;
     return "Done\n";
 }
 
@@ -230,8 +225,8 @@ sub add_source {
     my $code = shift || "";
 
     if ( update_project_info() ) {
-        $substkeeper->resolve_substitute;
-        $substkeeper->resolve_unknown_argument;
+        substkeeper->resolve_substitute;
+        substkeeper->resolve_unknown_argument;
     }
     my $mdl = mdlkeeper->get_module($currmdlnm, $currfilepath);
     if ( ! $mdl ) {
@@ -250,7 +245,7 @@ sub add_source {
 
     $nowstoringmdl = $mdl;
     mdlkeeper->store_module($mdl);
-    $addrrouter->store_current_project;
+    addrrouter->store_current_project;
     $nowstoringmdl = undef;
 
     my $mdlkey = $mdl->get_name eq "main" ? $mdl->get_filepath : $mdl->get_name;
@@ -266,9 +261,9 @@ sub add_source {
 
 sub resolve {
     $nowresolving = 1;
-    $substkeeper->resolve_substitute;
-    $substkeeper->resolve_unknown_argument;
-    $addrrouter->store_current_project;
+    substkeeper->resolve_substitute;
+    substkeeper->resolve_unknown_argument;
+    addrrouter->store_current_project;
     $nowresolving = 0;
 
     $scli->request_main_server("resolved");
@@ -288,7 +283,7 @@ sub setup_built_module {
         my ($mdlnm, $filepath) = -f $mdl_or_file ? ("main", $mdl_or_file)
                                :                   ($mdl_or_file, "");
         my $mdl = mdlkeeper->load_module($mdlnm, $filepath) or next ENTRY;
-        $substkeeper->load($mdl->get_name, $mdl->get_filepath, $mdl->get_projectnm);
+        substkeeper->load($mdl->get_name, $mdl->get_filepath, $mdl->get_projectnm);
         logger->notice("Finished reload module of '$mdl_or_file'");
     }
 
@@ -338,7 +333,7 @@ sub update_project_info {
     setup_config($currfilepath);
     builtin->setup() and builtin->load();
     mdlkeeper->setup();
-    $substkeeper->setup();
+    substkeeper->setup();
     return 1;
 }
 
@@ -347,14 +342,14 @@ sub resume_store {
     if ( $mdl && $mdl->isa("PlSense::Symbol::Module") ) {
         logger->notice("Resume store module : ".$mdl->get_fullnm);
         mdlkeeper->store_module($mdl);
-        $addrrouter->store_current_project;
+        addrrouter->store_current_project;
         $nowstoringmdl = undef;
     }
     if ( $nowresolving ) {
         logger->notice("Resume resolve subst/arg");
-        $substkeeper->resolve_substitute;
-        $substkeeper->resolve_unknown_argument;
-        $addrrouter->store_current_project;
+        substkeeper->resolve_substitute;
+        substkeeper->resolve_unknown_argument;
+        addrrouter->store_current_project;
         $nowresolving = 0;
     }
 }

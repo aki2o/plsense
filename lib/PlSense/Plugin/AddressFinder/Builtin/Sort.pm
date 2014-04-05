@@ -1,6 +1,6 @@
-package PlSense::Plugin::SubstituteValueFinder::Builtin::Pop;
+package PlSense::Plugin::AddressFinder::Builtin::Sort;
 
-use parent qw{ PlSense::Plugin::SubstituteValueFinder::Builtin };
+use parent qw{ PlSense::Plugin::AddressFinder::Builtin };
 use strict;
 use warnings;
 use Class::Std;
@@ -8,7 +8,7 @@ use PlSense::Logger;
 {
     sub get_builtin_name {
         my ($self) = @_;
-        return "pop";
+        return "sort";
     }
 
     sub find_address {
@@ -23,8 +23,11 @@ use PlSense::Logger;
 
     sub find_something : PRIVATE {
         my ($self, @tokens) = @_;
-        my $addr = $self->get_mediator->find_address(@tokens) or return;
-        return $addr.".A";
+
+        if ( $#tokens >= 0 && $tokens[0]->isa("PPI::Structure::Block") ) {
+            my $tok = shift @tokens;
+        }
+        return $self->get_mediator->find_address(@tokens);
     }
 }
 

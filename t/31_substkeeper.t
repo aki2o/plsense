@@ -3,6 +3,7 @@ use FindBin;
 use lib "$FindBin::Bin/../tlib";
 use TestSupport;
 use PlSense::Configure;
+use PlSense::Util;
 use PlSense::ModuleKeeper;
 use PlSense::AddressRouter;
 use PlSense::SubstituteKeeper;
@@ -12,9 +13,9 @@ ok(-d $tmpdir, "get tmp directory");
 
 set_primary_config(cachedir => $tmpdir);
 setup_config();
-my $mdlkeeper = PlSense::ModuleKeeper->new();
-my $addrrouter = PlSense::AddressRouter->new({ mdlkeeper => $mdlkeeper, with_build => 0 });
-my $substkeeper = PlSense::SubstituteKeeper->new({ mdlkeeper => $mdlkeeper, addrrouter => $addrrouter });
+set_mdlkeeper(PlSense::ModuleKeeper->new());
+set_addrrouter(PlSense::AddressRouter->new({ with_build => 0 }));
+my $substkeeper = PlSense::SubstituteKeeper->new();
 ok($substkeeper->isa("PlSense::SubstituteKeeper"), "new");
 
 my $debugstr = $substkeeper->to_string_by_regexp('.+');

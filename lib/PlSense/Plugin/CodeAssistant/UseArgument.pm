@@ -54,7 +54,7 @@ use PlSense::Util;
             EXPORTVAR:
             foreach my $var ( @exportvars ) {
                 if ( ! $var ) { next EXPORTVAR; }
-                my $resolve = $self->get_addrrouter->resolve_address($var->get_fullnm) or next EXPORTVAR;
+                my $resolve = addrrouter->resolve_address($var->get_fullnm) or next EXPORTVAR;
                 if ( ! $resolve->isa("PlSense::Entity::Array") ) { next EXPORTVAR; }
                 my $scalar = $resolve->get_element or next EXPORTVAR;
                 if ( ! eval { $scalar->isa("PlSense::Entity::Scalar") } ) { next EXPORTVAR; }
@@ -70,7 +70,7 @@ use PlSense::Util;
 
             if ( $mdl->exist_member('%EXPORT_TAGS') ) {
                 my $var = $mdl->get_member('%EXPORT_TAGS');
-                my $resolve = $self->get_addrrouter->resolve_address($var->get_fullnm) or return;
+                my $resolve = addrrouter->resolve_address($var->get_fullnm) or return;
                 if ( ! $resolve->isa("PlSense::Entity::Hash") ) { return; }
                 KEY:
                 foreach my $key ( $resolve->keys_member ) {
@@ -81,7 +81,7 @@ use PlSense::Util;
                         $self->push_candidate(":".$key, $value);
                     }
                     else {
-                        $self->push_candidate(":".$key, $self->get_addrrouter->resolve_address($value));
+                        $self->push_candidate(":".$key, addrrouter->resolve_address($value));
                     }
                 }
             }

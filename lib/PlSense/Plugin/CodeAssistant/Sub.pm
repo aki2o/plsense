@@ -5,6 +5,7 @@ use strict;
 use warnings;
 use Class::Std;
 use PlSense::Logger;
+use PlSense::Util;
 {
     sub is_only_valid_context {
         my ($self, $code, $tok) = @_;
@@ -15,7 +16,7 @@ use PlSense::Logger;
         $self->set_input($input);
         logger->info("Match context : input[$input]");
 
-        my $currmdl = $self->get_currentmodule;
+        my $currmdl = addrfinder->get_currentmodule;
         INHERIT_METHOD:
         foreach my $mtd ( $currmdl->get_inherit_methods ) {
             $self->push_candidate($mtd->get_name, $mtd);

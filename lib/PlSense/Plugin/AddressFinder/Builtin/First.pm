@@ -1,12 +1,12 @@
-package PlSense::Plugin::SubstituteValueFinder::Ext::First;
+package PlSense::Plugin::AddressFinder::Builtin::First;
 
-use parent qw{ PlSense::Plugin::SubstituteValueFinder::Ext };
+use parent qw{ PlSense::Plugin::AddressFinder::Builtin };
 use strict;
 use warnings;
 use Class::Std;
 use PlSense::Logger;
 {
-    sub get_method_name {
+    sub get_builtin_name {
         my ($self) = @_;
         return "first";
     }
@@ -23,10 +23,6 @@ use PlSense::Logger;
 
     sub find_something : PRIVATE {
         my ($self, $is_addr, @tokens) = @_;
-
-        my $mdl = $self->get_mediator->get_currentmodule;
-        if ( ! $mdl->exist_usingmdl("List::Util") &&
-             ! $mdl->exist_usingmdl("List::AllUtils") ) { return; }
 
         my $tok = shift @tokens or return;
         if ( ! $tok->isa("PPI::Structure::Block") ) { return; }

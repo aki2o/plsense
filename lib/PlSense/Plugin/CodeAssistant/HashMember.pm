@@ -5,6 +5,7 @@ use strict;
 use warnings;
 use Class::Std;
 use PlSense::Logger;
+use PlSense::Util;
 {
     sub is_valid_context {
         my ($self, $code, $tok) = @_;
@@ -39,7 +40,7 @@ use PlSense::Logger;
 
         my @tokens = $self->get_valid_tokens($stmt);
         if ( $#tokens < 0 ) { return; }
-        my $addr = $self->get_addrfinder->find_address(@tokens);
+        my $addr = addrfinder->find_address(@tokens);
         if ( ! $addr ) {
             logger->info("Not found address in current context");
             return 1;
@@ -68,7 +69,7 @@ use PlSense::Logger;
         my ($self, $addr) = @_;
 
         logger->debug("Try push candidate by resolve : $addr");
-        my $entity = $self->get_addrrouter->resolve_address($addr);
+        my $entity = addrrouter->resolve_address($addr);
         if ( ! $entity || ! $entity->isa("PlSense::Entity::Hash") ) {
             logger->info("Not hash entity in current context");
             return;
@@ -87,15 +88,14 @@ use PlSense::Logger;
 
     sub push_candidate_by_match : PRIVATE {
         my ($self, $addr) = @_;
-        my $addrrouter = $self->get_addrrouter;
-        my @values = $addrrouter->resolve_anything($addr);
+        my @values = addrrouter->resolve_anything($addr);
         VALUE:
         foreach my $value ( $addr, @values ) {
             if ( ! $value || eval { $value->isa("PlSense::Entity") } ) { next VALUE; }
             logger->debug("Try push candidate by match : $value");
             my $regexp = quotemeta($value)."\.H:([a-zA-Z0-9_\-]+)";
             MATCH:
-            foreach my $key ( $addrrouter->get_matched_route_list($regexp) ) {
+            foreach my $key ( addrrouter->get_matched_route_list($regexp) ) {
                 if ( $key !~ m{ $regexp }xms ) { next MATCH; }
                 $self->push_candidate($1);
             }

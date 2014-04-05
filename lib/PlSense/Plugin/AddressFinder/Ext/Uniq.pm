@@ -1,14 +1,14 @@
-package PlSense::Plugin::SubstituteValueFinder::Builtin::Sort;
+package PlSense::Plugin::AddressFinder::Ext::Uniq;
 
-use parent qw{ PlSense::Plugin::SubstituteValueFinder::Builtin };
+use parent qw{ PlSense::Plugin::AddressFinder::Ext };
 use strict;
 use warnings;
 use Class::Std;
 use PlSense::Logger;
 {
-    sub get_builtin_name {
+    sub get_method_name {
         my ($self) = @_;
-        return "sort";
+        return "uniq";
     }
 
     sub find_address {
@@ -24,9 +24,10 @@ use PlSense::Logger;
     sub find_something : PRIVATE {
         my ($self, @tokens) = @_;
 
-        if ( $#tokens >= 0 && $tokens[0]->isa("PPI::Structure::Block") ) {
-            my $tok = shift @tokens;
-        }
+        my $mdl = $self->get_mediator->get_currentmodule;
+        if ( ! $mdl->exist_usingmdl("List::MoreUtils") &&
+             ! $mdl->exist_usingmdl("List::AllUtils") ) { return; }
+
         return $self->get_mediator->find_address(@tokens);
     }
 }

@@ -7,23 +7,11 @@ use Class::Std;
 use PPI::Lexer;
 use Module::Pluggable instantiate => 'new', search_path => 'PlSense::Plugin::CodeAssistant';
 use PlSense::Logger;
+use PlSense::Util;
 use PlSense::Helper;
-use PlSense::SubstituteValueFinder;
 {
-    my %addrrouter_of :ATTR( :init_arg<addrrouter> );
-    my %addrfinder_of :ATTR( :init_arg<addrfinder> );
     my %lexer_of :ATTR();
     my %assistants_of :ATTR();
-
-    sub get_currentmodule {
-        my ($self) = @_;
-        return $addrfinder_of{ident $self}->get_currentmodule;
-    }
-
-    sub get_currentmethod {
-        my ($self) = @_;
-        return $addrfinder_of{ident $self}->get_currentmethod;
-    }
 
     sub BUILD {
         my ($class, $ident, $arg_ref) = @_;
@@ -33,9 +21,7 @@ use PlSense::SubstituteValueFinder;
 
     sub START {
         my ($class, $ident, $arg_ref) = @_;
-        my @assistants = $class->plugins({ 
-                                           addrrouter => $addrrouter_of{$ident},
-                                           addrfinder => $addrfinder_of{$ident}, });
+        my @assistants = $class->plugins();
         ASSISTANT:
         foreach my $assist ( @assistants ) { push @{$assistants_of{$ident}}, $assist; }
     }
@@ -44,7 +30,7 @@ use PlSense::SubstituteValueFinder;
         my ($self, $code) = @_;
         my @ret;
 
-        my $currmdl = $addrfinder_of{ident $self}->get_currentmodule;
+        my $currmdl = addrfinder->get_currentmodule;
         if ( ! $currmdl || ! $currmdl->isa("PlSense::Symbol::Module") ) {
             logger->warn("Not yet set current module");
             return @ret;

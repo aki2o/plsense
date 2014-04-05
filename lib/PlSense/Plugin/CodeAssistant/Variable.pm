@@ -34,8 +34,8 @@ use PlSense::Util;
         $self->set_input($input);
         logger->info("Match context : vartype[$vartype] input[$input]");
 
-        my $currmdl = $self->get_currentmodule;
-        my $currmtd = $self->get_currentmethod;
+        my $currmdl = addrfinder->get_currentmodule;
+        my $currmtd = addrfinder->get_currentmethod;
         my $mtdnm = $currmtd ? $currmtd->get_name : "";
         logger->notice("Found variable of ".$currmdl->get_fullnm." $mtdnm");
         VAR:

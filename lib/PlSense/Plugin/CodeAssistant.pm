@@ -4,13 +4,8 @@ use strict;
 use warnings;
 use Class::Std;
 use PlSense::Logger;
+use PlSense::Util;
 {
-    my %addrrouter_of :ATTR( :init_arg<addrrouter> );
-    sub get_addrrouter : RESTRICTED { my ($self) = @_; return $addrrouter_of{ident $self}; }
-
-    my %addrfinder_of :ATTR( :init_arg<addrfinder> );
-    sub get_addrfinder : RESTRICTED { my ($self) = @_; return $addrfinder_of{ident $self}; }
-
     my %input_of :ATTR( :default('') );
     sub set_input { my ($self, $input) = @_; $input_of{ident $self} = $input; }
     sub get_input : RESTRICTED { my ($self) = @_; return $input_of{ident $self}; }
@@ -53,16 +48,6 @@ use PlSense::Logger;
     sub init_last_candidate_instance {
         my $self = shift;
         $lasth_of{ident $self} = {};
-    }
-
-    sub get_currentmodule {
-        my ($self) = @_;
-        return $addrfinder_of{ident $self}->get_currentmodule;
-    }
-
-    sub get_currentmethod {
-        my ($self) = @_;
-        return $addrfinder_of{ident $self}->get_currentmethod;
     }
 
     sub BUILD {

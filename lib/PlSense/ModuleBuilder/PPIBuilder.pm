@@ -7,6 +7,7 @@ use Class::Std;
 use PPI::Lexer;
 use Module::Pluggable instantiate => 'new', search_path => 'PlSense::Plugin::PPIBuilder';
 use PlSense::Logger;
+use PlSense::Util;
 use PlSense::ModuleBuilder::PPIBuilder::IncludeStmt;
 use PlSense::Symbol::Method;
 use PlSense::Symbol::Variable;
@@ -23,9 +24,7 @@ use PlSense::Symbol::Variable;
 
     sub START {
         my ($class, $ident, $arg_ref) = @_;
-        my @plugins = $class->plugins({ 
-                                        substkeeper => $class->get_substkeeper,
-                                        substbuilder => $class->get_substbuilder, });
+        my @plugins = $class->plugins();
         PLUGIN:
         foreach my $p ( @plugins ) { push @{$plugins_of{$ident}}, $p; }
         $includestmtbuilder_of{$ident} = PlSense::ModuleBuilder::PPIBuilder::IncludeStmt->new();
@@ -52,7 +51,7 @@ use PlSense::Symbol::Variable;
         $self->build_anything($mdl, $mtd, $ppi->clone, $is_fragment);
 
         logger->info("Start build source in PPI part");
-        $self->get_substbuilder->set_currentmodule($mdl);
+        substbuilder->set_currentmodule($mdl);
         $self->do_plugins_begin($mdl, $ppi);
         $ppi->prune("PPI::Token::Comment");
         $ppi->prune("PPI::Token::Pod");
@@ -101,7 +100,7 @@ use PlSense::Symbol::Variable;
             METHOD:
             foreach my $mtdstmt ( @{$mtdstmts} ) {
                 my $mtd = $self->get_method_from_statement($mdl, $mtdstmt) or next METHOD;
-                $self->get_substbuilder->set_currentmethod($mtd);
+                substbuilder->set_currentmethod($mtd);
                 PLUGIN:
                 foreach my $p ( @{$plugins_of{ident $self}} ) {
                     $p->sub_statement($mtd, $mtdstmt);
@@ -132,10 +131,10 @@ use PlSense::Symbol::Variable;
         if ( $stmts ) {
             logger->info("Start build other statement in PPI part");
             if ( $mtd ) {
-                $self->get_substbuilder->set_currentmethod($mtd);
+                substbuilder->set_currentmethod($mtd);
             }
             else {
-                $self->get_substbuilder->init_currentmethod;
+                substbuilder->init_currentmethod;
             }
             STMT:
             foreach my $stmt ( @{$stmts} ) {
@@ -155,7 +154,7 @@ use PlSense::Symbol::Variable;
             }
         }
 
-        $self->get_substbuilder->init_currentmethod;
+        substbuilder->init_currentmethod;
         $self->do_plugins_end($mdl, $ppi);
     }
 

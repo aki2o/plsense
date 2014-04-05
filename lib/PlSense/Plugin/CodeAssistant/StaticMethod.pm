@@ -23,7 +23,7 @@ use PlSense::Util;
         logger->info("Match context : input[$input]");
 
         logger->notice("Found static method of [".$mdl->get_name."]");
-        my $currmdl = $self->get_currentmodule;
+        my $currmdl = addrfinder->get_currentmodule;
         STATIC_METHOD:
         foreach my $mtd ( $mdl->get_static_methods($currmdl) ) {
             $self->push_candidate($mtd->get_name, $mtd);

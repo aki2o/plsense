@@ -1,11 +1,11 @@
-package PlSense::SubstituteValueFinder;
+package PlSense::AddressFinder;
 
 use strict;
 use warnings;
 use Class::Std;
 use PPI::Lexer;
-use Module::Pluggable instantiate => 'new', search_path => [ 'PlSense::Plugin::SubstituteValueFinder::Builtin',
-                                                             'PlSense::Plugin::SubstituteValueFinder::Ext' ];
+use Module::Pluggable instantiate => 'new', search_path => [ 'PlSense::Plugin::AddressFinder::Builtin',
+                                                             'PlSense::Plugin::AddressFinder::Ext' ];
 use PlSense::Logger;
 use PlSense::Util;
 use PlSense::Entity::Null;
@@ -17,9 +17,6 @@ use PlSense::Entity::Reference;
     my %bpluginh_of :ATTR();
     my %epluginh_of :ATTR();
     my %lexer_of :ATTR();
-
-    my %substkeeper_of :ATTR( :init_arg<substkeeper> :default('') );
-    sub get_substkeeper { my ($self) = @_; return $substkeeper_of{ident $self}; }
 
     my %with_build_is :ATTR( :init_arg<with_build> );
     sub with_build { my ($self) = @_; return $with_build_is{ident $self} ? 1 : 0; }
@@ -65,11 +62,11 @@ use PlSense::Entity::Reference;
         my @plugins = $class->plugins({ mediator => $class,
                                         with_build => $class->with_build });
         PLUGIN:
-        foreach my $p ( grep { $_->isa("PlSense::Plugin::SubstituteValueFinder::Builtin") } @plugins ) {
+        foreach my $p ( grep { $_->isa("PlSense::Plugin::AddressFinder::Builtin") } @plugins ) {
             $bpluginh_of{$ident}->{$p->get_builtin_name} = $p;
         }
         PLUGIN:
-        foreach my $p ( grep { $_->isa("PlSense::Plugin::SubstituteValueFinder::Ext") } @plugins ) {
+        foreach my $p ( grep { $_->isa("PlSense::Plugin::AddressFinder::Ext") } @plugins ) {
             $epluginh_of{$ident}->{$p->get_method_name} = $p;
         }
     }
@@ -546,10 +543,10 @@ use PlSense::Entity::Reference;
             for my $i ( 0..$#values ) {
                 my $idx = $objective ? $i+2 : $i+1;
                 if ( $resolved_addr ) {
-                    $substkeeper_of{ident $self}->add_substitute($addr."[".$idx."]", $values[$i]);
+                    substkeeper->add_substitute($addr."[".$idx."]", $values[$i]);
                 }
                 else {
-                    $substkeeper_of{ident $self}->add_unknown_argument($addr, $idx, $values[$i]);
+                    substkeeper->add_unknown_argument($addr, $idx, $values[$i]);
                 }
             }
         }

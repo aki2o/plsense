@@ -1,10 +1,11 @@
-package PlSense::Plugin::SubstituteValueFinder::Builtin::Bless;
+package PlSense::Plugin::AddressFinder::Builtin::Bless;
 
-use parent qw{ PlSense::Plugin::SubstituteValueFinder::Builtin };
+use parent qw{ PlSense::Plugin::AddressFinder::Builtin };
 use strict;
 use warnings;
 use Class::Std;
 use PlSense::Logger;
+use PlSense::Util;
 {
     sub get_builtin_name {
         my ($self) = @_;
@@ -38,7 +39,7 @@ use PlSense::Logger;
         }
 
         my $mdl = $mediator->get_currentmodule;
-        $mediator->get_substkeeper->add_substitute('&'.$mdl->get_name.'::BLESS.R', $value, 1);
+        substkeeper->add_substitute('&'.$mdl->get_name.'::BLESS.R', $value, 1);
         return;
     }
 }

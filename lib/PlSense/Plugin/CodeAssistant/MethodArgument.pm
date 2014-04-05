@@ -5,6 +5,7 @@ use strict;
 use warnings;
 use Class::Std;
 use PlSense::Logger;
+use PlSense::Util;
 {
     sub is_valid_context {
         my ($self, $code, $tok) = @_;
@@ -31,7 +32,7 @@ use PlSense::Logger;
         logger->info("Match context : input[$input]");
 
         @tokens = $self->get_valid_tokens($bracetok);
-        my $rootaddr = $self->get_addrfinder->find_address(@tokens);
+        my $rootaddr = addrfinder->find_address(@tokens);
         if ( ! $rootaddr ) {
             logger->info("Not found address in current context");
             return 1;
@@ -49,7 +50,7 @@ use PlSense::Logger;
         my $addr = $self->get_current_address($rootaddr, $rootstmt);
         logger->notice("Found method argument of $addr");
 
-        my $entity = $self->get_addrrouter->resolve_address($addr);
+        my $entity = addrrouter->resolve_address($addr);
         if ( ! $entity || ! $entity->isa("PlSense::Entity::Hash") ) {
             logger->notice("Not hash entity in current context");
             return 1;

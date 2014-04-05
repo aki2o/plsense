@@ -16,7 +16,7 @@ use PlSense::Util;
         logger->info("Match context : input[$input]");
         $self->set_input($input);
 
-        my $currmdl = $self->get_currentmodule;
+        my $currmdl = addrfinder->get_currentmodule;
         logger->notice("Found explicit method in ".$currmdl->get_fullnm);
         METHOD:
         foreach my $mtd ( $currmdl->get_any_original_methods, builtin->get_methods ) {

@@ -37,9 +37,10 @@ set_primary_config( cachedir => $cachedir,
                     port3    => $port3, );
 setup_config($confpath) or exit 1;
 
-my $scli = PlSense::SocketClient->new({ retryinterval => 0.5, maxretry => 200 });
 set_mdlkeeper( PlSense::ModuleKeeper->new() );
 mdlkeeper->setup_without_reload();
+
+my $scli = PlSense::SocketClient->new({ retryinterval => 0.5, maxretry => 200 });
 
 $SIG{INT} = sub { logger->notice("Receive SIGINT"); resume_store(); exit 0; };
 $SIG{QUIT} = sub { logger->notice("Receive SIGQUIT"); resume_store(); exit 0; };

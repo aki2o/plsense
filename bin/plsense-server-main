@@ -16,7 +16,7 @@ use PlSense::Util;
 use PlSense::Builtin;
 use PlSense::ModuleKeeper;
 use PlSense::AddressRouter;
-use PlSense::SubstituteValueFinder;
+use PlSense::AddressFinder;
 use PlSense::CodeAssist;
 use PlSense::Helper;
 
@@ -97,26 +97,23 @@ if ( ! $sock->listen ) {
     exit 1;
 }
 
-my $scli = PlSense::SocketClient->new({ retryinterval => 0.2, maxretry => 5 });
 set_builtin( PlSense::Builtin->new() );
-builtin->setup_without_reload();
 set_mdlkeeper( PlSense::ModuleKeeper->new() );
-my $addrrouter = PlSense::AddressRouter->new({ 
-                                               with_build => 0, });
-my $addrfinder = PlSense::SubstituteValueFinder->new({ 
-                                                       with_build => 0, });
-my $assist = PlSense::CodeAssist->new({ 
-                                        addrrouter => $addrrouter,
-                                        addrfinder => $addrfinder });
-my $helper = PlSense::Helper->new({ addrrouter => $addrrouter, addrfinder => $addrfinder });
+set_addrrouter( PlSense::AddressRouter->new({ with_build => 0, }) );
+set_addrfinder( PlSense::AddressFinder->new({ with_build => 0, }) );
+builtin->setup_without_reload();
+
+my $scli = PlSense::SocketClient->new({ retryinterval => 0.2, maxretry => 5 });
+my $assist = PlSense::CodeAssist->new();
+my $helper = PlSense::Helper->new();
 my $currfilepath = "";
 my $currmdlnm = "";
 my $currmtdnm = "";
 
 $SIG{WINCH} = sub { logger->notice("Receive SIGWINCH"); exit 0; };
 $SIG{TERM} = sub { logger->notice("Receive SIGTERM"); exit 0; };
-$SIG{USR1} = sub { logger->notice("Receive SIGUSR1"); $addrrouter->reset; accept_client(); };
-$SIG{HUP} = sub { logger->notice("Receive SIGHUP"); $addrrouter->reset; accept_client(); };
+$SIG{USR1} = sub { logger->notice("Receive SIGUSR1"); addrrouter->reset; accept_client(); };
+$SIG{HUP} = sub { logger->notice("Receive SIGHUP"); addrrouter->reset; accept_client(); };
 
 accept_client();
 exit 0;
@@ -186,7 +183,7 @@ sub accept_client {
 }
 
 sub initialize {
-    $addrrouter->load_current_project;
+    addrrouter->load_current_project;
     return;
 }
 
@@ -317,7 +314,7 @@ sub set_currentfile {
     setup_config($currfilepath);
     builtin->setup();
     mdlkeeper->setup();
-    $addrrouter->setup();
+    addrrouter->setup();
     return "Done\n";
 }
 
@@ -370,7 +367,7 @@ sub is_ready {
 
 sub debug_stocked {
     my $ret = mdlkeeper->describe_keep_value;
-    $ret .= $addrrouter->describe_keep_value;
+    $ret .= addrrouter->describe_keep_value;
     return $ret;
 }
 
@@ -386,7 +383,7 @@ sub debug_module {
 
 sub debug_routing {
     my $regexp = shift || "";
-    return $addrrouter->to_string_by_regexp($regexp);
+    return addrrouter->to_string_by_regexp($regexp);
 }
 
 sub debug_lexer {
@@ -464,7 +461,7 @@ sub setup_built_module {
 }
 
 sub setup_resolved {
-    $addrrouter->load_current_project;
+    addrrouter->load_current_project;
     return;
 }
 
@@ -494,7 +491,7 @@ sub explore_package {
 }
 
 sub update_instance_condition {
-    my $currmdl = $addrfinder->get_currentmodule;
+    my $currmdl = addrfinder->get_currentmodule;
     if ( ! $currmdl || $currmdl->get_name ne $currmdlnm || $currmdl->get_filepath ne $currfilepath ) {
         my $mdl = mdlkeeper->get_module($currmdlnm, $currfilepath);
         if ( ! $mdl ) {
@@ -507,10 +504,10 @@ sub update_instance_condition {
             }
             return 0;
         }
-        $addrfinder->set_currentmodule($mdl);
+        addrfinder->set_currentmodule($mdl);
         $currmdl = $mdl;
     }
-    my $currmtd = $addrfinder->get_currentmethod;
+    my $currmtd = addrfinder->get_currentmethod;
     if ( $currmtdnm ) {
         if ( ! $currmtd || $currmtd->get_name ne $currmtdnm ) {
             my $mtd = $currmdl->get_method($currmtdnm);
@@ -519,11 +516,11 @@ sub update_instance_condition {
                 logger->error("Check the module status is 'Yes' by ready command.");
                 return 0;
             }
-            $addrfinder->set_currentmethod($mtd);
+            addrfinder->set_currentmethod($mtd);
         }
     }
     elsif ( $currmtd ) {
-        $addrfinder->init_currentmethod;
+        addrfinder->init_currentmethod;
     }
     return 1;
 }

@@ -79,8 +79,9 @@ if ( ! $sock->listen ) {
     exit 1;
 }
 
-my $scli = PlSense::SocketClient->new({ retryinterval => 0.2, maxretry => 10 });
 set_builtin( PlSense::Builtin->new() );
+
+my $scli = PlSense::SocketClient->new({ retryinterval => 0.2, maxretry => 10 });
 my %taskinfo_of;
 my @taskqueue;
 my $local;

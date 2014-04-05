@@ -1,4 +1,4 @@
-package PlSense::Plugin::SubstituteValueFinder;
+package PlSense::Plugin::AddressFinder;
 
 use strict;
 use warnings;

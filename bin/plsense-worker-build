@@ -45,31 +45,18 @@ set_primary_config( cachedir => $cachedir,
                     port3    => $port3, );
 setup_config($confpath) or exit 1;
 
-my $scli = PlSense::SocketClient->new({ retryinterval => 0.5, maxretry => 300 });
 set_builtin( PlSense::Builtin->new() );
 set_mdlkeeper( PlSense::ModuleKeeper->new() );
-my $addrrouter = PlSense::AddressRouter->new({ 
-                                               with_build => 1, });
-my $substkeeper = PlSense::SubstituteKeeper->new({ 
-                                                   addrrouter => $addrrouter, });
-my $substbuilder = PlSense::SubstituteBuilder->new({ 
-                                                     substkeeper => $substkeeper });
+set_addrrouter( PlSense::AddressRouter->new({ with_build => 1, }) );
+set_substkeeper( PlSense::SubstituteKeeper->new() );
+set_substbuilder( PlSense::SubstituteBuilder->new() );
 
+my $scli = PlSense::SocketClient->new({ retryinterval => 0.5, maxretry => 300 });
 my $srcupdater = PlSense::ModuleSrcUpdater->new();
-my $xrefbuilder = PlSense::ModuleBuilder::XrefBuilder->new({ 
-                                                             substkeeper => $substkeeper,
-                                                             substbuilder => $substbuilder, });
-my $inheritbuilder = PlSense::ModuleBuilder::InheritBuilder->new({ 
-                                                                   substkeeper => $substkeeper,
-                                                                   substbuilder => $substbuilder, });
-my $docbuilder = PlSense::ModuleBuilder::DocBuilder->new({ 
-                                                           
-                                                           substkeeper => $substkeeper,
-                                                           substbuilder => $substbuilder, });
-my $ppibuilder = PlSense::ModuleBuilder::PPIBuilder->new({ 
-                                                           
-                                                           substkeeper => $substkeeper,
-                                                           substbuilder => $substbuilder, });
+my $xrefbuilder = PlSense::ModuleBuilder::XrefBuilder->new();
+my $inheritbuilder = PlSense::ModuleBuilder::InheritBuilder->new();
+my $docbuilder = PlSense::ModuleBuilder::DocBuilder->new();
+my $ppibuilder = PlSense::ModuleBuilder::PPIBuilder->new();
 my (@builtmdls, @builtmdlkeys, @extmdls);
 
 $SIG{INT} = sub { logger->notice("Receive SIGINT"); interrupt_build(); exit 0; };
@@ -80,8 +67,8 @@ try {
     builtin->setup_without_reload();
     builtin->build();
     mdlkeeper->setup_without_reload();
-    $addrrouter->setup_without_reload();
-    $substkeeper->setup_without_reload();
+    addrrouter->setup_without_reload();
+    substkeeper->setup_without_reload();
 
     my ($filepath, $mdl);
     if ( -f $mdl_or_file ) {
@@ -127,7 +114,7 @@ try {
     foreach my $mdl ( @mdls ) {
 
         my $mdlkey = $mdl->get_name eq "main" ? $mdl->get_filepath : $mdl->get_name;
-        $substkeeper->reset;
+        substkeeper->reset;
 
         logger->notice("Start build [".$mdl->get_name."] : XRef part");
         $xrefbuilder->build($mdl);
@@ -143,8 +130,8 @@ try {
         $mdl->set_source(undef);
         $mdl->initialized;
         mdlkeeper->store_module($mdl);
-        $substkeeper->resolve_unknown_argument;
-        $substkeeper->store($mdl->get_name, $mdl->get_filepath, $mdl->get_projectnm);
+        substkeeper->resolve_unknown_argument;
+        substkeeper->store($mdl->get_name, $mdl->get_filepath, $mdl->get_projectnm);
         push @builtmdls, $mdl;
         push @builtmdlkeys, $mdlkey;
         push @extmdls, get_extmodules($mdl);

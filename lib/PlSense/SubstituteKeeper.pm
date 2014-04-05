@@ -20,9 +20,6 @@ use PlSense::Entity::Array;
     my %max_address_entry_of :ATTR( :init_arg<max_address_entry> :default(3) );
     my %current_local_is :ATTR();
 
-    my %addrrouter_of :ATTR( :init_arg<addrrouter> );
-    sub get_addrrouter { my ($self) = @_; return $addrrouter_of{ident $self}; }
-
     sub START {
         my ($class, $ident, $arg_ref) = @_;
         $cache_of{$ident} = $class->new_cache('ISubst');
@@ -38,7 +35,7 @@ use PlSense::Entity::Array;
         my $local = get_config("local");
         $cache_of{ident $self}->set_namespace( $local ? "ISubst.$projnm" : "ISubst" );
         $projcache_of{ident $self}->set_namespace("Subst.$projnm");
-        $addrrouter_of{ident $self}->setup_without_reload();
+        addrrouter->setup_without_reload();
         $current_local_is{ident $self} = $local;
     }
 
@@ -67,7 +64,7 @@ use PlSense::Entity::Array;
         my $mdlnm = shift || "";
         my $filepath = shift || "";
         my $projectnm = shift || "";
-        $addrrouter_of{ident $self}->store($mdlnm, $filepath, $projectnm);
+        addrrouter->store($mdlnm, $filepath, $projectnm);
         my $key = $self->get_cache_key($mdlnm, $filepath, $projectnm);
         if ( ! $projectnm ) {
             try   { $cache_of{ident $self}->set("[S]".$key, $substh_of{ident $self}); }
@@ -89,7 +86,7 @@ use PlSense::Entity::Array;
         my $mdlnm = shift || "";
         my $filepath = shift || "";
         my $projectnm = shift || "";
-        $addrrouter_of{ident $self}->load($mdlnm, $filepath, $projectnm);
+        addrrouter->load($mdlnm, $filepath, $projectnm);
         my $key = $self->get_cache_key($mdlnm, $filepath, $projectnm);
         $self->load_by_substitute_key("[S]".$key, $projectnm);
         $self->load_by_unknown_argument_key("[A]".$key, $projectnm);
@@ -110,7 +107,7 @@ use PlSense::Entity::Array;
         my $mdlnm = shift || "";
         my $filepath = shift || "";
         my $projectnm = shift || "";
-        $addrrouter_of{ident $self}->remove($mdlnm, $filepath, $projectnm);
+        addrrouter->remove($mdlnm, $filepath, $projectnm);
         my $key = $self->get_cache_key($mdlnm, $filepath, $projectnm);
         $self->remove_by_substitute_key("[S]".$key, $projectnm);
         $self->remove_by_unknown_argument_key("[A]".$key, $projectnm);
@@ -124,7 +121,7 @@ use PlSense::Entity::Array;
 
     sub remove_all {
         my $self = shift;
-        $addrrouter_of{ident $self}->remove_all;
+        addrrouter->remove_all;
         $self->reset;
         try   { $cache_of{ident $self}->clear; }
         catch { $cache_of{ident $self}->clear; };
@@ -137,7 +134,7 @@ use PlSense::Entity::Array;
 
     sub reset {
         my $self = shift;
-        $addrrouter_of{ident $self}->reset;
+        addrrouter->reset;
         $substh_of{ident $self} = {};
         $unknownargh_of{ident $self} = {};
     }
@@ -247,8 +244,8 @@ use PlSense::Entity::Array;
 
         if ( $force ||
              eval { $right->isa("PlSense::Entity") } ||
-             $addrrouter_of{ident $self}->exist_route($right) ) {
-            if ( ! $addrrouter_of{ident $self}->add_route($left, $right) ) { return; }
+             addrrouter->exist_route($right) ) {
+            if ( ! addrrouter->add_route($left, $right) ) { return; }
             $self->move_to_route($left);
         }
         else {
@@ -344,7 +341,7 @@ use PlSense::Entity::Array;
         logger->info("Start remove already resolved substitute : count[".($#addrs + 1)."]");
         SUBST:
         foreach my $right ( @addrs ) {
-            if ( ! $addrrouter_of{ident $self}->exist_route($right) ) { next SUBST; }
+            if ( ! addrrouter->exist_route($right) ) { next SUBST; }
             delete $substh_of{ident $self}->{$right};
         }
         @addrs = keys %{$unknownargh_of{ident $self}};
@@ -356,7 +353,7 @@ use PlSense::Entity::Array;
             my ($findaddr, $mtdnm) = ($1, $2);
             my $resolve = $resolved_of{$findaddr};
             if ( ! $resolve ) {
-                $resolve = $addrrouter_of{ident $self}->resolve_address($findaddr) or next ARG;
+                $resolve = addrrouter->resolve_address($findaddr) or next ARG;
                 $resolved_of{$findaddr} = $resolve;
             }
             if ( ! $resolve->isa("PlSense::Entity::Instance") ) { next ARG; }
@@ -373,10 +370,10 @@ use PlSense::Entity::Array;
         SUBST:
         foreach my $right ( @addrs ) {
             my $substs = $substh_of{ident $self}->{$right} or next SUBST;
-            if ( ! $addrrouter_of{ident $self}->exist_route($right) ) { next SUBST; }
+            if ( ! addrrouter->exist_route($right) ) { next SUBST; }
             SUBST:
             foreach my $left ( @{$substs} ) {
-                if ( ! $addrrouter_of{ident $self}->add_route($left, $right) ) { next SUBST; }
+                if ( ! addrrouter->add_route($left, $right) ) { next SUBST; }
                 $self->move_to_route($left);
             }
             delete $substh_of{ident $self}->{$right};
@@ -394,8 +391,8 @@ use PlSense::Entity::Array;
             my ($findaddr, $mtdnm) = ($1, $2);
             if ( ! exists $resolved_of{$findaddr} ) {
                 $resolved_of{$findaddr} = undef;
-                if ( $addrrouter_of{ident $self}->exist_route($findaddr) ) {
-                    $resolved_of{$findaddr} = $addrrouter_of{ident $self}->resolve_address($findaddr);
+                if ( addrrouter->exist_route($findaddr) ) {
+                    $resolved_of{$findaddr} = addrrouter->resolve_address($findaddr);
                 }
             }
             my $resolve = $resolved_of{$findaddr};
@@ -489,7 +486,7 @@ use PlSense::Entity::Array;
             my $substs = $substs_of{$right} or next FOUND;
             SUBST:
             foreach my $left ( @{$substs} ) {
-                if ( ! $addrrouter_of{ident $self}->add_route($left, $right) ) { next SUBST; }
+                if ( ! addrrouter->add_route($left, $right) ) { next SUBST; }
                 $self->move_to_route($left);
             }
         }
@@ -560,7 +557,7 @@ use PlSense::Entity::Array;
             foreach my $leftaddr ( @{$loadh->{$rightaddr}} ) {
                 my $idx = firstidx { $_ eq $leftaddr } @{$substs};
                 if ( $idx < 0 ) {
-                    $addrrouter_of{ident $self}->remove_route($leftaddr, $rightaddr);
+                    addrrouter->remove_route($leftaddr, $rightaddr);
                 }
                 else {
                     splice @{$substs}, $idx, 1;
@@ -632,7 +629,7 @@ use PlSense::Entity::Array;
         foreach my $key ( @keys ) {
             my $ch = substr($key, 1, 1);
             if ( $ch eq 'S' ) {
-                $addrrouter_of{ident $self}->load_by_cache_key(substr($key, 3));
+                addrrouter->load_by_cache_key(substr($key, 3));
                 $self->load_by_substitute_key($key, 0);
             }
             elsif ( $ch eq 'A' ) {
@@ -654,7 +651,7 @@ use PlSense::Entity::Array;
         foreach my $key ( @keys ) {
             my $ch = substr($key, 1, 1);
             if ( $ch eq 'S' ) {
-                $addrrouter_of{ident $self}->load_by_cache_key(substr($key, 3));
+                addrrouter->load_by_cache_key(substr($key, 3));
                 $self->load_by_substitute_key($key, 1);
             }
             elsif ( $ch eq 'A' ) {
@@ -675,8 +672,8 @@ use PlSense::Entity::Array;
         foreach my $key ( @keys ) {
             my $ch = substr($key, 1, 1);
             if ( $ch eq 'S' ) {
-                $memoryonly ? $addrrouter_of{ident $self}->remove_by_cache_key_on_memory(substr($key, 3))
-                            : $addrrouter_of{ident $self}->remove_by_cache_key(substr($key, 3));
+                $memoryonly ? addrrouter->remove_by_cache_key_on_memory(substr($key, 3))
+                            : addrrouter->remove_by_cache_key(substr($key, 3));
                 $self->remove_by_substitute_key($key, 1, $memoryonly);
             }
             elsif ( $ch eq 'A' ) {

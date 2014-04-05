@@ -1,6 +1,6 @@
-package PlSense::Plugin::SubstituteValueFinder::Builtin::Values;
+package PlSense::Plugin::AddressFinder::Builtin::Values;
 
-use parent qw{ PlSense::Plugin::SubstituteValueFinder::Builtin };
+use parent qw{ PlSense::Plugin::AddressFinder::Builtin };
 use strict;
 use warnings;
 use Class::Std;

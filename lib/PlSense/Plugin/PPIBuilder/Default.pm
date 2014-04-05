@@ -6,6 +6,7 @@ use warnings;
 use Class::Std;
 use List::AllUtils qw{ firstidx };
 use PlSense::Logger;
+use PlSense::Util;
 use PlSense::Entity::Instance;
 use PlSense::Entity::Hash;
 use PlSense::Symbol::Variable;
@@ -16,14 +17,14 @@ use PlSense::Symbol::Variable;
 
         my $mtd = $mdl->get_method("new") or return;
         my $entity = PlSense::Entity::Instance->new({ modulenm => $mdl->get_name, });
-        $self->get_substkeeper->add_substitute($mtd->get_fullnm, $entity, 1);
+        substkeeper->add_substitute($mtd->get_fullnm, $entity, 1);
         my $baddr = '&'.$mdl->get_name.'::BLESS';
-        $self->get_substkeeper->add_substitute($baddr, $entity, 1);
+        substkeeper->add_substitute($baddr, $entity, 1);
 
         PARENT:
         for my $i ( 1..$mdl->count_parent ) {
             my $parent = $mdl->get_parent($i);
-            $self->get_substkeeper->add_substitute("&".$mdl->get_fullnm."::new[2]", "&".$parent->get_fullnm."::new[2]", 1);
+            substkeeper->add_substitute("&".$mdl->get_fullnm."::new[2]", "&".$parent->get_fullnm."::new[2]", 1);
         }
     }
 
@@ -42,7 +43,7 @@ use PlSense::Symbol::Variable;
         my $mdl = $mtd->get_module or return;
         if ( $mdl->is_objective ) {
             my $baddr = '&'.$mdl->get_name.'::BLESS';
-            $self->get_substkeeper->add_substitute($mtd->get_fullnm."[1]", $baddr, 1);
+            substkeeper->add_substitute($mtd->get_fullnm."[1]", $baddr, 1);
         }
 
         my $block = $stmt->block or return;
@@ -54,7 +55,7 @@ use PlSense::Symbol::Variable;
         elsif ( $laststmt->isa("PPI::Statement") ) {
             my @tokens = $laststmt->children;
             logger->info("Found method last statement : ".$laststmt->content);
-            $self->get_substbuilder->build_method_return($mtd, @tokens);
+            substbuilder->build_method_return($mtd, @tokens);
         }
     }
 
@@ -64,7 +65,7 @@ use PlSense::Symbol::Variable;
         my $eqidx = firstidx { $_->isa("PPI::Token::Operator") && $_->content eq "=" } @tokens;
         if ( $eqidx < 0 || $eqidx >= $#tokens ) { return; }
         $eqidx++;
-        $self->get_substbuilder->build_variable_substitute( $vars, @tokens[$eqidx..$#tokens] );
+        substbuilder->build_variable_substitute( $vars, @tokens[$eqidx..$#tokens] );
     }
 
     sub other_statement {
@@ -96,13 +97,13 @@ use PlSense::Symbol::Variable;
         logger->info("Found substitute statement : ".$stmt->content);
         my @lefts = @tokens[0..($eqidx-1)];
         my @rights = @tokens[($eqidx+1)..$#tokens];
-        $self->get_substbuilder->build_substitute_with_find_variable( \@lefts, @rights );
+        substbuilder->build_substitute_with_find_variable( \@lefts, @rights );
         return 1;
     }
 
     sub build_by_normal_statement : PRIVATE {
         my ($self, $stmt, @tokens) = @_;
-        $self->get_substbuilder->build_any_substitute_from_normal_statement(@tokens);
+        substbuilder->build_any_substitute_from_normal_statement(@tokens);
     }
 
     sub build_by_break_statement : PRIVATE {
@@ -111,7 +112,7 @@ use PlSense::Symbol::Variable;
         my $e = shift @tokens or return;
         if ( $e->content ne "return" ) { return; }
         logger->info("Found method break statement : ".$stmt->content);
-        $self->get_substbuilder->build_method_return($mtd, @tokens);
+        substbuilder->build_method_return($mtd, @tokens);
     }
 
     sub build_by_for_statement : PRIVATE {
@@ -148,19 +149,19 @@ use PlSense::Symbol::Variable;
         logger->info("Found for/foreach statement : ".$e->content);
         @children = $e->children;
 
-        my $any = $self->get_substbuilder->get_finder->find_address_or_entity(@children) or return;
+        my $any = addrfinder->find_address_or_entity(@children) or return;
         if ( eval { $any->isa("PlSense::Entity") } ) {
             if ( ! $any->isa("PlSense::Entity::Array") ) { return; }
             my $el = $any->get_element;
             if ( $el ) {
-                $self->get_substkeeper->add_substitute($var->get_fullnm, $el);
+                substkeeper->add_substitute($var->get_fullnm, $el);
             }
             elsif ( $any->count_address > 0 ) {
-                $self->get_substkeeper->add_substitute($var->get_fullnm, $any->get_address(1).".A");
+                substkeeper->add_substitute($var->get_fullnm, $any->get_address(1).".A");
             }
         }
         else {
-            $self->get_substkeeper->add_substitute($var->get_fullnm, $any.".A");
+            substkeeper->add_substitute($var->get_fullnm, $any.".A");
         }
     }
 

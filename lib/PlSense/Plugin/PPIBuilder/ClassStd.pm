@@ -6,6 +6,7 @@ use warnings;
 use Class::Std;
 use List::AllUtils qw{ first };
 use PlSense::Logger;
+use PlSense::Util;
 use PlSense::Symbol::Method;
 use PlSense::Entity::Reference;
 use PlSense::Entity::Hash;
@@ -17,8 +18,8 @@ use PlSense::Entity::Null;
              ! $mdl->exist_usingmdl("Class::Std::Storable") &&
              ! $mdl->exist_usingmdl("Class::Std::Fast::Storable") ) { return; }
 
-        $self->get_substkeeper->add_substitute("&".$mdl->get_fullnm."::BUILD[3]", "&".$mdl->get_fullnm."::new[2]", 1);
-        $self->get_substkeeper->add_substitute("&".$mdl->get_fullnm."::START[3]", "&".$mdl->get_fullnm."::new[2]", 1);
+        substkeeper->add_substitute("&".$mdl->get_fullnm."::BUILD[3]", "&".$mdl->get_fullnm."::new[2]", 1);
+        substkeeper->add_substitute("&".$mdl->get_fullnm."::START[3]", "&".$mdl->get_fullnm."::new[2]", 1);
     }
 
     sub sub_statement {
@@ -89,7 +90,7 @@ use PlSense::Entity::Null;
                                                                                   module => $mdl,
                                                                                   publicly => 1 });
             $mtd->set_importive(0);
-            $self->get_substkeeper->add_substitute($mtd->get_fullnm, $var->get_fullnm.".H:*", 1);
+            substkeeper->add_substitute($mtd->get_fullnm, $var->get_fullnm.".H:*", 1);
         }
         if ( $setternm ) {
             my $mtdnm = "set_".$setternm;
@@ -98,17 +99,17 @@ use PlSense::Entity::Null;
                                                                                   module => $mdl,
                                                                                   publicly => 1 });
             $mtd->set_importive(0);
-            $self->get_substkeeper->add_substitute($var->get_fullnm.".H:*", $mtd->get_fullnm."[2]", 1);
+            substkeeper->add_substitute($var->get_fullnm.".H:*", $mtd->get_fullnm."[2]", 1);
         }
         if ( $initnm ) {
             my $mtd = $mdl->get_method("new") or return;
-            $self->get_substkeeper->add_substitute($var->get_fullnm.".H:*", $mtd->get_fullnm."[2].R.H:".$initnm, 1);
+            substkeeper->add_substitute($var->get_fullnm.".H:*", $mtd->get_fullnm."[2].R.H:".$initnm, 1);
 
-            my @routes = $self->get_substkeeper->get_addrrouter->get_route($mtd->get_fullnm."[2]");
+            my @routes = addrrouter->get_route($mtd->get_fullnm."[2]");
             my $ref = first { eval { $_->isa("PlSense::Entity::Reference") } } @routes;
             if ( ! $ref ) {
                 $ref = PlSense::Entity::Reference->new();
-                $self->get_substkeeper->add_substitute($mtd->get_fullnm."[2]", $ref, 1);
+                substkeeper->add_substitute($mtd->get_fullnm."[2]", $ref, 1);
             }
             my $hash = $ref->get_entity;
             if ( ! eval { $hash->isa("PlSense::Entity::Hash") } ) {
