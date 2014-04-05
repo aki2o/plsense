@@ -7,6 +7,7 @@ use PPI::Lexer;
 use Module::Pluggable instantiate => 'new', search_path => [ 'PlSense::Plugin::SubstituteValueFinder::Builtin',
                                                              'PlSense::Plugin::SubstituteValueFinder::Ext' ];
 use PlSense::Logger;
+use PlSense::Util;
 use PlSense::Entity::Null;
 use PlSense::Entity::Scalar;
 use PlSense::Entity::Array;
@@ -427,7 +428,7 @@ use PlSense::Entity::Reference;
         my $mdl = $self->get_currentmodule;
         my $mtd = $self->get_currentmethod;
 
-        if ( $builtin_of{ident $self}->exist_variable($varnm) ) {
+        if ( builtin->exist_variable($varnm) ) {
             logger->debug("Found builtin variable : $varnm");
             my $p = $bpluginh_of{ident $self}->{$varnm};
             if ( $p ) { return $p->find_address(@tokens); }
@@ -486,7 +487,7 @@ use PlSense::Entity::Reference;
             return $self->build_address_anything_with_method_arg($mtd->get_fullnm, @tokens);
         }
 
-        if ( $builtin_of{ident $self}->exist_method($currwd) ) {
+        if ( builtin->exist_method($currwd) ) {
             logger->debug("Found builtin function : $currwd");
             my $p = $bpluginh_of{ident $self}->{$currwd};
             if ( $p ) {
