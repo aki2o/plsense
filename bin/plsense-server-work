@@ -70,7 +70,7 @@ my $sock = IO::Socket::INET->new(LocalAddr => "localhost",
                                  LocalPort => $port2,
                                  Proto => "tcp",
                                  Listen => 1,
-                                 ReUse => 1,
+                                 ReUse => 0,
                                  );
 if ( ! $sock ) {
     logger->fatal("Can't create socket : $!");
