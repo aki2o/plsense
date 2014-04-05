@@ -8,6 +8,7 @@ use Try::Tiny;
 use PlSense;
 use PlSense::Logger;
 use PlSense::Configure;
+use PlSense::Util;
 use PlSense::SocketClient;
 
 my %opthelp_of = ("-h, --help"        => "Show this message.",
