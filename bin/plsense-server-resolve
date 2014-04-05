@@ -57,7 +57,9 @@ if ( ! $cachedir || ! -d $cachedir ) {
 set_primary_config( cachedir => $cachedir,
                     port1    => $port1,
                     port2    => $port2,
-                    port3    => $port3, );
+                    port3    => $port3,
+                    loglevel => $loglvl,
+                    logfile  => $logfile, );
 setup_config() or exit 1;
 
 my $sock = IO::Socket::INET->new(LocalAddr => "localhost",
@@ -92,8 +94,8 @@ my $nowresolving = undef;
 
 $SIG{WINCH} = sub { logger->notice("Receive SIGWINCH"); resume_store(); exit 0; };
 $SIG{TERM} = sub { logger->notice("Receive SIGTERM"); resume_store(); exit 0; };
-$SIG{USR1} = sub { logger->notice("Receive SIGUSR1"); resume_store(); accept_client(); };
-$SIG{HUP} = sub { logger->notice("Receive SIGHUP"); resume_store(); accept_client(); };
+$SIG{USR1} = sub { logger->notice("Receive SIGUSR1"); resume_store(); restart(); };
+$SIG{HUP} = sub { logger->notice("Receive SIGHUP"); resume_store(); restart(); };
 
 accept_client();
 exit 0;
@@ -163,10 +165,66 @@ sub accept_client {
 }
 
 sub initialize {
-    # builtin->build;
-    # $scli->request_main_server("builtin");
     substkeeper->load_all;
     return;
+}
+
+sub get_needbuild_extmodules {
+    my $mdl = shift;
+
+    my @ret;
+    PARENT:
+    for my $i ( 1..$mdl->count_parent ) {
+        my $parent = $mdl->get_parent($i);
+        my $m = mdlkeeper->get_module($parent->get_name);
+        if ( $m->is_initialized ) { next PARENT; }
+        push @ret, $parent->get_name;
+    }
+    USINGMODULE:
+    for my $i ( 1..$mdl->count_usingmdl ) {
+        my $usingmdl = $mdl->get_usingmdl($i);
+        my $m = mdlkeeper->get_module($usingmdl->get_name);
+        if ( $m->is_initialized ) { next USINGMODULE; }
+        push @ret, $usingmdl->get_name;
+    }
+
+    return @ret;
+}
+
+sub update_project_info {
+    # TODO: Location is needed to sync with other server correctly
+    my $loc = $scli->get_main_server_response("location") or return;
+    $currprojnm = $loc =~ m{ ^ Project: \s+ ([^\n]*?) $ }xms ? $1 : "";
+    $currfilepath = $loc =~ m{ ^ File: \s+ ([^\n]*?) $ }xms ? $1 : "";
+    $currmdlnm = $loc =~ m{ ^ Module: \s+ ([^\n]*?) $ }xms ? $1 : "";
+    $currmtdnm = $loc =~ m{ ^ Sub: \s+ ([^\n]*?) $ }xms ? $1 : "";
+
+    setup_config($currfilepath);
+    builtin->setup() and builtin->load();
+    mdlkeeper->setup();
+    substkeeper->setup();
+    return 1;
+}
+
+sub resume_store {
+    my $mdl = $nowstoringmdl;
+    if ( $mdl && $mdl->isa("PlSense::Symbol::Module") ) {
+        logger->notice("Resume store module : ".$mdl->get_fullnm);
+        mdlkeeper->store_module($mdl);
+        addrrouter->store_current_project;
+        $nowstoringmdl = undef;
+    }
+    if ( $nowresolving ) {
+        logger->notice("Resume resolve subst/arg");
+        substkeeper->resolve_substitute;
+        substkeeper->resolve_unknown_argument;
+        addrrouter->store_current_project;
+        $nowresolving = 0;
+    }
+}
+
+sub restart {
+    exec "plsense-server-resolve ".get_common_option();
 }
 
 
@@ -292,65 +350,11 @@ sub setup_built_module {
 }
 
 sub update_loglevel {
-    $loglvl = shift || "";
+    my $loglvl = shift || "";
     $loglvl =~ s{ ^\s+ }{}xms;
     $loglvl =~ s{ \s+$ }{}xms;
     update_logger_level($loglvl);
+    set_primary_config(loglevel => $loglvl);
     return;
-}
-
-
-sub get_needbuild_extmodules {
-    my $mdl = shift;
-
-    my @ret;
-    PARENT:
-    for my $i ( 1..$mdl->count_parent ) {
-        my $parent = $mdl->get_parent($i);
-        my $m = mdlkeeper->get_module($parent->get_name);
-        if ( $m->is_initialized ) { next PARENT; }
-        push @ret, $parent->get_name;
-    }
-    USINGMODULE:
-    for my $i ( 1..$mdl->count_usingmdl ) {
-        my $usingmdl = $mdl->get_usingmdl($i);
-        my $m = mdlkeeper->get_module($usingmdl->get_name);
-        if ( $m->is_initialized ) { next USINGMODULE; }
-        push @ret, $usingmdl->get_name;
-    }
-
-    return @ret;
-}
-
-sub update_project_info {
-    # TODO: Location is needed to sync with other server correctly
-    my $loc = $scli->get_main_server_response("location") or return;
-    $currprojnm = $loc =~ m{ ^ Project: \s+ ([^\n]*?) $ }xms ? $1 : "";
-    $currfilepath = $loc =~ m{ ^ File: \s+ ([^\n]*?) $ }xms ? $1 : "";
-    $currmdlnm = $loc =~ m{ ^ Module: \s+ ([^\n]*?) $ }xms ? $1 : "";
-    $currmtdnm = $loc =~ m{ ^ Sub: \s+ ([^\n]*?) $ }xms ? $1 : "";
-
-    setup_config($currfilepath);
-    builtin->setup() and builtin->load();
-    mdlkeeper->setup();
-    substkeeper->setup();
-    return 1;
-}
-
-sub resume_store {
-    my $mdl = $nowstoringmdl;
-    if ( $mdl && $mdl->isa("PlSense::Symbol::Module") ) {
-        logger->notice("Resume store module : ".$mdl->get_fullnm);
-        mdlkeeper->store_module($mdl);
-        addrrouter->store_current_project;
-        $nowstoringmdl = undef;
-    }
-    if ( $nowresolving ) {
-        logger->notice("Resume resolve subst/arg");
-        substkeeper->resolve_substitute;
-        substkeeper->resolve_unknown_argument;
-        addrrouter->store_current_project;
-        $nowresolving = 0;
-    }
 }
 

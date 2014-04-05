@@ -301,17 +301,8 @@ GetOptions ('help'        => sub { show_usage(); exit 0; },
 setup_logger($loglvl, $logfile);
 if ( ! $loglvl ) { $loglvl = ''; }
 if ( ! $logfile ) { $logfile = ''; }
-if ( ! $maxtasks || $maxtasks !~ m{ ^\d+$ }xms ) { $maxtasks = 20; }
 
-if ( $cachedir ) {
-    set_primary_config( cachedir => $cachedir,
-                        port1    => $port1,
-                        port2    => $port2,
-                        port3    => $port3,
-                        maxtasks => $maxtasks, );
-    setup_config();
-}
-else {
+if ( ! $cachedir ) {
     logger->info("Read option from config file.");
     setup_config("", 0, 1) or exit 1;
     $cachedir   = get_config("cachedir");
@@ -323,6 +314,14 @@ else {
     $logfile  ||= get_config("logfile") || "";
     setup_logger($loglvl, $logfile);
 }
+set_primary_config( cachedir => $cachedir,
+                    port1    => $port1,
+                    port2    => $port2,
+                    port3    => $port3,
+                    maxtasks => $maxtasks,
+                    loglevel => $loglvl,
+                    logfile  => $logfile, );
+setup_config() or exit 1;
 
 my $scli = PlSense::SocketClient->new({ retryinterval => 0.2, maxretry => 10 });
 my %pid_of;
@@ -428,14 +427,6 @@ sub show_help {
 }
 
 
-sub get_common_option {
-    my $ret = "--cachedir '$cachedir' --loglevel '$loglvl' --logfile '$logfile'";
-    $ret .= " --port1 $port1";
-    $ret .= " --port2 $port2";
-    $ret .= " --port3 $port3";
-    return $ret;
-}
-
 sub start_main_server {
     my $immediately = shift || 0;
     return start_server_sentinel("main", $immediately);
@@ -467,7 +458,7 @@ sub start_server_sentinel {
     }
 
     my $cmdnm = "plsense-server-".$svtype;
-    my $etcopt = $svtype eq "work" ? " --maxtasks $maxtasks" : "";
+    my $etcopt = $svtype eq "work" ? " --maxtasks ".get_config("maxtasks") : "";
     my $cmdstr = "$cmdnm ".get_common_option().$etcopt;
     logger->info("Start server : $cmdstr");
     system "$cmdstr &";
@@ -537,6 +528,7 @@ sub show_server_status {
 }
 
 sub start_server {
+    my $cachedir = get_config("cachedir");
     if ( ! $cachedir ) {
         logger->fatal("Required information for cachedir. For more information, run 'plsense --help'");
         return;
@@ -747,11 +739,12 @@ sub debug_lexer {
 
 sub update_config {
     create_global_config() or return;
-    $cachedir = get_config("cachedir");
-    $port1    = get_config("port1");
-    $port2    = get_config("port2");
-    $port3    = get_config("port3");
-    $maxtasks = get_config("maxtasks");
+    set_primary_config( cachedir => undef,
+                        port1    => undef,
+                        port2    => undef,
+                        port3    => undef,
+                        maxtasks => undef, );
+    setup_config("", 1) or return;
     return "Finished update config\n";
 }
 

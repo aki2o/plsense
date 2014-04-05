@@ -61,7 +61,9 @@ set_primary_config( cachedir => $cachedir,
                     port1    => $port1,
                     port2    => $port2,
                     port3    => $port3,
-                    maxtasks => $maxtasks, );
+                    maxtasks => $maxtasks,
+                    loglevel => $loglvl,
+                    logfile  => $logfile, );
 setup_config() or exit 1;
 
 my $sock = IO::Socket::INET->new(LocalAddr => "localhost",
@@ -88,8 +90,8 @@ my $local;
 
 $SIG{WINCH} = sub { logger->notice("Receive SIGWINCH"); kill_all_task(); exit 0; };
 $SIG{TERM} = sub { logger->notice("Receive SIGTERM"); kill_all_task(); exit 0; };
-$SIG{USR1} = sub { logger->notice("Receive SIGUSR1"); kill_all_task(); accept_client(); };
-$SIG{HUP} = sub { logger->notice("Receive SIGHUP"); kill_all_task(); accept_client(); };
+$SIG{USR1} = sub { logger->notice("Receive SIGUSR1"); kill_all_task(); restart(); };
+$SIG{HUP} = sub { logger->notice("Receive SIGHUP"); kill_all_task(); restart(); };
 
 accept_client();
 exit 0;
@@ -199,7 +201,7 @@ sub run_task {
 
     my $limit = $now + 60 * 10;
     RUN_TASK:
-    while ( $taskcount < $maxtasks ) {
+    while ( $taskcount < get_config("maxtasks") ) {
         my $nexttask = shift @taskqueue or return;
         my $taskkey = $nexttask->{key};
         if ( is_running($taskkey) ) { next RUN_TASK; }
@@ -247,14 +249,11 @@ sub kill_all_task {
     }
 }
 
-sub get_common_option {
+sub get_worker_common_option {
     my $is_project = shift || 0;
-    my $confpath = get_config("confpath") || "";
-    my $ret = "--cachedir '$cachedir' --loglevel '$loglvl' --logfile '$logfile' --confpath '$confpath'";
+    my $ret = get_common_option();
+    $ret .= " --confpath '".(get_config("confpath") || "")."'";
     if ( $is_project ) { $ret .= " --project" }
-    $ret .= " --port1 $port1";
-    $ret .= " --port2 $port2";
-    $ret .= " --port3 $port3";
     return $ret;
 }
 
@@ -266,7 +265,7 @@ sub add_find_task {
     foreach my $dir ( @rootdirs ) {
         $rootdiropt .= " --rootdir '$dir'";
     }
-    add_task("find $tasknm", "plsense-worker-find --tasknm '$tasknm' $rootdiropt ".get_common_option($global ? 0 : 1));
+    add_task("find $tasknm", "plsense-worker-find --tasknm '$tasknm' $rootdiropt ".get_worker_common_option($global ? 0 : 1));
     return;
 }
 
@@ -308,6 +307,35 @@ sub update_location {
     return 1;
 }
 
+sub build_sentinel {
+    my $mdl_or_files = shift || "";
+    my $recursive = shift || 0;
+    my $force = shift || 0;
+    my @mdl_or_files = split m{ \| }xms, $mdl_or_files;
+    ENTRY:
+    foreach my $mdl_or_file ( @mdl_or_files ) {
+        $mdl_or_file =~ s{ ^\s+ }{}xms;
+        $mdl_or_file =~ s{ \s+$ }{}xms;
+        if ( ! $mdl_or_file ) { next ENTRY; }
+        my $target = -f $mdl_or_file ? File::Spec->rel2abs($mdl_or_file) : $mdl_or_file;
+        my $taskkey = "build ".$target;
+        if ( is_running($taskkey) ) {
+            logger->info("Quit build '$mdl_or_file'. It's now building or build already");
+            next ENTRY;
+        }
+        logger->notice("Add task build '$mdl_or_file'. recursive[$recursive]");
+        my $cmd = "plsense-worker-build --target '$target' ".get_worker_common_option();
+        if ( $recursive ) { $cmd .= " --recursive" }
+        if ( $force ) { $cmd .= " --force" }
+        add_task($taskkey, $cmd);
+    }
+    return;
+}
+
+sub restart {
+    exec "plsense-server-work ".get_common_option()." --maxtasks ".get_config("maxtasks");
+}
+
 
 
 sub get_status {
@@ -342,31 +370,6 @@ sub build_force {
 sub build_recursive_force {
     my $mdl_or_files = shift || "";
     build_sentinel($mdl_or_files, 1, 1);
-}
-
-sub build_sentinel {
-    my $mdl_or_files = shift || "";
-    my $recursive = shift || 0;
-    my $force = shift || 0;
-    my @mdl_or_files = split m{ \| }xms, $mdl_or_files;
-    ENTRY:
-    foreach my $mdl_or_file ( @mdl_or_files ) {
-        $mdl_or_file =~ s{ ^\s+ }{}xms;
-        $mdl_or_file =~ s{ \s+$ }{}xms;
-        if ( ! $mdl_or_file ) { next ENTRY; }
-        my $target = -f $mdl_or_file ? File::Spec->rel2abs($mdl_or_file) : $mdl_or_file;
-        my $taskkey = "build ".$target;
-        if ( is_running($taskkey) ) {
-            logger->info("Quit build '$mdl_or_file'. It's now building or build already");
-            next ENTRY;
-        }
-        logger->notice("Add task build '$mdl_or_file'. recursive[$recursive]");
-        my $cmd = "plsense-worker-build --target '$target' ".get_common_option();
-        if ( $recursive ) { $cmd .= " --recursive" }
-        if ( $force ) { $cmd .= " --force" }
-        add_task($taskkey, $cmd);
-    }
-    return;
 }
 
 sub open_file {
@@ -427,11 +430,11 @@ sub finish_build {
 }
 
 sub update_loglevel {
-    $loglvl = shift || "";
+    my $loglvl = shift || "";
     $loglvl =~ s{ ^\s+ }{}xms;
     $loglvl =~ s{ \s+$ }{}xms;
     update_logger_level($loglvl);
+    set_primary_config(loglevel => $loglvl);
     return;
 }
-
 

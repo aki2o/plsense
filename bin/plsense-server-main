@@ -79,7 +79,9 @@ if ( ! $cachedir || ! -d $cachedir ) {
 set_primary_config( cachedir => $cachedir,
                     port1    => $port1,
                     port2    => $port2,
-                    port3    => $port3, );
+                    port3    => $port3,
+                    loglevel => $loglvl,
+                    logfile  => $logfile, );
 setup_config() or exit 1;
 
 my $sock = IO::Socket::INET->new(LocalAddr => "localhost",
@@ -112,8 +114,8 @@ my $currmtdnm = "";
 
 $SIG{WINCH} = sub { logger->notice("Receive SIGWINCH"); exit 0; };
 $SIG{TERM} = sub { logger->notice("Receive SIGTERM"); exit 0; };
-$SIG{USR1} = sub { logger->notice("Receive SIGUSR1"); addrrouter->reset; accept_client(); };
-$SIG{HUP} = sub { logger->notice("Receive SIGHUP"); addrrouter->reset; accept_client(); };
+$SIG{USR1} = sub { logger->notice("Receive SIGUSR1"); restart(); };
+$SIG{HUP} = sub { logger->notice("Receive SIGHUP"); restart(); };
 
 accept_client();
 exit 0;
@@ -185,6 +187,45 @@ sub accept_client {
 sub initialize {
     addrrouter->load_current_project;
     return;
+}
+
+sub update_instance_condition {
+    my $currmdl = addrfinder->get_currentmodule;
+    if ( ! $currmdl || $currmdl->get_name ne $currmdlnm || $currmdl->get_filepath ne $currfilepath ) {
+        my $mdl = mdlkeeper->get_module($currmdlnm, $currfilepath);
+        if ( ! $mdl ) {
+            if ( ! $currmdlnm ) {
+                logger->error("Not yet set current file/module by onfile/onmod command");
+            }
+            else {
+                logger->error("Not yet exist [$currmdlnm] of [$currfilepath]");
+                logger->error("Check the module status is not 'Nothing' by ready command.");
+            }
+            return 0;
+        }
+        addrfinder->set_currentmodule($mdl);
+        $currmdl = $mdl;
+    }
+    my $currmtd = addrfinder->get_currentmethod;
+    if ( $currmtdnm ) {
+        if ( ! $currmtd || $currmtd->get_name ne $currmtdnm ) {
+            my $mtd = $currmdl->get_method($currmtdnm);
+            if ( ! $mtd ) {
+                logger->error("Not found [$currmtdnm] in [$currmdlnm] of [$currfilepath]");
+                logger->error("Check the module status is 'Yes' by ready command.");
+                return 0;
+            }
+            addrfinder->set_currentmethod($mtd);
+        }
+    }
+    elsif ( $currmtd ) {
+        addrfinder->init_currentmethod;
+    }
+    return 1;
+}
+
+sub restart {
+    exec "plsense-server-main ".get_common_option();
 }
 
 
@@ -466,10 +507,11 @@ sub setup_resolved {
 }
 
 sub update_loglevel {
-    $loglvl = shift || "";
+    my $loglvl = shift || "";
     $loglvl =~ s{ ^\s+ }{}xms;
     $loglvl =~ s{ \s+$ }{}xms;
     update_logger_level($loglvl);
+    set_primary_config(loglevel => $loglvl);
     return;
 }
 
@@ -489,40 +531,4 @@ sub explore_package {
     }
     return $ret;
 }
-
-sub update_instance_condition {
-    my $currmdl = addrfinder->get_currentmodule;
-    if ( ! $currmdl || $currmdl->get_name ne $currmdlnm || $currmdl->get_filepath ne $currfilepath ) {
-        my $mdl = mdlkeeper->get_module($currmdlnm, $currfilepath);
-        if ( ! $mdl ) {
-            if ( ! $currmdlnm ) {
-                logger->error("Not yet set current file/module by onfile/onmod command");
-            }
-            else {
-                logger->error("Not yet exist [$currmdlnm] of [$currfilepath]");
-                logger->error("Check the module status is not 'Nothing' by ready command.");
-            }
-            return 0;
-        }
-        addrfinder->set_currentmodule($mdl);
-        $currmdl = $mdl;
-    }
-    my $currmtd = addrfinder->get_currentmethod;
-    if ( $currmtdnm ) {
-        if ( ! $currmtd || $currmtd->get_name ne $currmtdnm ) {
-            my $mtd = $currmdl->get_method($currmtdnm);
-            if ( ! $mtd ) {
-                logger->error("Not found [$currmtdnm] in [$currmdlnm] of [$currfilepath]");
-                logger->error("Check the module status is 'Yes' by ready command.");
-                return 0;
-            }
-            addrfinder->set_currentmethod($mtd);
-        }
-    }
-    elsif ( $currmtd ) {
-        addrfinder->init_currentmethod;
-    }
-    return 1;
-}
-
 

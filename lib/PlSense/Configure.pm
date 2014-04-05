@@ -8,6 +8,7 @@ use File::Spec;
 use PlSense::Logger;
 use Exporter 'import';
 our @EXPORT = qw( setup_config
+                  init_config
                   set_primary_config
                   get_config
                   get_default_config
@@ -43,9 +44,9 @@ our @EXPORT = qw( setup_config
 
     sub setup_config {
         my ($filepath, $reload, $interactive) = @_;
-        if ( ! $gcnf ) {
+        if ( ! $gcnf || $reload ) {
             $gcnf = {};
-            $gcnf->{$_} = $primary_of{$_} foreach grep { exists $primary_of{$_} } @gkeys;
+            $gcnf->{$_} = $primary_of{$_} foreach grep { defined $primary_of{$_} } @gkeys;
             if ( ! exist_global_config() && $interactive ) {
                 my $ret = read_string("Not exist config file [$global_config_path]\nMaking? (Y/n) ") || "";
                 if ( ! $ret || lc($ret) eq 'y' || lc($ret) eq 'yes' ) {
@@ -57,11 +58,11 @@ our @EXPORT = qw( setup_config
             }
             if ( exist_global_config() ) {
                 $gcnf = load_config($global_config_path, @gkeys) or return;
-                $gcnf->{$_} = $primary_of{$_} foreach grep { exists $primary_of{$_} } @gkeys;
+                $gcnf->{$_} = $primary_of{$_} foreach grep { defined $primary_of{$_} } @gkeys;
             }
         }
         $pcnf = {};
-        $pcnf->{$_} = $primary_of{$_} foreach grep { exists $primary_of{$_} } @pkeys;
+        $pcnf->{$_} = $primary_of{$_} foreach grep { defined $primary_of{$_} } @pkeys;
         if ( ! $filepath ) { return 1; }
         my $pconfpath = get_config_path($filepath) or return 1;
         if ( exists $pcnf_of{$pconfpath} && ! $reload ) {
@@ -69,7 +70,7 @@ our @EXPORT = qw( setup_config
         }
         else {
             $pcnf = load_config($pconfpath, @pkeys) or return;
-            $pcnf->{$_} = $primary_of{$_} foreach grep { exists $primary_of{$_} } @pkeys;
+            $pcnf->{$_} = $primary_of{$_} foreach grep { defined $primary_of{$_} } @pkeys;
             $pcnf->{confpath} = $pconfpath;
             makeup_config();
             $pcnf_of{$pconfpath} = $pcnf;
@@ -78,17 +79,22 @@ our @EXPORT = qw( setup_config
         return 1;
     }
 
+    sub init_config {
+        $gcnf = undef;
+        $pcnf = undef;
+        %pcnf_of = ();
+        %primary_of = ();
+    }
+
     sub set_primary_config {
         my %conf = @_;
         CONFIG:
         foreach my $confignm ( keys %conf ) {
-            my $v = $conf{$confignm};
-            if ( ! defined $v ) { next CONFIG; }
             if ( ! grep { $_ eq $confignm } ( @gkeys, @pkeys ) ) {
                 logger->error("Invalid config name : $confignm");
                 next CONFIG;
             }
-            $primary_of{$confignm} = $v;
+            $primary_of{$confignm} = $conf{$confignm};
         }
     }
 
