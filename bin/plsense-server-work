@@ -331,7 +331,8 @@ sub build_sentinel {
 }
 
 sub refresh {
-    builtin->reset;
+    set_builtin( PlSense::Builtin->new() );
+    $local = 0;
     setup_config();
 }
 

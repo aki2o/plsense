@@ -225,9 +225,15 @@ sub update_instance_condition {
 }
 
 sub refresh {
-    builtin->reset;
-    mdlkeeper->reset;
-    addrrouter->reset;
+    set_builtin( PlSense::Builtin->new() );
+    set_mdlkeeper( PlSense::ModuleKeeper->new() );
+    set_addrrouter( PlSense::AddressRouter->new({ with_build => 0, }) );
+    set_addrfinder( PlSense::AddressFinder->new({ with_build => 0, }) );
+    $assist = PlSense::CodeAssist->new();
+    $helper = PlSense::Helper->new();
+    $currfilepath = "";
+    $currmdlnm = "";
+    $currmtdnm = "";
     setup_config();
 }
 

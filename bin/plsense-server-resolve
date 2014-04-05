@@ -226,9 +226,16 @@ sub resume_store {
 }
 
 sub refresh {
-    builtin->reset;
-    mdlkeeper->reset;
-    substkeeper->reset;
+    set_builtin( PlSense::Builtin->new() );
+    set_mdlkeeper( PlSense::ModuleKeeper->new() );
+    set_addrrouter( PlSense::AddressRouter->new({ with_build => 1 }) );
+    set_substkeeper( PlSense::SubstituteKeeper->new({ max_entry => 500 }) );
+    set_substbuilder( PlSense::SubstituteBuilder->new() );
+    $ppibuilder = PlSense::ModuleBuilder::PPIBuilder->new();
+    $currprojnm = "";
+    $currfilepath = "";
+    $currmdlnm = "";
+    $currmtdnm = "";
     setup_config();
 }
 
