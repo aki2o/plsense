@@ -32,7 +32,7 @@ my $before_resolve_mem = get_proc_memory_quantity("plsense-server-resolve");
 run_plsense_testcmd("refresh > /dev/null");
 wait_fin_task();
 
-ok(is_server_running(), "restart server process") or done_mytest();
+ok(is_server_running(), "server alive after refresh") or done_mytest();
 
 my $after_main_mem = get_proc_memory_quantity("plsense-server-main");
 my $after_work_mem = get_proc_memory_quantity("plsense-server-work");

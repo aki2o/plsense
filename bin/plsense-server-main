@@ -225,6 +225,9 @@ sub update_instance_condition {
 }
 
 sub refresh {
+    undef $assist;
+    undef $helper;
+    reset_all_util();
     set_builtin( PlSense::Builtin->new() );
     set_mdlkeeper( PlSense::ModuleKeeper->new() );
     set_addrrouter( PlSense::AddressRouter->new({ with_build => 0, }) );
