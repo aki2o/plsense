@@ -70,8 +70,7 @@ my $sock = IO::Socket::INET->new(LocalAddr => "localhost",
                                  LocalPort => $port2,
                                  Proto => "tcp",
                                  Listen => 1,
-                                 ReUse => 0,
-                                 );
+                                 ReUse => 1, );
 if ( ! $sock ) {
     logger->fatal("Can't create socket : $!");
     exit 1;
@@ -90,8 +89,8 @@ my $local;
 
 $SIG{WINCH} = sub { logger->notice("Receive SIGWINCH"); kill_all_task(); exit 0; };
 $SIG{TERM} = sub { logger->notice("Receive SIGTERM"); kill_all_task(); exit 0; };
-$SIG{USR1} = sub { logger->notice("Receive SIGUSR1"); kill_all_task(); restart(); };
-$SIG{HUP} = sub { logger->notice("Receive SIGHUP"); kill_all_task(); restart(); };
+$SIG{USR1} = sub { logger->notice("Receive SIGUSR1"); kill_all_task(); refresh(); accept_client(); };
+$SIG{HUP} = sub { logger->notice("Receive SIGHUP"); kill_all_task(); refresh(); accept_client(); };
 
 accept_client();
 exit 0;
@@ -162,7 +161,6 @@ sub accept_client {
 }
 
 sub initialize {
-    setup_config();
     add_find_installed_task();
     run_task();
     builtin->setup_without_reload();
@@ -332,8 +330,9 @@ sub build_sentinel {
     return;
 }
 
-sub restart {
-    exec "plsense-server-work ".get_common_option()." --maxtasks ".get_config("maxtasks");
+sub refresh {
+    builtin->reset;
+    setup_config();
 }
 
 

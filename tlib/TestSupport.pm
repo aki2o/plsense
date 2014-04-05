@@ -20,6 +20,7 @@ our @EXPORT = qw( get_tmp_dir
                   wait_fin_task
                   wait_fin_timeout
                   wait_ready
+                  get_proc_memory_quantity
                   used_modules );
 {
     sub get_tmp_dir {
@@ -183,6 +184,13 @@ our @EXPORT = qw( get_tmp_dir
             if ( $readyret eq "Yes" ) { last WAIT_READY; }
             sleep $chk_interval;
         }
+    }
+
+    sub get_proc_memory_quantity {
+        my $procnm = shift or return 0;
+        my $mem = qx{ ps alx | grep $procnm | grep -v grep | awk '{printf \$8}' };
+        if ( $mem !~ m{ \A \d+ \z }xms ) { return 0; }
+        return $mem;
     }
 
     sub used_modules {

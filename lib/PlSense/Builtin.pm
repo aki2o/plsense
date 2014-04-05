@@ -126,6 +126,13 @@ use PlSense::Symbol::Variable;
         return 1;
     }
 
+    sub is_loaded {
+        my ($self) = @_;
+        my @vars = keys $variableh_of{ident $self};
+        my @mtds = keys $methodh_of{ident $self};
+        return $#vars > 0 && $#mtds > 0;
+    }
+
     sub reset {
         my ($self) = @_;
         $variableh_of{ident $self} = {};

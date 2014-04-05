@@ -66,8 +66,7 @@ my $sock = IO::Socket::INET->new(LocalAddr => "localhost",
                                  LocalPort => $port3,
                                  Proto => "tcp",
                                  Listen => 1,
-                                 ReUse => 0,
-                                 );
+                                 ReUse => 1, );
 if ( ! $sock ) {
     logger->fatal("Can't create socket : $!");
     exit 1;
@@ -94,8 +93,8 @@ my $nowresolving = undef;
 
 $SIG{WINCH} = sub { logger->notice("Receive SIGWINCH"); resume_store(); exit 0; };
 $SIG{TERM} = sub { logger->notice("Receive SIGTERM"); resume_store(); exit 0; };
-$SIG{USR1} = sub { logger->notice("Receive SIGUSR1"); resume_store(); restart(); };
-$SIG{HUP} = sub { logger->notice("Receive SIGHUP"); resume_store(); restart(); };
+$SIG{USR1} = sub { logger->notice("Receive SIGUSR1"); resume_store(); refresh(); accept_client(); };
+$SIG{HUP} = sub { logger->notice("Receive SIGHUP"); resume_store(); refresh(); accept_client(); };
 
 accept_client();
 exit 0;
@@ -165,8 +164,11 @@ sub accept_client {
 }
 
 sub initialize {
+    builtin->setup_without_reload();
+    mdlkeeper->setup_without_reload();
+    substkeeper->setup_without_reload();
+    builtin->load;
     substkeeper->load_all;
-    return;
 }
 
 sub get_needbuild_extmodules {
@@ -200,7 +202,7 @@ sub update_project_info {
     $currmtdnm = $loc =~ m{ ^ Sub: \s+ ([^\n]*?) $ }xms ? $1 : "";
 
     setup_config($currfilepath);
-    builtin->setup() and builtin->load();
+    builtin->setup() || ! builtin->is_loaded and builtin->load();
     mdlkeeper->setup();
     substkeeper->setup();
     return 1;
@@ -223,8 +225,11 @@ sub resume_store {
     }
 }
 
-sub restart {
-    exec "plsense-server-resolve ".get_common_option();
+sub refresh {
+    builtin->reset;
+    mdlkeeper->reset;
+    substkeeper->reset;
+    setup_config();
 }
 
 
