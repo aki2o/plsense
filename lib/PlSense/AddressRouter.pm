@@ -8,6 +8,7 @@ use List::AllUtils qw{ firstidx lastidx };
 use Try::Tiny;
 use PlSense::Logger;
 use PlSense::Configure;
+use PlSense::Util;
 {
     my %cache_of :ATTR( :default(undef) );
     my %routeh_of :ATTR();
@@ -17,9 +18,6 @@ use PlSense::Configure;
     my %max_reverse_address_entry_of :ATTR( :init_arg<max_reverse_address_entry> :default(10) );
     my %max_try_routing_of :ATTR( :init_arg<max_try_routing> :default(50) );
     my %commonkeyh_of :ATTR();
-
-    my %mdlkeeper_of :ATTR( :init_arg<mdlkeeper> );
-    sub get_mdlkeeper : PRIVATE { my ($self) = @_; return $mdlkeeper_of{ident $self}; }
 
     my %with_build_is :ATTR( :init_arg<with_build> );
     sub with_build { my ($self) = @_; return $with_build_is{ident $self} ? 1 : 0; }
@@ -368,7 +366,7 @@ use PlSense::Configure;
                 $followaddr = $mtdnm.$followaddr;
                 my ($mdlnm, $filepath) = $mtdaddr =~ m{ \A main \[ (.+) \] \z }xms ? ("main", $1)
                                        :                                             ($mtdaddr, "");
-                my $mdl = $self->get_mdlkeeper->get_module($mdlnm, $filepath) or last ADDR;
+                my $mdl = mdlkeeper->get_module($mdlnm, $filepath) or last ADDR;
                 my $mtd = $mdl->get_any_method($mtdnm) or last ADDR;
                 if ( $mtd->is_importive ) {
                     logger->debug("Try get original method of [$mtdnm] in [".$mdl->get_name."]");
@@ -550,7 +548,7 @@ use PlSense::Configure;
         }
         elsif ( $ch eq "W" ) {
             if ( $etype ne 'instance' ) { return (); }
-            my $mdl = $self->get_mdlkeeper->get_module( $entity->get_modulenm ) or return ();
+            my $mdl = mdlkeeper->get_module( $entity->get_modulenm ) or return ();
             my $mtdnm = substr($follow, 2);
             my $mtd = $mdl->get_any_method($mtdnm) or return ();
             my $mtdfullnm = $mtd->get_fullnm;
@@ -633,8 +631,8 @@ use PlSense::Configure;
             my $newmdlnm = $new->get_modulenm || "";
             if ( ! $oldmdlnm ) { return $new; }
             elsif ( $newmdlnm && $oldmdlnm ne $newmdlnm ) { return $new; }
-            # my $oldmdl = $self->get_mdlkeeper->get_module($old->get_modulenm);
-            # my $newmdl = $self->get_mdlkeeper->get_module($new->get_modulenm);
+            # my $oldmdl = mdlkeeper->get_module($old->get_modulenm);
+            # my $newmdl = mdlkeeper->get_module($new->get_modulenm);
             # if ( ! $oldmdl ) {
             #     $old->set_modulenm($new->get_modulenm);
             # }

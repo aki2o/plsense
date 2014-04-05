@@ -5,6 +5,7 @@ use strict;
 use warnings;
 use Class::Std;
 use PlSense::Logger;
+use PlSense::Util;
 {
     sub is_only_valid_context {
         my ($self, $code, $tok) = @_;
@@ -36,7 +37,7 @@ use PlSense::Logger;
         if ( $mdlnm eq "base" || $mdlnm eq "parent" ) {
 
             MODULE:
-            foreach my $mdl ( $self->get_mdlkeeper->get_packages ) {
+            foreach my $mdl ( mdlkeeper->get_packages ) {
                 if ( $inputed_is{$mdl->get_name} ) { next MODULE; }
                 $self->push_candidate($mdl->get_name, $mdl);
             }
@@ -44,7 +45,7 @@ use PlSense::Logger;
         }
         else {
 
-            my $mdl = $self->get_mdlkeeper->get_module($mdlnm) or return;
+            my $mdl = mdlkeeper->get_module($mdlnm) or return;
             if ( ! $mdl->is_exportable ) { return; }
 
             my @exportvars;

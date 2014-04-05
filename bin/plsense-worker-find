@@ -38,8 +38,8 @@ set_primary_config( cachedir => $cachedir,
 setup_config($confpath) or exit 1;
 
 my $scli = PlSense::SocketClient->new({ retryinterval => 0.5, maxretry => 200 });
-my $mdlkeeper = PlSense::ModuleKeeper->new();
-$mdlkeeper->setup_without_reload();
+set_mdlkeeper( PlSense::ModuleKeeper->new() );
+mdlkeeper->setup_without_reload();
 
 $SIG{INT} = sub { logger->notice("Receive SIGINT"); resume_store(); exit 0; };
 $SIG{QUIT} = sub { logger->notice("Receive SIGQUIT"); resume_store(); exit 0; };
@@ -74,8 +74,8 @@ foreach my $dir ( @dirs ) {
             MDL:
             foreach my $mdlnm ( "main", $mdlnm ) {
 
-                my $mdl = $is_project ? $mdlkeeper->get_project_module($mdlnm, $filepath)
-                        :               $mdlkeeper->get_module($mdlnm, $filepath);
+                my $mdl = $is_project ? mdlkeeper->get_project_module($mdlnm, $filepath)
+                        :               mdlkeeper->get_module($mdlnm, $filepath);
                 if ( ! $mdl ) {
                     logger->info("Found not yet stored module [$mdlnm] in [$filepath]");
                     $mdl = PlSense::Symbol::Module->new({ name => $mdlnm,
@@ -84,7 +84,7 @@ foreach my $dir ( @dirs ) {
                                                           lastmodified => $lastmodified });
                     logger->notice("New module [".$mdl->get_name."] in [".$mdl->get_filepath."] belong [".$mdl->get_projectnm."]");
                     $nowstoringmdl = $mdl;
-                    $mdlkeeper->store_module($mdl);
+                    mdlkeeper->store_module($mdl);
                     $nowstoringmdl = undef;
                     if ( $is_project ) {
                         my $mdlkey = $mdl->get_name eq "main" ? $mdl->get_filepath : $mdl->get_name;
@@ -110,7 +110,7 @@ foreach my $dir ( @dirs ) {
                                                           lastmodified => $lastmodified });
                     logger->notice("New module [".$mdl->get_name."] in [".$mdl->get_filepath."] belong [".$mdl->get_projectnm."]");
                     $nowstoringmdl = $mdl;
-                    $mdlkeeper->store_module($mdl);
+                    mdlkeeper->store_module($mdl);
                     $nowstoringmdl = undef;
                     if ( $needbuild ) { push @needbuild, $mdlkey; }
                 }
@@ -148,7 +148,7 @@ exit 0;
 sub resume_store {
     my $mdl = $nowstoringmdl;
     if ( $mdl && $mdl->isa("PlSense::Symbol::Module") ) {
-        $mdlkeeper->store_module($mdl);
+        mdlkeeper->store_module($mdl);
         $nowstoringmdl = undef;
     }
 }

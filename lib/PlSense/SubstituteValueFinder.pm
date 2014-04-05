@@ -18,9 +18,6 @@ use PlSense::Entity::Reference;
     my %epluginh_of :ATTR();
     my %lexer_of :ATTR();
 
-    my %mdlkeeper_of :ATTR( :init_arg<mdlkeeper> );
-    sub get_mdlkeeper { my ($self) = @_; return $mdlkeeper_of{ident $self}; }
-
     my %substkeeper_of :ATTR( :init_arg<substkeeper> :default('') );
     sub get_substkeeper { my ($self) = @_; return $substkeeper_of{ident $self}; }
 
@@ -449,7 +446,7 @@ use PlSense::Entity::Reference;
 
         if ( $varnm =~ m{ ^ ($|@|%|&) ([a-zA-Z0-9:]+) :: ([a-zA-Z0-9_]+) $ }xms ) {
             my ($type, $mdlnm, $somenm) = ($1, $2, $3);
-            my $m = $mdlkeeper_of{ident $self}->get_module($mdlnm) or return;
+            my $m = mdlkeeper->get_module($mdlnm) or return;
             my $addr = $type.$mdlnm."::".$somenm;
             if ( $type eq '&' ) {
                 logger->info("Found used method : ".$addr);
@@ -497,7 +494,7 @@ use PlSense::Entity::Reference;
             return;
         }
 
-        my $m = $mdlkeeper_of{ident $self}->get_module($currwd);
+        my $m = mdlkeeper->get_module($currwd);
         if ( $m ) {
             logger->info("Found module : $currwd");
             return $self->build_address_literal_method($m, @tokens);
@@ -505,7 +502,7 @@ use PlSense::Entity::Reference;
 
         if ( $currwd =~ m{ ^ ([a-zA-Z0-9:]+) :: ([a-zA-Z0-9_]+) $ }xms ) {
             my ($mdlnm, $mtdnm) = ($1, $2);
-            my $m = $mdlkeeper_of{ident $self}->get_module($mdlnm) or return;
+            my $m = mdlkeeper->get_module($mdlnm) or return;
             my $addr = $mdlnm."::".$mtdnm;
             logger->info("Found used method : $addr");
             return $self->build_address_anything_with_method_arg("&".$addr, @tokens);

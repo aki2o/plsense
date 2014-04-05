@@ -5,6 +5,7 @@ use strict;
 use warnings;
 use Class::Std;
 use PlSense::Logger;
+use PlSense::Util;
 {
     sub is_only_valid_context {
         my ($self, $code, $tok) = @_;
@@ -25,7 +26,7 @@ use PlSense::Logger;
             logger->info("Can't get instance entity from [$addr]");
             return 1;
         }
-        my $mdl = $self->get_mdlkeeper->get_module( $entity->get_modulenm );
+        my $mdl = mdlkeeper->get_module( $entity->get_modulenm );
         if ( ! $mdl ) {
             logger->info("Can't get module of [".$entity->get_modulenm."]");
             return 1;

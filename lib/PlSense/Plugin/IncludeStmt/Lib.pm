@@ -5,6 +5,7 @@ use strict;
 use warnings;
 use Class::Std;
 use File::Basename;
+use PlSense::Util;
 {
     sub include_statement {
         my ($self, $mdl, $includenm, $stmt) = @_;
@@ -57,7 +58,7 @@ use File::Basename;
         # my $currpath = dirname($mdl->get_filepath);
         # LIBPATH:
         # foreach my $libpath ( @libpathes ) {
-        #     $self->get_mdlkeeper->find_module($currpath."/".$libpath);
+        #     mdlkeeper->find_module($currpath."/".$libpath);
         # }
     }
 }

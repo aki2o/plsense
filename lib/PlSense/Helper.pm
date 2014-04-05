@@ -71,12 +71,12 @@ use PlSense::Util;
             if ( $addr ) {
                 my $entity = $addrrouter_of{ident $self}->resolve_address($addr) or return "";
                 if ( ! $entity->isa("PlSense::Entity::Instance") ) { return ""; }
-                $mdl = $addrfinder->get_mdlkeeper->get_module($entity->get_modulenm) or return "";
+                $mdl = mdlkeeper->get_module($entity->get_modulenm) or return "";
             }
             else {
                 $pretok = pop @tokens or return "";
                 if ( ! $pretok->isa("PPI::Token::Word") ) { return ""; }
-                $mdl = $addrfinder->get_mdlkeeper->get_module("".$pretok->content."") or return "";
+                $mdl = mdlkeeper->get_module("".$pretok->content."") or return "";
             }
             if ( ! $mdl ) { return ""; }
             $mtd = $mdl->get_any_original_method($word) or return "";
@@ -116,18 +116,18 @@ use PlSense::Util;
                 if ( $addr ) {
                     my $entity = $addrrouter_of{ident $self}->resolve_address($addr) or return "";
                     if ( ! $entity->isa("PlSense::Entity::Instance") ) { return ""; }
-                    $mdl = $addrfinder->get_mdlkeeper->get_module($entity->get_modulenm) or return "";
+                    $mdl = mdlkeeper->get_module($entity->get_modulenm) or return "";
                 }
                 else {
                     $pretok = pop @tokens or return "";
                     if ( ! $pretok->isa("PPI::Token::Word") ) { return ""; }
-                    $mdl = $addrfinder->get_mdlkeeper->get_module("".$pretok->content."") or return "";
+                    $mdl = mdlkeeper->get_module("".$pretok->content."") or return "";
                 }
                 if ( ! $mdl ) { return ""; }
                 my $mtd = $mdl->get_any_original_method($word) or return "";
                 return $self->get_symbol_help_text($mtd);
             }
-            elsif ( my $mdl = $addrfinder->get_mdlkeeper->get_module($word) ) {
+            elsif ( my $mdl = mdlkeeper->get_module($word) ) {
                 # Word is Module
                 return $self->get_symbol_help_text($mdl);
             }
@@ -143,7 +143,7 @@ use PlSense::Util;
                 my ($mdlkey, $mtdnm) = ($1, $2);
                 my ($mdlnm, $filepath) = $mdlkey =~ m{ \A main \[ (.+) \] \z }xms ? ("main", $1)
                                        :                                            ($mdlkey, "");
-                my $mdl = $addrfinder->get_mdlkeeper->get_module($mdlnm, $filepath) or return "";
+                my $mdl = mdlkeeper->get_module($mdlnm, $filepath) or return "";
                 if ( ! $mdl->exist_method($mtdnm) ) { return ""; }
                 my $mtd = $mdl->get_any_original_method($mtdnm);
                 return $self->get_symbol_help_text($mtd);

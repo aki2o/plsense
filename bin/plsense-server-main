@@ -100,12 +100,12 @@ if ( ! $sock->listen ) {
 my $scli = PlSense::SocketClient->new({ retryinterval => 0.2, maxretry => 5 });
 set_builtin( PlSense::Builtin->new() );
 builtin->setup_without_reload();
-my $mdlkeeper = PlSense::ModuleKeeper->new();
-my $addrrouter = PlSense::AddressRouter->new({ mdlkeeper => $mdlkeeper,
+set_mdlkeeper( PlSense::ModuleKeeper->new() );
+my $addrrouter = PlSense::AddressRouter->new({ 
                                                with_build => 0, });
-my $addrfinder = PlSense::SubstituteValueFinder->new({ mdlkeeper => $mdlkeeper,
+my $addrfinder = PlSense::SubstituteValueFinder->new({ 
                                                        with_build => 0, });
-my $assist = PlSense::CodeAssist->new({ mdlkeeper => $mdlkeeper,
+my $assist = PlSense::CodeAssist->new({ 
                                         addrrouter => $addrrouter,
                                         addrfinder => $addrfinder });
 my $helper = PlSense::Helper->new({ addrrouter => $addrrouter, addrfinder => $addrfinder });
@@ -210,27 +210,27 @@ sub remove {
         if ( ! $mdl_or_file ) { next ENTRY; }
         my ($mdlnm, $filepath) = -f $mdl_or_file ? ("main", File::Spec->rel2abs($mdl_or_file))
                                :                   ($mdl_or_file, "");
-        my $mdl = $mdlkeeper->get_module($mdlnm, $filepath) or next ENTRY;
+        my $mdl = mdlkeeper->get_module($mdlnm, $filepath) or next ENTRY;
         if ( $filepath ) {
-            foreach my $m ( $mdlkeeper->get_bundle_modules($filepath) ) {
-                $mdlkeeper->remove_module($m->get_name, $m->get_filepath, $m->get_projectnm);
+            foreach my $m ( mdlkeeper->get_bundle_modules($filepath) ) {
+                mdlkeeper->remove_module($m->get_name, $m->get_filepath, $m->get_projectnm);
             }
         }
         else {
-            $mdlkeeper->remove_module($mdlnm, $filepath, $mdl->get_projectnm);
+            mdlkeeper->remove_module($mdlnm, $filepath, $mdl->get_projectnm);
         }
     }
     return "Done\n";
 }
 
 sub remove_all {
-    $mdlkeeper->remove_all_module;
+    mdlkeeper->remove_all_module;
     initialize();
     return "Done\n";
 }
 
 sub remove_project_all {
-    $mdlkeeper->remove_project_all_module;
+    mdlkeeper->remove_project_all_module;
     return "Done\n";
 }
 
@@ -238,7 +238,7 @@ sub help_module {
     my $mdlnm = shift || "";
     $mdlnm =~ s{ ^\s+ }{}xms;
     $mdlnm =~ s{ \s+$ }{}xms;
-    my $mdl = $mdlkeeper->get_module($mdlnm);
+    my $mdl = mdlkeeper->get_module($mdlnm);
     if ( ! $mdl ) {
         logger->error("Not found module[$mdlnm]");
         return;
@@ -252,7 +252,7 @@ sub help_method {
     my @e = split m{ \s+ }xms, $arg;
     my $mtdnm = shift @e || "";
     my $mdlnm = shift @e || "";
-    my $mdl = $mdlkeeper->get_module($mdlnm);
+    my $mdl = mdlkeeper->get_module($mdlnm);
     my $mtd = $mdl ? $mdl->get_any_method($mtdnm) : undef;
     if ( $mtd ) { return $helper->get_symbol_help_text($mtd); }
     if ( builtin->exist_method($mtdnm) ) {
@@ -270,7 +270,7 @@ sub help_variable {
     my @e = split m{ \s+ }xms, $arg;
     my $varnm = shift @e || "";
     my $mdlnm = shift @e || "";
-    my $mdl = $mdlkeeper->get_module($mdlnm);
+    my $mdl = mdlkeeper->get_module($mdlnm);
     my $var = $mdl && $mdl->exist_member($varnm) ? $mdl->get_member($varnm) : undef;
     if ( $var ) { return $helper->get_symbol_help_text($var); }
     if ( builtin->exist_variable($varnm) ) {
@@ -316,7 +316,7 @@ sub set_currentfile {
     logger->notice("Set current file is [$currfilepath]");
     setup_config($currfilepath);
     builtin->setup();
-    $mdlkeeper->setup();
+    mdlkeeper->setup();
     $addrrouter->setup();
     return "Done\n";
 }
@@ -359,17 +359,17 @@ sub is_ready {
     $mdl_or_file =~ s{ ^\s+ }{}xms;
     $mdl_or_file =~ s{ \s+$ }{}xms;
     if ( ! $mdl_or_file ) {
-        return join("\n", map { $_->get_name } $mdlkeeper->get_built_modules)."\n";
+        return join("\n", map { $_->get_name } mdlkeeper->get_built_modules)."\n";
     }
     my ($mdlnm, $filepath) = -f $mdl_or_file ? ("main", File::Spec->rel2abs($mdl_or_file))
                            :                   ($mdl_or_file, "");
-    my $mdl = $mdlkeeper->get_module($mdlnm, $filepath) or return "Not Found\n";
+    my $mdl = mdlkeeper->get_module($mdlnm, $filepath) or return "Not Found\n";
     if ( ! $mdl->is_initialized ) { return "No\n"; }
     return "Yes\n";
 }
 
 sub debug_stocked {
-    my $ret = $mdlkeeper->describe_keep_value;
+    my $ret = mdlkeeper->describe_keep_value;
     $ret .= $addrrouter->describe_keep_value;
     return $ret;
 }
@@ -380,7 +380,7 @@ sub debug_module {
     $mdl_or_file =~ s{ \s+$ }{}xms;
     my ($mdlnm, $filepath) = -f $mdl_or_file ? ("main", File::Spec->rel2abs($mdl_or_file))
                            :                   ($mdl_or_file, "");
-    my $mdl = $mdlkeeper->get_module($mdlnm, $filepath) or return;
+    my $mdl = mdlkeeper->get_module($mdlnm, $filepath) or return;
     return $mdl->to_detail_string;
 }
 
@@ -405,9 +405,9 @@ sub uninitialize_module {
     $mdl_or_file =~ s{ \s+$ }{}xms;
     my ($mdlnm, $filepath) = -f $mdl_or_file ? ("main", File::Spec->rel2abs($mdl_or_file))
                            :                   ($mdl_or_file, "");
-    my $mdl = $mdlkeeper->get_module($mdlnm, $filepath) or return;
+    my $mdl = mdlkeeper->get_module($mdlnm, $filepath) or return;
     if ( $filepath ) {
-        foreach my $m ( $mdlkeeper->get_bundle_modules($filepath) ) {
+        foreach my $m ( mdlkeeper->get_bundle_modules($filepath) ) {
             $m->uninitialized;
         }
     }
@@ -434,8 +434,8 @@ sub setup_found_module {
         if ( ! $mdl_or_file ) { next ENTRY; }
         my ($mdlnm, $filepath) = -f $mdl_or_file ? ("main", File::Spec->rel2abs($mdl_or_file))
                                :                   ($mdl_or_file, "");
-        $is_project ? $mdlkeeper->get_project_module($mdlnm, $filepath)
-                    : $mdlkeeper->get_module($mdlnm, $filepath);
+        $is_project ? mdlkeeper->get_project_module($mdlnm, $filepath)
+                    : mdlkeeper->get_module($mdlnm, $filepath);
     }
     $is_project ? logger->info("Finished setup found project module")
                 : logger->info("Finished setup found module");
@@ -457,7 +457,7 @@ sub setup_built_module {
         if ( ! $mdl_or_file ) { next ENTRY; }
         my ($mdlnm, $filepath) = -f $mdl_or_file ? ("main", File::Spec->rel2abs($mdl_or_file))
                                :                   ($mdl_or_file, "");
-        my $mdl = $mdlkeeper->load_module($mdlnm, $filepath) or next ENTRY;
+        my $mdl = mdlkeeper->load_module($mdlnm, $filepath) or next ENTRY;
         logger->notice("Finished reload module of '$mdl_or_file'");
     }
     return;
@@ -482,7 +482,7 @@ sub explore_package {
     $pkg_regexp =~ s{ \s+$ }{}xms;
     my $ret = "";
     PKG:
-    foreach my $pkg ( grep { ! $pkg_regexp || $_->get_name =~ m{ $pkg_regexp }xms } $mdlkeeper->get_packages ) {
+    foreach my $pkg ( grep { ! $pkg_regexp || $_->get_name =~ m{ $pkg_regexp }xms } mdlkeeper->get_packages ) {
         $ret .= $pkg->get_fullnm." ".$pkg->get_filepath." ".$pkg->get_linenumber.":".$pkg->get_colnumber."\n";
         MTD:
         foreach my $mtd ( $pkg->get_own_methods ) {
@@ -496,7 +496,7 @@ sub explore_package {
 sub update_instance_condition {
     my $currmdl = $addrfinder->get_currentmodule;
     if ( ! $currmdl || $currmdl->get_name ne $currmdlnm || $currmdl->get_filepath ne $currfilepath ) {
-        my $mdl = $mdlkeeper->get_module($currmdlnm, $currfilepath);
+        my $mdl = mdlkeeper->get_module($currmdlnm, $currfilepath);
         if ( ! $mdl ) {
             if ( ! $currmdlnm ) {
                 logger->error("Not yet set current file/module by onfile/onmod command");

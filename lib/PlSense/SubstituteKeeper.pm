@@ -8,6 +8,7 @@ use List::AllUtils qw{ any firstidx };
 use Try::Tiny;
 use PlSense::Logger;
 use PlSense::Configure;
+use PlSense::Util;
 use PlSense::Entity::Scalar;
 use PlSense::Entity::Array;
 {
@@ -18,9 +19,6 @@ use PlSense::Entity::Array;
     my %max_entry_of :ATTR( :init_arg<max_entry> :default(50) );
     my %max_address_entry_of :ATTR( :init_arg<max_address_entry> :default(3) );
     my %current_local_is :ATTR();
-
-    my %mdlkeeper_of :ATTR( :init_arg<mdlkeeper> );
-    sub get_mdlkeeper { my ($self) = @_; return $mdlkeeper_of{ident $self}; }
 
     my %addrrouter_of :ATTR( :init_arg<addrrouter> );
     sub get_addrrouter { my ($self) = @_; return $addrrouter_of{ident $self}; }
@@ -319,7 +317,7 @@ use PlSense::Entity::Array;
         my ($mdlkey, $mtdnm) = ($1, $2);
         my ($mdlnm, $filepath) = $mdlkey =~ m{ \A main \[ (.+) \] \z }xms ? ("main", $1)
                                :                                            ($mdlkey, "");
-        my $mdl = $mdlkeeper_of{ident $self}->get_module($mdlnm, $filepath) or return;
+        my $mdl = mdlkeeper->get_module($mdlnm, $filepath) or return;
         if ( ! $mdl->exist_method($mtdnm) ) { return; }
         my $mtd = $mdl->get_method($mtdnm);
 
@@ -362,7 +360,7 @@ use PlSense::Entity::Array;
                 $resolved_of{$findaddr} = $resolve;
             }
             if ( ! $resolve->isa("PlSense::Entity::Instance") ) { next ARG; }
-            my $mdl = $mdlkeeper_of{ident $self}->get_module( $resolve->get_modulenm ) or next ARG;
+            my $mdl = mdlkeeper->get_module( $resolve->get_modulenm ) or next ARG;
             my $mtd = $mdl->get_any_method($mtdnm) or next ARG;
             delete $unknownargh_of{ident $self}->{$mtdaddr};
         }
@@ -402,7 +400,7 @@ use PlSense::Entity::Array;
             }
             my $resolve = $resolved_of{$findaddr};
             if ( ! $resolve || ! $resolve->isa("PlSense::Entity::Instance") ) { next ARG; }
-            my $mdl = $mdlkeeper_of{ident $self}->get_module( $resolve->get_modulenm ) or next ARG;
+            my $mdl = mdlkeeper->get_module( $resolve->get_modulenm ) or next ARG;
             my $mtd = $mdl->get_any_method($mtdnm) or next ARG;
             logger->debug("Resolved unknown argument : $mtdaddr -> ".$mtd->get_fullnm);
             my $idxh = $unknownargh_of{ident $self}->{$mtdaddr};

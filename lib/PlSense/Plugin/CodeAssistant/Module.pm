@@ -5,6 +5,7 @@ use strict;
 use warnings;
 use Class::Std;
 use PlSense::Logger;
+use PlSense::Util;
 {
     sub is_only_valid_context {
         my ($self, $code, $tok) = @_;
@@ -51,7 +52,7 @@ use PlSense::Logger;
 
         logger->notice("Found include modules");
         MODULE:
-        foreach my $mdl ( $self->get_mdlkeeper->get_packages ) {
+        foreach my $mdl ( mdlkeeper->get_packages ) {
             $self->push_candidate($mdl->get_name, $mdl);
         }
     }

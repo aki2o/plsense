@@ -5,6 +5,7 @@ use strict;
 use warnings;
 use Class::Std;
 use PlSense::Logger;
+use PlSense::Util;
 {
     sub is_only_valid_context {
         my ($self, $code, $tok) = @_;
@@ -17,7 +18,7 @@ use PlSense::Logger;
         if ( ! $tok || ! $tok->isa("PPI::Token::Operator") || $tok->content ne '->' ) { return; }
         $tok = $tok->previous_sibling;
         if ( ! $tok || ! $tok->isa("PPI::Token::Word") ) { return; }
-        my $mdl = $self->get_mdlkeeper->get_module("".$tok->content."") or return;
+        my $mdl = mdlkeeper->get_module("".$tok->content."") or return;
         $self->set_input($input);
         logger->info("Match context : input[$input]");
 

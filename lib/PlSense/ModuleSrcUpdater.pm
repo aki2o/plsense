@@ -5,17 +5,15 @@ use warnings;
 use Class::Std;
 use PPI::Document;
 use PlSense::Logger;
+use PlSense::Util;
 use PlSense::ModuleBuilder::PPIBuilder::IncludeStmt;
 use PlSense::Symbol::Module;
 {
-    my %mdlkeeper_of :ATTR( :init_arg<mdlkeeper> );
-    sub get_mdlkeeper : RESTRICTED { my ($self) = @_; return $mdlkeeper_of{ident $self}; }
-
     my %includestmtbuilder_of :ATTR();
 
     sub START {
         my ($class, $ident, $arg_ref) = @_;
-        $includestmtbuilder_of{$ident} = PlSense::ModuleBuilder::PPIBuilder::IncludeStmt->new({ mdlkeeper => $class->get_mdlkeeper });
+        $includestmtbuilder_of{$ident} = PlSense::ModuleBuilder::PPIBuilder::IncludeStmt->new();
     }
 
     sub update_or_create_modules {
@@ -29,8 +27,7 @@ use PlSense::Symbol::Module;
         my @attr = stat $filepath;
         my $lastmodified = $attr[9];
 
-        my $mdlkeeper = $self->get_mdlkeeper;
-        my $currmdl = $mdlkeeper->get_module("main", $filepath);
+        my $currmdl = mdlkeeper->get_module("main", $filepath);
         if ( ! $currmdl ) {
             $currmdl = PlSense::Symbol::Module->new({ name => "main",
                                                       filepath => $filepath,
@@ -39,7 +36,7 @@ use PlSense::Symbol::Module;
                                                       linenumber => 1,
                                                       colnumber => 1, });
             logger->notice("New module [".$currmdl->get_name."] in [".$currmdl->get_filepath."] belong [".$currmdl->get_projectnm."]");
-            $mdlkeeper->store_module($currmdl);
+            mdlkeeper->store_module($currmdl);
         }
         $currmdl->reset_all($lastmodified);
         $foundmdl_is{$currmdl->get_name} = $currmdl;
@@ -63,14 +60,14 @@ use PlSense::Symbol::Module;
                     $currmdl = $mainmdl;
                 }
                 elsif ( ! exists $foundmdl_is{$mdlnm} ) {
-                    my $mdl = $mdlkeeper->get_module($mdlnm);
+                    my $mdl = mdlkeeper->get_module($mdlnm);
                     if ( ! $mdl ) {
                         $mdl = PlSense::Symbol::Module->new({ name => $mdlnm,
                                                               filepath => $filepath,
                                                               projectnm => $projectnm,
                                                               lastmodified => $lastmodified });
                         logger->notice("New module [".$mdl->get_name."] in [".$mdl->get_filepath."] belong [".$mdl->get_projectnm."]");
-                        $mdlkeeper->store_module($mdl);
+                        mdlkeeper->store_module($mdl);
                     }
                     $mdl->reset_all($lastmodified);
                     $foundmdl_is{$mdlnm} = $mdl;

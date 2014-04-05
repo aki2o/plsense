@@ -10,7 +10,6 @@ use PlSense::Logger;
 use PlSense::Helper;
 use PlSense::SubstituteValueFinder;
 {
-    my %mdlkeeper_of :ATTR( :init_arg<mdlkeeper> );
     my %addrrouter_of :ATTR( :init_arg<addrrouter> );
     my %addrfinder_of :ATTR( :init_arg<addrfinder> );
     my %lexer_of :ATTR();
@@ -34,7 +33,7 @@ use PlSense::SubstituteValueFinder;
 
     sub START {
         my ($class, $ident, $arg_ref) = @_;
-        my @assistants = $class->plugins({ mdlkeeper => $mdlkeeper_of{$ident},
+        my @assistants = $class->plugins({ 
                                            addrrouter => $addrrouter_of{$ident},
                                            addrfinder => $addrfinder_of{$ident}, });
         ASSISTANT:

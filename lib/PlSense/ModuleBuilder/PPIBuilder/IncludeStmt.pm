@@ -5,10 +5,8 @@ use warnings;
 use Class::Std;
 use Module::Pluggable instantiate => 'new', search_path => 'PlSense::Plugin::IncludeStmt';
 use PlSense::Logger;
+use PlSense::Util;
 {
-    my %mdlkeeper_of :ATTR( :init_arg<mdlkeeper> );
-    sub get_mdlkeeper : RESTRICTED { my ($self) = @_; return $mdlkeeper_of{ident $self}; }
-
     my %plugins_of :ATTR();
 
     sub BUILD {
@@ -18,7 +16,7 @@ use PlSense::Logger;
 
     sub START {
         my ($class, $ident, $arg_ref) = @_;
-        my @plugins = $class->plugins({ mdlkeeper => $class->get_mdlkeeper, });
+        my @plugins = $class->plugins();
         PLUGIN:
         foreach my $p ( @plugins ) { push @{$plugins_of{$ident}}, $p; }
     }
@@ -35,7 +33,7 @@ use PlSense::Logger;
 
         if ( $stmt->pragma ) { return; }
         if ( $mdl->exist_usingmdl($mdlnm) ) { return; }
-        my $incmdl = $self->get_mdlkeeper->get_module($mdlnm);
+        my $incmdl = mdlkeeper->get_module($mdlnm);
         if ( ! $incmdl ) {
             logger->warn("Not found module : $mdlnm");
             return;
@@ -43,7 +41,7 @@ use PlSense::Logger;
         my $filepath = $incmdl->get_filepath;
         if ( ! $filepath || ! -f $filepath ) {
             logger->warn("Not exist module : $mdlnm");
-            $self->get_mdlkeeper->remove_module($incmdl->get_name, $filepath, $incmdl->get_projectnm);
+            mdlkeeper->remove_module($incmdl->get_name, $filepath, $incmdl->get_projectnm);
             return;
         }
         logger->debug("Found using module of [".$mdl->get_name."] : ".$incmdl->get_name);

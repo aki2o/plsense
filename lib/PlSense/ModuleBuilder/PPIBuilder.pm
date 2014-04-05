@@ -23,12 +23,12 @@ use PlSense::Symbol::Variable;
 
     sub START {
         my ($class, $ident, $arg_ref) = @_;
-        my @plugins = $class->plugins({ mdlkeeper => $class->get_mdlkeeper,
+        my @plugins = $class->plugins({ 
                                         substkeeper => $class->get_substkeeper,
                                         substbuilder => $class->get_substbuilder, });
         PLUGIN:
         foreach my $p ( @plugins ) { push @{$plugins_of{$ident}}, $p; }
-        $includestmtbuilder_of{$ident} = PlSense::ModuleBuilder::PPIBuilder::IncludeStmt->new({ mdlkeeper => $class->get_mdlkeeper });
+        $includestmtbuilder_of{$ident} = PlSense::ModuleBuilder::PPIBuilder::IncludeStmt->new();
     }
 
     sub build {
