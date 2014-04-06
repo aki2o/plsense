@@ -9,10 +9,24 @@ run_plsense_testcmd("svstart > /dev/null");
 ok(is_server_running(), "start server process") or done_mytest();
 wait_fin_task();
 
+my $init_main_mem = get_proc_memory_quantity("plsense-server-main");
+my $init_work_mem = get_proc_memory_quantity("plsense-server-work");
+my $init_resolve_mem = get_proc_memory_quantity("plsense-server-resolve");
+ok($init_main_mem > 0, "consume $init_main_mem mem in main server at start");
+ok($init_work_mem > 0, "consume $init_work_mem mem in work server at start");
+ok($init_resolve_mem > 0, "consume $init_resolve_mem mem in resolve server at start");
+
 my $src = "$FindBin::Bin/sample/01_var.pl";
 run_plsense_testcmd("open '$src' > /dev/null");
 wait_ready($src, 3, 20);
 wait_fin_task();
+
+my $first_main_mem = get_proc_memory_quantity("plsense-server-main");
+my $first_work_mem = get_proc_memory_quantity("plsense-server-work");
+my $first_resolve_mem = get_proc_memory_quantity("plsense-server-resolve");
+ok($first_main_mem > 0, "consume $first_main_mem mem in main server after first action");
+ok($first_work_mem > 0, "consume $first_work_mem mem in work server after first action");
+ok($first_resolve_mem > 0, "consume $first_resolve_mem mem in resolve server after first action");
 
 my @before_readys = split m{ \s+ }xms, get_plsense_testcmd_result("ready");
 ok($#before_readys > 0, "ready $#before_readys modules before refresh") or done_mytest();
