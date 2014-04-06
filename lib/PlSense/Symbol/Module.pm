@@ -41,7 +41,7 @@ use PlSense::Logger;
             return;
         }
         push @{$parents_of{ident $self}}, $parent;
-        if ( ! $not_weaken ) { weaken @{$parents_of{ident $self}}[-1]; }
+        # if ( ! $not_weaken ) { weaken @{$parents_of{ident $self}}[-1]; }
     }
     sub count_parent {
         my ($self) = @_;
@@ -86,7 +86,7 @@ use PlSense::Logger;
             return;
         }
         push @{$usingmdls_of{ident $self}}, $usingmdl;
-        if ( ! $not_weaken ) { weaken @{$usingmdls_of{ident $self}}[-1]; }
+        # if ( ! $not_weaken ) { weaken @{$usingmdls_of{ident $self}}[-1]; }
     }
     sub count_usingmdl {
         my ($self) = @_;
@@ -131,7 +131,7 @@ use PlSense::Logger;
             return;
         }
         push @{$bundlemdls_of{ident $self}}, $bundlemdl;
-        if ( ! $not_weaken ) { weaken @{$bundlemdls_of{ident $self}}[-1]; }
+        # if ( ! $not_weaken ) { weaken @{$bundlemdls_of{ident $self}}[-1]; }
     }
     sub count_bundlemdl {
         my ($self) = @_;
