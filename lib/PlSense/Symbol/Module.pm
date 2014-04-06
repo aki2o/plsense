@@ -29,7 +29,7 @@ use PlSense::Logger;
         $parents_of{ident $self} = \@valids;
     }
     sub push_parent {
-        my ($self, $parent) = @_;
+        my ($self, $parent, $not_weaken) = @_;
         if ( ! $parent || ! $parent->isa("PlSense::Symbol::Module") ) {
             logger->error("Not PlSense::Symbol::Module");
             return;
@@ -39,7 +39,7 @@ use PlSense::Logger;
             return;
         }
         push @{$parents_of{ident $self}}, $parent;
-        # weaken @{$parents_of{ident $self}}[-1];
+        if ( ! $not_weaken ) { weaken @{$parents_of{ident $self}}[-1]; }
     }
     sub count_parent {
         my ($self) = @_;
@@ -72,7 +72,7 @@ use PlSense::Logger;
         $usingmdls_of{ident $self} = \@valids;
     }
     sub push_usingmdl {
-        my ($self, $usingmdl) = @_;
+        my ($self, $usingmdl, $not_weaken) = @_;
         if ( ! $usingmdl || ! $usingmdl->isa("PlSense::Symbol::Module") ) {
             logger->error("Not PlSense::Symbol::Module");
             return;
@@ -82,7 +82,7 @@ use PlSense::Logger;
             return;
         }
         push @{$usingmdls_of{ident $self}}, $usingmdl;
-        # weaken @{$usingmdls_of{ident $self}}[-1];
+        if ( ! $not_weaken ) { weaken @{$usingmdls_of{ident $self}}[-1]; }
     }
     sub count_usingmdl {
         my ($self) = @_;
@@ -115,7 +115,7 @@ use PlSense::Logger;
         $bundlemdls_of{ident $self} = \@valids;
     }
     sub push_bundlemdl {
-        my ($self, $bundlemdl) = @_;
+        my ($self, $bundlemdl, $not_weaken) = @_;
         if ( ! $bundlemdl || ! $bundlemdl->isa("PlSense::Symbol::Module") ) {
             logger->error("Not PlSense::Symbol::Module");
             return;
@@ -125,7 +125,7 @@ use PlSense::Logger;
             return;
         }
         push @{$bundlemdls_of{ident $self}}, $bundlemdl;
-        # weaken @{$bundlemdls_of{ident $self}}[-1];
+        if ( ! $not_weaken ) { weaken @{$bundlemdls_of{ident $self}}[-1]; }
     }
     sub count_bundlemdl {
         my ($self) = @_;

@@ -217,11 +217,11 @@ use PlSense::Configure;
         $mdl->reset_bundlemdl;
 
         PARENT:
-        foreach my $parent ( @parents ) { $mdl->push_parent($parent); }
+        foreach my $parent ( @parents ) { $mdl->push_parent($parent, 1); }
         USINGMODULE:
-        foreach my $usingmdl ( @usingmdls ) { $mdl->push_usingmdl($usingmdl); }
+        foreach my $usingmdl ( @usingmdls ) { $mdl->push_usingmdl($usingmdl, 1); }
         BUNDLEMODULE:
-        foreach my $bundlemdl ( @bundlemdls ) { $mdl->push_bundlemdl($bundlemdl); }
+        foreach my $bundlemdl ( @bundlemdls ) { $mdl->push_bundlemdl($bundlemdl, 1); }
 
         my $key = $self->get_cache_key($mdl->get_name, $mdl->get_filepath);
         if ( $mdl->get_projectnm ) {
