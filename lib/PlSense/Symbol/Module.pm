@@ -25,7 +25,8 @@ use PlSense::Logger;
     my %parents_of :ATTR();
     sub update_parent {
         my ($self) = @_;
-        @{$parents_of{ident $self}} = grep { $_ && $_->isa("PlSense::Symbol::Module") } @{$parents_of{ident $self}};
+        my @valids = grep { $_ && $_->isa("PlSense::Symbol::Module") } @{$parents_of{ident $self}};
+        $parents_of{ident $self} = \@valids;
     }
     sub push_parent {
         my ($self, $parent) = @_;
@@ -67,7 +68,8 @@ use PlSense::Logger;
     my %usingmdls_of :ATTR();
     sub update_usingmdl {
         my ($self) = @_;
-        @{$usingmdls_of{ident $self}} = grep { $_ && $_->isa("PlSense::Symbol::Module") } @{$usingmdls_of{ident $self}};
+        my @valids = grep { $_ && $_->isa("PlSense::Symbol::Module") } @{$usingmdls_of{ident $self}};
+        $usingmdls_of{ident $self} = \@valids;
     }
     sub push_usingmdl {
         my ($self, $usingmdl) = @_;
@@ -109,7 +111,8 @@ use PlSense::Logger;
     my %bundlemdls_of :ATTR( :default(undef) );
     sub update_bundlemdl {
         my ($self) = @_;
-        @{$bundlemdls_of{ident $self}} = grep { $_ && $_->isa("PlSense::Symbol::Module") } @{$bundlemdls_of{ident $self}};
+        my @valids = grep { $_ && $_->isa("PlSense::Symbol::Module") } @{$bundlemdls_of{ident $self}};
+        $bundlemdls_of{ident $self} = \@valids;
     }
     sub push_bundlemdl {
         my ($self, $bundlemdl) = @_;
