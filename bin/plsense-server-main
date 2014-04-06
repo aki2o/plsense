@@ -142,7 +142,7 @@ sub initialize {
     $currfilepath = "";
     $currmdlnm = "";
     $currmtdnm = "";
-    # builtin->reset;
+    builtin->reset;
     mdlkeeper->reset;
     addrrouter->reset;
     builtin->setup_without_reload();
