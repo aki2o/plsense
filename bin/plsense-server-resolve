@@ -83,6 +83,13 @@ $SIG{TERM} = sub { logger->notice("Receive SIGTERM"); resume_store(); exit 0; };
 $SIG{USR1} = sub { logger->notice("Receive SIGUSR1"); resume_store(); initialize() && accept_client(); };
 $SIG{HUP} = sub { logger->notice("Receive SIGHUP"); resume_store(); initialize() && accept_client(); };
 
+setup_config() or exit 1;
+set_builtin( PlSense::Builtin->new() );
+set_mdlkeeper( PlSense::ModuleKeeper->new() );
+set_addrrouter( PlSense::AddressRouter->new({ with_build => 1 }) );
+set_substkeeper( PlSense::SubstituteKeeper->new({ max_entry => 500 }) );
+set_substbuilder( PlSense::SubstituteBuilder->new() );
+$ppibuilder = PlSense::ModuleBuilder::PPIBuilder->new();
 initialize() or exit 1;
 accept_client();
 exit 0;
@@ -110,18 +117,15 @@ EOF
 
 sub initialize {
     setup_config() or return;
-    set_builtin( PlSense::Builtin->new() );
-    set_mdlkeeper( PlSense::ModuleKeeper->new() );
-    set_addrrouter( PlSense::AddressRouter->new({ with_build => 1 }) );
-    set_substkeeper( PlSense::SubstituteKeeper->new({ max_entry => 500 }) );
-    set_substbuilder( PlSense::SubstituteBuilder->new() );
-    $ppibuilder = PlSense::ModuleBuilder::PPIBuilder->new();
     $currprojnm = "";
     $currfilepath = "";
     $currmdlnm = "";
     $currmtdnm = "";
     $nowstoringmdl = undef;
     $nowresolving = undef;
+    builtin->reset;
+    mdlkeeper->reset;
+    substkeeper->reset;
     builtin->setup_without_reload();
     mdlkeeper->setup_without_reload();
     substkeeper->setup_without_reload();

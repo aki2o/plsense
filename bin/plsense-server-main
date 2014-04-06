@@ -105,6 +105,13 @@ $SIG{TERM} = sub { logger->notice("Receive SIGTERM"); exit 0; };
 $SIG{USR1} = sub { logger->notice("Receive SIGUSR1"); initialize() && accept_client(); };
 $SIG{HUP} = sub { logger->notice("Receive SIGHUP"); initialize() && accept_client(); };
 
+setup_config() or exit 1;
+set_builtin( PlSense::Builtin->new() );
+set_mdlkeeper( PlSense::ModuleKeeper->new() );
+set_addrrouter( PlSense::AddressRouter->new({ with_build => 0, }) );
+set_addrfinder( PlSense::AddressFinder->new({ with_build => 0, }) );
+$assist = PlSense::CodeAssist->new();
+$helper = PlSense::Helper->new();
 initialize() or exit 1;
 accept_client();
 exit 0;
@@ -132,15 +139,12 @@ EOF
 
 sub initialize {
     setup_config() or return;
-    set_builtin( PlSense::Builtin->new() );
-    set_mdlkeeper( PlSense::ModuleKeeper->new() );
-    set_addrrouter( PlSense::AddressRouter->new({ with_build => 0, }) );
-    set_addrfinder( PlSense::AddressFinder->new({ with_build => 0, }) );
-    $assist = PlSense::CodeAssist->new();
-    $helper = PlSense::Helper->new();
     $currfilepath = "";
     $currmdlnm = "";
     $currmtdnm = "";
+    builtin->reset;
+    mdlkeeper->reset;
+    addrrouter->reset;
     builtin->setup_without_reload();
     mdlkeeper->setup_without_reload();
     addrrouter->setup_without_reload();
