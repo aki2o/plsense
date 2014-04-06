@@ -26,7 +26,7 @@ use PlSense::Logger;
     sub update_parent {
         my ($self) = @_;
         DELETE_INVALID:
-        while ( my $idx = firstidx { ! $_ } @{$parents_of{ident $self}} >= 0 ) {
+        while ( ( my $idx = firstidx { ! $_ } @{$parents_of{ident $self}} ) >= 0 ) {
             splice @{$parents_of{ident $self}}, $idx, 1;
         }
     }
@@ -71,7 +71,7 @@ use PlSense::Logger;
     sub update_usingmdl {
         my ($self) = @_;
         DELETE_INVALID:
-        while ( my $idx = firstidx { ! $_ } @{$usingmdls_of{ident $self}} >= 0 ) {
+        while ( ( my $idx = firstidx { ! $_ } @{$usingmdls_of{ident $self}} ) >= 0 ) {
             splice @{$usingmdls_of{ident $self}}, $idx, 1;
         }
     }
@@ -116,7 +116,7 @@ use PlSense::Logger;
     sub update_bundlemdl {
         my ($self) = @_;
         DELETE_INVALID:
-        while ( my $idx = firstidx { ! $_ } @{$bundlemdls_of{ident $self}} >= 0 ) {
+        while ( ( my $idx = firstidx { ! $_ } @{$bundlemdls_of{ident $self}} ) >= 0 ) {
             splice @{$bundlemdls_of{ident $self}}, $idx, 1;
         }
     }
