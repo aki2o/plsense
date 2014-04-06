@@ -113,11 +113,11 @@ EOF
 }
 
 sub initialize {
+    setup_config() or return;
     set_builtin( PlSense::Builtin->new() );
     %taskinfo_of = ();
     @taskqueue = ();
     $local = 0;
-    setup_config() or return;
     add_find_installed_task();
     run_task();
     builtin->setup_without_reload();

@@ -109,6 +109,7 @@ EOF
 }
 
 sub initialize {
+    setup_config() or return;
     set_builtin( PlSense::Builtin->new() );
     set_mdlkeeper( PlSense::ModuleKeeper->new() );
     set_addrrouter( PlSense::AddressRouter->new({ with_build => 1 }) );
@@ -121,7 +122,6 @@ sub initialize {
     $currmtdnm = "";
     $nowstoringmdl = undef;
     $nowresolving = undef;
-    setup_config() or return;
     builtin->setup_without_reload();
     mdlkeeper->setup_without_reload();
     substkeeper->setup_without_reload();

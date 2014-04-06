@@ -131,6 +131,7 @@ EOF
 }
 
 sub initialize {
+    setup_config() or return;
     set_builtin( PlSense::Builtin->new() );
     set_mdlkeeper( PlSense::ModuleKeeper->new() );
     set_addrrouter( PlSense::AddressRouter->new({ with_build => 0, }) );
@@ -140,7 +141,6 @@ sub initialize {
     $currfilepath = "";
     $currmdlnm = "";
     $currmtdnm = "";
-    setup_config() or return;
     builtin->setup_without_reload();
     mdlkeeper->setup_without_reload();
     addrrouter->setup_without_reload();
