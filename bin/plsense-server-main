@@ -82,7 +82,6 @@ set_primary_config( cachedir => $cachedir,
                     port3    => $port3,
                     loglevel => $loglvl,
                     logfile  => $logfile, );
-setup_config() or exit 1;
 
 my $sock = IO::Socket::INET->new(LocalAddr => "localhost",
                                  LocalPort => $port1,
@@ -98,23 +97,15 @@ if ( ! $sock->listen ) {
     exit 1;
 }
 
-set_builtin( PlSense::Builtin->new() );
-set_mdlkeeper( PlSense::ModuleKeeper->new() );
-set_addrrouter( PlSense::AddressRouter->new({ with_build => 0, }) );
-set_addrfinder( PlSense::AddressFinder->new({ with_build => 0, }) );
-
 my $scli = PlSense::SocketClient->new({ retryinterval => 0.2, maxretry => 5 });
-my $assist = PlSense::CodeAssist->new();
-my $helper = PlSense::Helper->new();
-my $currfilepath = "";
-my $currmdlnm = "";
-my $currmtdnm = "";
+my ($assist, $helper, $currfilepath, $currmdlnm, $currmtdnm);
 
 $SIG{WINCH} = sub { logger->notice("Receive SIGWINCH"); exit 0; };
 $SIG{TERM} = sub { logger->notice("Receive SIGTERM"); exit 0; };
-$SIG{USR1} = sub { logger->notice("Receive SIGUSR1"); refresh(); accept_client(); };
-$SIG{HUP} = sub { logger->notice("Receive SIGHUP"); refresh(); accept_client(); };
+$SIG{USR1} = sub { logger->notice("Receive SIGUSR1"); initialize() && accept_client(); };
+$SIG{HUP} = sub { logger->notice("Receive SIGHUP"); initialize() && accept_client(); };
 
+initialize() or exit 1;
 accept_client();
 exit 0;
 
@@ -139,10 +130,27 @@ EOF
     return;
 }
 
+sub initialize {
+    set_builtin( PlSense::Builtin->new() );
+    set_mdlkeeper( PlSense::ModuleKeeper->new() );
+    set_addrrouter( PlSense::AddressRouter->new({ with_build => 0, }) );
+    set_addrfinder( PlSense::AddressFinder->new({ with_build => 0, }) );
+    $assist = PlSense::CodeAssist->new();
+    $helper = PlSense::Helper->new();
+    $currfilepath = "";
+    $currmdlnm = "";
+    $currmtdnm = "";
+    setup_config() or return;
+    builtin->setup_without_reload();
+    mdlkeeper->setup_without_reload();
+    addrrouter->setup_without_reload();
+    addrrouter->load_current_project;
+    return 1;
+}
+
 sub accept_client {
     logger->info("Starting main server");
 
-    initialize();
     ACCEPT_CLIENT:
     while ( my $cli = $sock->accept ) {
         logger->debug("Waiting client ...");
@@ -182,13 +190,6 @@ sub accept_client {
     logger->info("Stopping main server");
 }
 
-sub initialize {
-    builtin->setup_without_reload();
-    mdlkeeper->setup_without_reload();
-    addrrouter->setup_without_reload();
-    addrrouter->load_current_project;
-}
-
 sub update_instance_condition {
     my $currmdl = addrfinder->get_currentmodule;
     if ( ! $currmdl || $currmdl->get_name ne $currmdlnm || $currmdl->get_filepath ne $currfilepath ) {
@@ -222,22 +223,6 @@ sub update_instance_condition {
         addrfinder->init_currentmethod;
     }
     return 1;
-}
-
-sub refresh {
-    undef $assist;
-    undef $helper;
-    reset_all_util();
-    set_builtin( PlSense::Builtin->new() );
-    set_mdlkeeper( PlSense::ModuleKeeper->new() );
-    set_addrrouter( PlSense::AddressRouter->new({ with_build => 0, }) );
-    set_addrfinder( PlSense::AddressFinder->new({ with_build => 0, }) );
-    $assist = PlSense::CodeAssist->new();
-    $helper = PlSense::Helper->new();
-    $currfilepath = "";
-    $currmdlnm = "";
-    $currmtdnm = "";
-    setup_config();
 }
 
 
@@ -275,7 +260,6 @@ sub remove {
 
 sub remove_all {
     mdlkeeper->remove_all_module;
-    initialize();
     return "Done\n";
 }
 

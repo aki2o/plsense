@@ -64,7 +64,6 @@ set_primary_config( cachedir => $cachedir,
                     maxtasks => $maxtasks,
                     loglevel => $loglvl,
                     logfile  => $logfile, );
-setup_config() or exit 1;
 
 my $sock = IO::Socket::INET->new(LocalAddr => "localhost",
                                  LocalPort => $port2,
@@ -80,18 +79,15 @@ if ( ! $sock->listen ) {
     exit 1;
 }
 
-set_builtin( PlSense::Builtin->new() );
-
 my $scli = PlSense::SocketClient->new({ retryinterval => 0.2, maxretry => 10 });
-my %taskinfo_of;
-my @taskqueue;
-my $local;
+my (%taskinfo_of, @taskqueue, $local);
 
 $SIG{WINCH} = sub { logger->notice("Receive SIGWINCH"); kill_all_task(); exit 0; };
 $SIG{TERM} = sub { logger->notice("Receive SIGTERM"); kill_all_task(); exit 0; };
-$SIG{USR1} = sub { logger->notice("Receive SIGUSR1"); kill_all_task(); refresh(); accept_client(); };
-$SIG{HUP} = sub { logger->notice("Receive SIGHUP"); kill_all_task(); refresh(); accept_client(); };
+$SIG{USR1} = sub { logger->notice("Receive SIGUSR1"); kill_all_task(); initialize() && accept_client(); };
+$SIG{HUP} = sub { logger->notice("Receive SIGHUP"); kill_all_task(); initialize() && accept_client(); };
 
+initialize() or exit 1;
 accept_client();
 exit 0;
 
@@ -116,10 +112,23 @@ EOF
     return;
 }
 
+sub initialize {
+    set_builtin( PlSense::Builtin->new() );
+    %taskinfo_of = ();
+    @taskqueue = ();
+    $local = 0;
+    setup_config() or return;
+    add_find_installed_task();
+    run_task();
+    builtin->setup_without_reload();
+    builtin->build;
+    $scli->request_main_server("builtin");
+    return 1;
+}
+
 sub accept_client {
     logger->info("Starting work server");
 
-    initialize();
     ACCEPT_CLIENT:
     while ( my $cli = $sock->accept ) {
         logger->debug("Waiting client ...");
@@ -158,15 +167,6 @@ sub accept_client {
     $sock->close;
 
     logger->info("Stopping work server");
-}
-
-sub initialize {
-    add_find_installed_task();
-    run_task();
-    builtin->setup_without_reload();
-    builtin->build;
-    $scli->request_main_server("builtin");
-    return;
 }
 
 sub run_task {
@@ -330,12 +330,6 @@ sub build_sentinel {
     return;
 }
 
-sub refresh {
-    set_builtin( PlSense::Builtin->new() );
-    $local = 0;
-    setup_config();
-}
-
 
 
 sub get_status {
@@ -348,7 +342,7 @@ sub get_own_pid {
 
 sub remove_all {
     kill_all_task();
-    initialize();
+    builtin->remove;
     return "Done\n";
 }
 

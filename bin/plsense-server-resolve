@@ -60,7 +60,6 @@ set_primary_config( cachedir => $cachedir,
                     port3    => $port3,
                     loglevel => $loglvl,
                     logfile  => $logfile, );
-setup_config() or exit 1;
 
 my $sock = IO::Socket::INET->new(LocalAddr => "localhost",
                                  LocalPort => $port3,
@@ -76,26 +75,15 @@ if ( ! $sock->listen ) {
     exit 1;
 }
 
-set_builtin( PlSense::Builtin->new() );
-set_mdlkeeper( PlSense::ModuleKeeper->new() );
-set_addrrouter( PlSense::AddressRouter->new({ with_build => 1 }) );
-set_substkeeper( PlSense::SubstituteKeeper->new({ max_entry => 500 }) );
-set_substbuilder( PlSense::SubstituteBuilder->new() );
-
 my $scli = PlSense::SocketClient->new({ retryinterval => 0.2, maxretry => 100 });
-my $ppibuilder = PlSense::ModuleBuilder::PPIBuilder->new();
-my $currprojnm = "";
-my $currfilepath = "";
-my $currmdlnm = "";
-my $currmtdnm = "";
-my $nowstoringmdl = undef;
-my $nowresolving = undef;
+my ($ppibuilder, $currprojnm, $currfilepath, $currmdlnm, $currmtdnm, $nowstoringmdl, $nowresolving);
 
 $SIG{WINCH} = sub { logger->notice("Receive SIGWINCH"); resume_store(); exit 0; };
 $SIG{TERM} = sub { logger->notice("Receive SIGTERM"); resume_store(); exit 0; };
-$SIG{USR1} = sub { logger->notice("Receive SIGUSR1"); resume_store(); refresh(); accept_client(); };
-$SIG{HUP} = sub { logger->notice("Receive SIGHUP"); resume_store(); refresh(); accept_client(); };
+$SIG{USR1} = sub { logger->notice("Receive SIGUSR1"); resume_store(); initialize() && accept_client(); };
+$SIG{HUP} = sub { logger->notice("Receive SIGHUP"); resume_store(); initialize() && accept_client(); };
 
+initialize() or exit 1;
 accept_client();
 exit 0;
 
@@ -120,10 +108,31 @@ EOF
     return;
 }
 
+sub initialize {
+    set_builtin( PlSense::Builtin->new() );
+    set_mdlkeeper( PlSense::ModuleKeeper->new() );
+    set_addrrouter( PlSense::AddressRouter->new({ with_build => 1 }) );
+    set_substkeeper( PlSense::SubstituteKeeper->new({ max_entry => 500 }) );
+    set_substbuilder( PlSense::SubstituteBuilder->new() );
+    $ppibuilder = PlSense::ModuleBuilder::PPIBuilder->new();
+    $currprojnm = "";
+    $currfilepath = "";
+    $currmdlnm = "";
+    $currmtdnm = "";
+    $nowstoringmdl = undef;
+    $nowresolving = undef;
+    setup_config() or return;
+    builtin->setup_without_reload();
+    mdlkeeper->setup_without_reload();
+    substkeeper->setup_without_reload();
+    builtin->load;
+    substkeeper->load_all;
+    return 1;
+}
+
 sub accept_client {
     logger->info("Starting resolve server");
 
-    initialize();
     ACCEPT_CLIENT:
     while ( my $cli = $sock->accept ) {
         logger->debug("Waiting client ...");
@@ -161,14 +170,6 @@ sub accept_client {
     $sock->close;
 
     logger->info("Stopping resolve server");
-}
-
-sub initialize {
-    builtin->setup_without_reload();
-    mdlkeeper->setup_without_reload();
-    substkeeper->setup_without_reload();
-    builtin->load;
-    substkeeper->load_all;
 }
 
 sub get_needbuild_extmodules {
@@ -225,20 +226,6 @@ sub resume_store {
     }
 }
 
-sub refresh {
-    set_builtin( PlSense::Builtin->new() );
-    set_mdlkeeper( PlSense::ModuleKeeper->new() );
-    set_addrrouter( PlSense::AddressRouter->new({ with_build => 1 }) );
-    set_substkeeper( PlSense::SubstituteKeeper->new({ max_entry => 500 }) );
-    set_substbuilder( PlSense::SubstituteBuilder->new() );
-    $ppibuilder = PlSense::ModuleBuilder::PPIBuilder->new();
-    $currprojnm = "";
-    $currfilepath = "";
-    $currmdlnm = "";
-    $currmtdnm = "";
-    setup_config();
-}
-
 
 
 sub get_status {
@@ -279,14 +266,15 @@ sub remove {
 }
 
 sub remove_all {
+    # Deleting mdlkeeper is entrusted to plsense-server-main
+    # mdlkeeper->remove_all_module;
     substkeeper->remove_all;
-    builtin->remove;
-    initialize();
     return "Done\n";
 }
 
 sub remove_project_all {
-    mdlkeeper->remove_project_all_module;
+    # Deleting mdlkeeper is entrusted to plsense-server-main
+    # mdlkeeper->remove_project_all_module;
     substkeeper->remove_project_all;
     return "Done\n";
 }

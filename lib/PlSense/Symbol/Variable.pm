@@ -4,6 +4,7 @@ use parent qw{ PlSense::Symbol };
 use strict;
 use warnings;
 use Class::Std::Storable;
+use Scalar::Util qw{ weaken };
 use PlSense::Logger;
 {
     my %lexical_is :ATTR( :init_arg<lexical> :default(1) );
@@ -18,6 +19,7 @@ use PlSense::Logger;
     sub set_belong {
         my ($self, $belong) = @_;
         $belong_of{ident $self} = $belong;
+        weaken $belong_of{ident $self};
         if ( $belong->isa("PlSense::Symbol::Module") ) {
             $belong->set_member($self->get_name(), $self);
         }

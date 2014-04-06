@@ -4,6 +4,7 @@ use parent qw{ PlSense::Symbol };
 use strict;
 use warnings;
 use Class::Std::Storable;
+use Scalar::Util qw{ weaken };
 use PlSense::Logger;
 {
     my %publicly_is :ATTR( :init_arg<publicly> :default(0) );
@@ -34,6 +35,7 @@ use PlSense::Logger;
             return;
         }
         $module_of{ident $self} = $module;
+        weaken $module_of{ident $self};
         $module->set_method($self->get_name, $self);
     }
     sub get_module { my ($self) = @_; return $module_of{ident $self}; }
