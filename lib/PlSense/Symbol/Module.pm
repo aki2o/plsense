@@ -59,7 +59,8 @@ use PlSense::Logger;
     }
     sub exist_parent {
         my ($self, $mdlnm) = @_;
-        return grep { $_ && $_->get_name eq $mdlnm } @{$parents_of{ident $self}} ? 1 : 0;
+        my @ret = grep { $_ && $_->get_name eq $mdlnm } @{$parents_of{ident $self}};
+        return $#ret >= 0 ? 1 : 0;
     }
     sub reset_parent { my ($self) = @_; $parents_of{ident $self} = []; }
 
@@ -100,7 +101,8 @@ use PlSense::Logger;
     }
     sub exist_usingmdl {
         my ($self, $mdlnm) = @_;
-        return grep { $_ && $_->get_name() eq $mdlnm } @{$usingmdls_of{ident $self}} ? 1 : 0;
+        my @ret = grep { $_ && $_->get_name eq $mdlnm } @{$usingmdls_of{ident $self}};
+        return $#ret >= 0 ? 1 : 0;
     }
     sub reset_usingmdl { my ($self) = @_; $usingmdls_of{ident $self} = []; }
 
@@ -141,7 +143,8 @@ use PlSense::Logger;
     }
     sub exist_bundlemdl {
         my ($self, $mdlnm) = @_;
-        return grep { $_ && $_->get_name() eq $mdlnm } @{$bundlemdls_of{ident $self}} ? 1 : 0;
+        my @ret = grep { $_ && $_->get_name eq $mdlnm } @{$bundlemdls_of{ident $self}};
+        return $#ret >= 0 ? 1 : 0;
     }
     sub reset_bundlemdl { my ($self) = @_; $bundlemdls_of{ident $self} = []; }
 
