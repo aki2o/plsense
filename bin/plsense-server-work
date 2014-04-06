@@ -87,6 +87,8 @@ $SIG{TERM} = sub { logger->notice("Receive SIGTERM"); kill_all_task(); exit 0; }
 $SIG{USR1} = sub { logger->notice("Receive SIGUSR1"); kill_all_task(); initialize() && accept_client(); };
 $SIG{HUP} = sub { logger->notice("Receive SIGHUP"); kill_all_task(); initialize() && accept_client(); };
 
+setup_config() or exit 1;
+set_builtin( PlSense::Builtin->new() );
 initialize() or exit 1;
 accept_client();
 exit 0;
@@ -114,12 +116,12 @@ EOF
 
 sub initialize {
     setup_config() or return;
-    set_builtin( PlSense::Builtin->new() );
     %taskinfo_of = ();
     @taskqueue = ();
     $local = 0;
     add_find_installed_task();
     run_task();
+    builtin->reset;
     builtin->setup_without_reload();
     builtin->build;
     $scli->request_main_server("builtin");

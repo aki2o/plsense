@@ -4,7 +4,7 @@ use parent qw{ PlSense::Symbol };
 use strict;
 use warnings;
 use Class::Std::Storable;
-use List::AllUtils qw{ first uniq };
+use List::AllUtils qw{ first uniq firstidx };
 use Scalar::Util qw{ weaken };
 use PlSense::Logger;
 {
@@ -25,8 +25,10 @@ use PlSense::Logger;
     my %parents_of :ATTR();
     sub update_parent {
         my ($self) = @_;
-        my @valids = grep { $_ && $_->isa("PlSense::Symbol::Module") } @{$parents_of{ident $self}};
-        $parents_of{ident $self} = \@valids;
+        DELETE_INVALID:
+        while ( my $idx = firstidx { ! $_ } @{$parents_of{ident $self}} ) {
+            splice @{$parents_of{ident $self}}, $idx, 1;
+        }
     }
     sub push_parent {
         my ($self, $parent, $not_weaken) = @_;
@@ -43,7 +45,7 @@ use PlSense::Logger;
     }
     sub count_parent {
         my ($self) = @_;
-        # $self->update_parent;
+        $self->update_parent;
         return $#{$parents_of{ident $self}} + 1;
     }
     sub get_parent {
@@ -68,8 +70,10 @@ use PlSense::Logger;
     my %usingmdls_of :ATTR();
     sub update_usingmdl {
         my ($self) = @_;
-        my @valids = grep { $_ && $_->isa("PlSense::Symbol::Module") } @{$usingmdls_of{ident $self}};
-        $usingmdls_of{ident $self} = \@valids;
+        DELETE_INVALID:
+        while ( my $idx = firstidx { ! $_ } @{$usingmdls_of{ident $self}} ) {
+            splice @{$usingmdls_of{ident $self}}, $idx, 1;
+        }
     }
     sub push_usingmdl {
         my ($self, $usingmdl, $not_weaken) = @_;
@@ -86,7 +90,7 @@ use PlSense::Logger;
     }
     sub count_usingmdl {
         my ($self) = @_;
-        # $self->update_usingmdl;
+        $self->update_usingmdl;
         return $#{$usingmdls_of{ident $self}} + 1;
     }
     sub get_usingmdl {
@@ -111,8 +115,10 @@ use PlSense::Logger;
     my %bundlemdls_of :ATTR( :default(undef) );
     sub update_bundlemdl {
         my ($self) = @_;
-        my @valids = grep { $_ && $_->isa("PlSense::Symbol::Module") } @{$bundlemdls_of{ident $self}};
-        $bundlemdls_of{ident $self} = \@valids;
+        DELETE_INVALID:
+        while ( my $idx = firstidx { ! $_ } @{$bundlemdls_of{ident $self}} ) {
+            splice @{$bundlemdls_of{ident $self}}, $idx, 1;
+        }
     }
     sub push_bundlemdl {
         my ($self, $bundlemdl, $not_weaken) = @_;
@@ -129,7 +135,7 @@ use PlSense::Logger;
     }
     sub count_bundlemdl {
         my ($self) = @_;
-        # $self->update_bundlemdl;
+        $self->update_bundlemdl;
         return $#{$bundlemdls_of{ident $self}} + 1;
     }
     sub get_bundlemdl {
