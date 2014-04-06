@@ -43,7 +43,7 @@ use PlSense::Logger;
     }
     sub count_parent {
         my ($self) = @_;
-        $self->update_parent;
+        # $self->update_parent;
         return $#{$parents_of{ident $self}} + 1;
     }
     sub get_parent {
@@ -86,7 +86,7 @@ use PlSense::Logger;
     }
     sub count_usingmdl {
         my ($self) = @_;
-        $self->update_usingmdl;
+        # $self->update_usingmdl;
         return $#{$usingmdls_of{ident $self}} + 1;
     }
     sub get_usingmdl {
@@ -129,7 +129,7 @@ use PlSense::Logger;
     }
     sub count_bundlemdl {
         my ($self) = @_;
-        $self->update_bundlemdl;
+        # $self->update_bundlemdl;
         return $#{$bundlemdls_of{ident $self}} + 1;
     }
     sub get_bundlemdl {
