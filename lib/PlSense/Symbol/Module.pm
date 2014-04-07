@@ -7,7 +7,6 @@ use Class::Std::Storable;
 use List::AllUtils qw{ first uniq firstidx };
 use Scalar::Util qw{ weaken };
 use PlSense::Logger;
-use PlSense::Util;
 {
     my %filepath_of :ATTR( :init_arg<filepath> );
     sub get_filepath { my ($self) = @_; return $filepath_of{ident $self}; }
@@ -41,9 +40,8 @@ use PlSense::Util;
             logger->warn("Already exist [".$parent->get_name()."]");
             return;
         }
-        # push @{$parents_of{ident $self}}, $parent;
-        push @{$parents_of{ident $self}}, $parent->get_name;
-        # if ( ! $not_weaken ) { weaken @{$parents_of{ident $self}}[-1]; }
+        push @{$parents_of{ident $self}}, $parent;
+        if ( ! $not_weaken ) { weaken @{$parents_of{ident $self}}[-1]; }
     }
     sub count_parent {
         my ($self) = @_;
@@ -60,13 +58,11 @@ use PlSense::Util;
             logger->warn("Out of Index");
             return;
         }
-        # return @{$parents_of{ident $self}}[$index - 1];
-        return mdlkeeper->get_module( @{$parents_of{ident $self}}[$index - 1] );
+        return @{$parents_of{ident $self}}[$index - 1];
     }
     sub exist_parent {
         my ($self, $mdlnm) = @_;
-        # my @ret = grep { $_ && $_->get_name eq $mdlnm } @{$parents_of{ident $self}};
-        my @ret = grep { $_ && $_ eq $mdlnm } @{$parents_of{ident $self}};
+        my @ret = grep { $_ && $_->get_name eq $mdlnm } @{$parents_of{ident $self}};
         return $#ret >= 0 ? 1 : 0;
     }
     sub reset_parent { my ($self) = @_; $parents_of{ident $self} = []; }
@@ -89,9 +85,8 @@ use PlSense::Util;
             logger->warn("Already exist : ".$usingmdl->get_name());
             return;
         }
-        # push @{$usingmdls_of{ident $self}}, $usingmdl;
-        push @{$usingmdls_of{ident $self}}, $usingmdl->get_name;
-        # if ( ! $not_weaken ) { weaken @{$usingmdls_of{ident $self}}[-1]; }
+        push @{$usingmdls_of{ident $self}}, $usingmdl;
+        if ( ! $not_weaken ) { weaken @{$usingmdls_of{ident $self}}[-1]; }
     }
     sub count_usingmdl {
         my ($self) = @_;
@@ -108,13 +103,11 @@ use PlSense::Util;
             logger->warn("Out of Index");
             return;
         }
-        # return @{$usingmdls_of{ident $self}}[$index - 1];
-        return mdlkeeper->get_module( @{$usingmdls_of{ident $self}}[$index - 1] );
+        return @{$usingmdls_of{ident $self}}[$index - 1];
     }
     sub exist_usingmdl {
         my ($self, $mdlnm) = @_;
-        # my @ret = grep { $_ && $_->get_name eq $mdlnm } @{$usingmdls_of{ident $self}};
-        my @ret = grep { $_ && $_ eq $mdlnm } @{$usingmdls_of{ident $self}};
+        my @ret = grep { $_ && $_->get_name eq $mdlnm } @{$usingmdls_of{ident $self}};
         return $#ret >= 0 ? 1 : 0;
     }
     sub reset_usingmdl { my ($self) = @_; $usingmdls_of{ident $self} = []; }
@@ -137,9 +130,8 @@ use PlSense::Util;
             logger->warn("Already exist : ".$bundlemdl->get_name());
             return;
         }
-        # push @{$bundlemdls_of{ident $self}}, $bundlemdl;
-        push @{$bundlemdls_of{ident $self}}, $bundlemdl->get_name;
-        # if ( ! $not_weaken ) { weaken @{$bundlemdls_of{ident $self}}[-1]; }
+        push @{$bundlemdls_of{ident $self}}, $bundlemdl;
+        if ( ! $not_weaken ) { weaken @{$bundlemdls_of{ident $self}}[-1]; }
     }
     sub count_bundlemdl {
         my ($self) = @_;
@@ -156,13 +148,11 @@ use PlSense::Util;
             logger->warn("Out of Index");
             return;
         }
-        # return @{$bundlemdls_of{ident $self}}[$index - 1];
-        return mdlkeeper->get_module( @{$bundlemdls_of{ident $self}}[$index - 1] );
+        return @{$bundlemdls_of{ident $self}}[$index - 1];
     }
     sub exist_bundlemdl {
         my ($self, $mdlnm) = @_;
-        # my @ret = grep { $_ && $_->get_name eq $mdlnm } @{$bundlemdls_of{ident $self}};
-        my @ret = grep { $_ && $_ eq $mdlnm } @{$bundlemdls_of{ident $self}};
+        my @ret = grep { $_ && $_->get_name eq $mdlnm } @{$bundlemdls_of{ident $self}};
         return $#ret >= 0 ? 1 : 0;
     }
     sub reset_bundlemdl { my ($self) = @_; $bundlemdls_of{ident $self} = []; }

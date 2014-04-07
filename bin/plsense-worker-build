@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Getopt::Long;
+use Getopt::Long qw{:config posix_default no_ignore_case gnu_compat};
 use IO::Socket;
 use List::AllUtils qw{ uniq };
 use Try::Tiny;
@@ -20,20 +20,18 @@ use PlSense::ModuleBuilder::XrefBuilder;
 use PlSense::ModuleBuilder::InheritBuilder;
 use PlSense::ModuleBuilder::DocBuilder;
 use PlSense::ModuleBuilder::PPIBuilder;
-use Devel::Leak::Object qw(GLOBAL_bless);
 
 my ($cachedir, $port1, $port2, $port3, $confpath, $mdl_or_file, $recursive, $force, $loglvl, $logfile);
-GetOptions ('cachedir=s'  => \$cachedir,
-            'port1=i'     => \$port1,
-            'port2=i'     => \$port2,
-            'port3=i'     => \$port3,
-            'confpath=s'  => \$confpath,
-            'target=s'    => \$mdl_or_file,
-            'recursive'   => \$recursive,
-            'force'       => \$force,
-            'loglevel=s'  => \$loglvl,
-            'logfile=s'   => \$logfile,
-            );
+GetOptions ('cachedir=s' => \$cachedir,
+            'port1=i'    => \$port1,
+            'port2=i'    => \$port2,
+            'port3=i'    => \$port3,
+            'confpath=s' => \$confpath,
+            'target=s'   => \$mdl_or_file,
+            'recursive'  => \$recursive,
+            'force'      => \$force,
+            'loglevel=s' => \$loglvl,
+            'logfile=s'  => \$logfile, );
 
 setup_logger($loglvl, $logfile);
 if ( ! -d $cachedir ) {
@@ -54,15 +52,15 @@ set_addrrouter( PlSense::AddressRouter->new({ with_build => 1, }) );
 set_substkeeper( PlSense::SubstituteKeeper->new() );
 set_substbuilder( PlSense::SubstituteBuilder->new() );
 
-my $scli = PlSense::SocketClient->new({ retryinterval => 0.5, maxretry => 300 });
-my $srcupdater = PlSense::ModuleSrcUpdater->new();
-my $xrefbuilder = PlSense::ModuleBuilder::XrefBuilder->new();
+my $scli           = PlSense::SocketClient->new({ retryinterval => 0.5, maxretry => 300 });
+my $srcupdater     = PlSense::ModuleSrcUpdater->new();
+my $xrefbuilder    = PlSense::ModuleBuilder::XrefBuilder->new();
 my $inheritbuilder = PlSense::ModuleBuilder::InheritBuilder->new();
-my $docbuilder = PlSense::ModuleBuilder::DocBuilder->new();
-my $ppibuilder = PlSense::ModuleBuilder::PPIBuilder->new();
+my $docbuilder     = PlSense::ModuleBuilder::DocBuilder->new();
+my $ppibuilder     = PlSense::ModuleBuilder::PPIBuilder->new();
 my (@builtmdls, @builtmdlkeys, @extmdls);
 
-$SIG{INT} = sub { logger->notice("Receive SIGINT"); interrupt_build(); exit 0; };
+$SIG{INT}  = sub { logger->notice("Receive SIGINT");  interrupt_build(); exit 0; };
 $SIG{QUIT} = sub { logger->notice("Receive SIGQUIT"); interrupt_build(); exit 0; };
 $SIG{TERM} = sub { logger->notice("Receive SIGTERM"); interrupt_build(); exit 0; };
 

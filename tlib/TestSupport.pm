@@ -12,6 +12,7 @@ our @EXPORT = qw( get_tmp_dir
                   get_work_dir
                   create_tmp_dir
                   get_unused_port
+                  get_any_testcmd_string
                   get_plsense_testcmd_string
                   get_plsense_testcmd_result
                   run_plsense_testcmd
@@ -110,12 +111,17 @@ our @EXPORT = qw( get_tmp_dir
         return @ret;
     }
 
-    sub get_plsense_testcmd_string {
+    sub get_any_testcmd_string {
         my $cmdstr = shift || "";
         my $workpath = get_work_dir();
         my $addpath = "PATH=$FindBin::Bin/../blib/script:$FindBin::Bin/../bin:\${PATH} ; export PATH";
         my $chhome = "HOME=$workpath ; export HOME";
-        return "$addpath ; $chhome ; plsense $cmdstr";
+        return "$addpath ; $chhome ; $cmdstr";
+    }
+
+    sub get_plsense_testcmd_string {
+        my $cmdstr = shift || "";
+        return get_any_testcmd_string("plsense $cmdstr");
     }
 
     sub get_plsense_testcmd_result {

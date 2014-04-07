@@ -28,8 +28,10 @@ ok($first_main_mem > 0, "consume $first_main_mem mem in main server after first 
 ok($first_work_mem > 0, "consume $first_work_mem mem in work server after first action");
 ok($first_resolve_mem > 0, "consume $first_resolve_mem mem in resolve server after first action");
 
-my @before_readys = split m{ \s+ }xms, get_plsense_testcmd_result("ready");
-ok($#before_readys > 0, "ready $#before_readys modules before refresh") or done_mytest();
+my @first_readys = split m{ \s+ }xms, get_plsense_testcmd_result("ready");
+ok($#first_readys > 0, "ready $#first_readys modules after first action") or done_mytest();
+
+for ( my $i = 0; $i <= 2; $i++ ) {
 
 BUILD:
 foreach my $f ( glob("$FindBin::Bin/sample/*.pl") ) {
@@ -42,6 +44,9 @@ wait_fin_task();
 my $before_main_mem = get_proc_memory_quantity("plsense-server-main");
 my $before_work_mem = get_proc_memory_quantity("plsense-server-work");
 my $before_resolve_mem = get_proc_memory_quantity("plsense-server-resolve");
+
+my @before_readys = split m{ \s+ }xms, get_plsense_testcmd_result("ready");
+ok($#before_readys > $#first_readys, "ready $#before_readys modules before refresh");
 
 run_plsense_testcmd("refresh > /dev/null");
 wait_fin_task();
@@ -56,7 +61,10 @@ ok($after_work_mem < $before_work_mem, "work server is refreshed. mem:[$before_w
 ok($after_resolve_mem < $before_resolve_mem, "resolve server is refreshed. mem:[$before_resolve_mem]->[$after_resolve_mem]");
 
 my @after_readys = split m{ \s+ }xms, get_plsense_testcmd_result("ready");
-is($#after_readys, $#before_readys, "ready modules is refreshed");
+is($#after_readys, $#first_readys, "ready modules is refreshed");
+
+}
+
 
 my $loc = get_plsense_testcmd_result("loc");
 my $currfilepath = $loc =~ m{ ^ File: \s+ ([^\n]*?) $ }xms ? $1 : "";

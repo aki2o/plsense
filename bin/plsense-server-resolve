@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Getopt::Long;
+use Getopt::Long qw{:config posix_default no_ignore_case gnu_compat};
 use IO::Socket;
 use File::Spec;
 use Try::Tiny;
@@ -17,14 +17,14 @@ use PlSense::SubstituteKeeper;
 use PlSense::SubstituteBuilder;
 use PlSense::ModuleBuilder::PPIBuilder;
 
-my %opthelp_of = ("-h, --help"     => "Show this message.",
-                  "-c, --cachedir" => "Path of directory caching information for Completion/Help.",
-                  "--port1"        => "Port number for listening by main server process. Default is 33333.",
-                  "--port2"        => "Port number for listening by work server process. Default is 33334.",
-                  "--port3"        => "Port number for listening by resolve server process. Default is 33335.",
-                  "--loglevel"     => "Level of logging. Its value is for Log::Handler.",
-                  "--logfile"      => "Path of log file.",
-                  );
+my %opthelp_of = ("-h, --help"      => "Show this message.",
+                  "-c, --cachedir"  => "Path of directory caching information for Completion/Help.",
+                  "--port1"         => "Port number for listening by main server process. Default is 33333.",
+                  "--port2"         => "Port number for listening by work server process. Default is 33334.",
+                  "--port3"         => "Port number for listening by resolve server process. Default is 33335.",
+                  "--loglevel"      => "Level of logging. Its value is for Log::Handler.",
+                  "--logfile"       => "Path of log file.",
+                  "--never-give-up" => "Never give up to listen port", );
 
 my %function_of = (status        => \&get_status,
                    pid           => \&get_own_pid,
@@ -39,15 +39,15 @@ my %function_of = (status        => \&get_status,
                    loglvl        => \&update_loglevel,
                    );
 
-my ($cachedir, $port1, $port2, $port3, $loglvl, $logfile);
-GetOptions ('help'       => sub { show_usage(); exit 0; },
-            'cachedir=s' => \$cachedir,
-            'port1=i'    => \$port1,
-            'port2=i'    => \$port2,
-            'port3=i'    => \$port3,
-            'loglevel=s' => \$loglvl,
-            'logfile=s'  => \$logfile,
-            );
+my ($cachedir, $port1, $port2, $port3, $loglvl, $logfile, $never_give_up);
+GetOptions ('help|h'        => sub { show_usage(); exit 0; },
+            'cachedir|c=s'  => \$cachedir,
+            'port1=i'       => \$port1,
+            'port2=i'       => \$port2,
+            'port3=i'       => \$port3,
+            'loglevel=s'    => \$loglvl,
+            'logfile=s'     => \$logfile,
+            'never-give-up' => \$never_give_up, );
 
 setup_logger($loglvl, $logfile);
 if ( ! $cachedir || ! -d $cachedir ) {
@@ -60,36 +60,43 @@ set_primary_config( cachedir => $cachedir,
                     port3    => $port3,
                     loglevel => $loglvl,
                     logfile  => $logfile, );
-
-my $sock = IO::Socket::INET->new(LocalAddr => "localhost",
-                                 LocalPort => $port3,
-                                 Proto => "tcp",
-                                 Listen => 1,
-                                 ReUse => 1, );
-if ( ! $sock ) {
-    logger->fatal("Can't create socket : $!");
-    exit 1;
-}
-if ( ! $sock->listen ) {
-    logger->fatal("Can't listening port [$port3] : $!");
-    exit 1;
-}
+setup_config() or exit 1;
 
 my $scli = PlSense::SocketClient->new({ retryinterval => 0.2, maxretry => 100 });
 my ($ppibuilder, $currprojnm, $currfilepath, $currmdlnm, $currmtdnm, $nowstoringmdl, $nowresolving);
-
-$SIG{WINCH} = sub { logger->notice("Receive SIGWINCH"); resume_store(); exit 0; };
-$SIG{TERM} = sub { logger->notice("Receive SIGTERM"); resume_store(); exit 0; };
-$SIG{USR1} = sub { logger->notice("Receive SIGUSR1"); resume_store(); initialize() && accept_client(); };
-$SIG{HUP} = sub { logger->notice("Receive SIGHUP"); resume_store(); initialize() && accept_client(); };
-
-setup_config() or exit 1;
 set_builtin( PlSense::Builtin->new() );
 set_mdlkeeper( PlSense::ModuleKeeper->new() );
 set_addrrouter( PlSense::AddressRouter->new({ with_build => 1 }) );
 set_substkeeper( PlSense::SubstituteKeeper->new({ max_entry => 500 }) );
 set_substbuilder( PlSense::SubstituteBuilder->new() );
 $ppibuilder = PlSense::ModuleBuilder::PPIBuilder->new();
+
+my $sock;
+my $myport = get_config("port3");
+SOCK_OPEN:
+until ( $sock = IO::Socket::INET->new( LocalAddr => "localhost",
+                                       LocalPort => $myport,
+                                       Proto     => "tcp",
+                                       Listen    => 1,
+                                       ReUse     => 1, ) ) {
+    if ( ! $never_give_up ) { last SOCK_OPEN; }
+    logger->debug("Wait for releasing port : $myport");
+    sleep 5;
+}
+if ( ! $sock ) {
+    logger->fatal("Can't create socket : $!");
+    exit 1;
+}
+if ( ! $sock->listen ) {
+    logger->fatal("Can't listening port [$myport] : $!");
+    exit 1;
+}
+
+$SIG{WINCH} = sub { logger->notice("Receive SIGWINCH"); resume_store(); exit 0; };
+$SIG{TERM}  = sub { logger->notice("Receive SIGTERM");  resume_store(); exit 0; };
+$SIG{USR1}  = sub { logger->notice("Receive SIGUSR1");  resume_store(); start_myself(); exit 0; };
+$SIG{HUP}   = sub { logger->notice("Receive SIGHUP");   resume_store(); start_myself(); exit 0; };
+
 initialize() or exit 1;
 accept_client();
 exit 0;
@@ -228,6 +235,10 @@ sub resume_store {
         addrrouter->store_current_project;
         $nowresolving = 0;
     }
+}
+
+sub start_myself {
+    system "plsense-server-resolve ".get_common_option()." --never-give-up &";
 }
 
 

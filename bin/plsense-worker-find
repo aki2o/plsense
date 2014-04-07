@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Getopt::Long;
+use Getopt::Long qw{:config posix_default no_ignore_case gnu_compat};
 use IO::Socket;
 use Try::Tiny;
 use PlSense::Logger;
@@ -12,19 +12,17 @@ use PlSense::Util;
 use PlSense::ModuleKeeper;
 use PlSense::Symbol::Module;
 
-my ($cachedir, $port1, $port2, $port3, $confpath, $is_project, $tasknm, $loglvl, $logfile);
-my @dirs;
-GetOptions ('cachedir=s'  => \$cachedir,
-            'port1=i'     => \$port1,
-            'port2=i'     => \$port2,
-            'port3=i'     => \$port3,
-            'confpath=s'  => \$confpath,
-            'project'     => \$is_project,
-            'tasknm=s'    => \$tasknm,
-            'rootdir=s'   => \@dirs,
-            'loglevel=s'  => \$loglvl,
-            'logfile=s'   => \$logfile,
-            );
+my ($cachedir, $port1, $port2, $port3, $confpath, $is_project, $tasknm, $loglvl, $logfile, @dirs);
+GetOptions ('cachedir=s' => \$cachedir,
+            'port1=i'    => \$port1,
+            'port2=i'    => \$port2,
+            'port3=i'    => \$port3,
+            'confpath=s' => \$confpath,
+            'project'    => \$is_project,
+            'tasknm=s'   => \$tasknm,
+            'rootdir=s'  => \@dirs,
+            'loglevel=s' => \$loglvl,
+            'logfile=s'  => \$logfile, );
 
 setup_logger($loglvl, $logfile);
 if ( ! -d $cachedir ) {
@@ -40,17 +38,17 @@ set_primary_config( cachedir => $cachedir,
 setup_config($confpath) or exit 1;
 
 set_mdlkeeper( PlSense::ModuleKeeper->new() );
-mdlkeeper->setup_without_reload();
 
 my $scli = PlSense::SocketClient->new({ retryinterval => 0.5, maxretry => 200 });
+my $projectnm = get_config("name");
+my $nowstoringmdl = undef;
+my (@mdl_or_files, @needbuild, @firstbuild, %found_is, %lastmodified_of);
 
-$SIG{INT} = sub { logger->notice("Receive SIGINT"); resume_store(); exit 0; };
+$SIG{INT}  = sub { logger->notice("Receive SIGINT");  resume_store(); exit 0; };
 $SIG{QUIT} = sub { logger->notice("Receive SIGQUIT"); resume_store(); exit 0; };
 $SIG{TERM} = sub { logger->notice("Receive SIGTERM"); resume_store(); exit 0; };
 
-my (@mdl_or_files, @needbuild, @firstbuild, %found_is, %lastmodified_of);
-my $projectnm = get_config("name");
-my $nowstoringmdl = undef;
+mdlkeeper->setup_without_reload();
 LIBPATH:
 foreach my $dir ( @dirs ) {
     chomp $dir;
@@ -97,10 +95,10 @@ foreach my $dir ( @dirs ) {
 
                 my $mdlkey = $mdl->get_name eq "main" ? $mdl->get_filepath : $mdl->get_name;
                 if ( $found_is{$mdlkey} ) { next MDL; }
-
                 $found_is{$mdlkey} = 1;
-                push @mdl_or_files, $mdlkey;
+                if ( $mdl->get_name ne "main" ) { push @mdl_or_files, $mdlkey; }
 
+                # The not yet built module don't need to be built in find process.
                 my $needbuild = $mdl->is_initialized;
                 if ( $lastmodified != $mdl->get_lastmodified && $mdl->get_filepath eq $filepath && $needbuild ) {
                     push @needbuild, $mdlkey;

@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Getopt::Long;
+use Getopt::Long qw{:config posix_default no_ignore_case gnu_compat};
 use IO::Socket;
 use Try::Tiny;
 use PlSense;
@@ -287,17 +287,16 @@ my %function_of = (help         => \&show_help,
 
 my ($cachedir, $port1, $port2, $port3, $maxtasks, $loglvl, $logfile);
 my $interactive = 0;
-GetOptions ('help'        => sub { show_usage(); exit 0; },
-            'version'     => sub { print "PlSense version is $PlSense::VERSION\n"; exit 0; },
-            'cachedir=s'  => \$cachedir,
-            'port1=i'     => \$port1,
-            'port2=i'     => \$port2,
-            'port3=i'     => \$port3,
-            'maxtasks=i'  => \$maxtasks,
-            'loglevel=s'  => \$loglvl,
-            'logfile=s'   => \$logfile,
-            'interactive' => \$interactive,
-            );
+GetOptions ('help|h'        => sub { show_usage(); exit 0; },
+            'version|v'     => sub { print "PlSense version is $PlSense::VERSION\n"; exit 0; },
+            'cachedir|c=s'  => \$cachedir,
+            'port1=i'       => \$port1,
+            'port2=i'       => \$port2,
+            'port3=i'       => \$port3,
+            'maxtasks=i'    => \$maxtasks,
+            'loglevel=s'    => \$loglvl,
+            'logfile=s'     => \$logfile,
+            'interactive|i' => \$interactive, );
 
 setup_logger($loglvl, $logfile);
 if ( ! $loglvl ) { $loglvl = ''; }
@@ -448,8 +447,8 @@ sub start_server_sentinel {
     if ( $pid && kill(0, $pid) ) { return 1; }
 
     if ( ! $immediately ) {
-        $pid = $svtype eq "main"    ? $scli->get_main_server_response("pid", { ignore_error => 1, maxretry => 5 })
-             : $svtype eq "work"    ? $scli->get_work_server_response("pid", { ignore_error => 1, maxretry => 5 })
+        $pid = $svtype eq "main"    ? $scli->get_main_server_response("pid",    { ignore_error => 1, maxretry => 5 })
+             : $svtype eq "work"    ? $scli->get_work_server_response("pid",    { ignore_error => 1, maxretry => 5 })
              : $svtype eq "resolve" ? $scli->get_resolve_server_response("pid", { ignore_error => 1, maxretry => 5 })
              :                        0;
         if ( $pid ) {
@@ -464,8 +463,8 @@ sub start_server_sentinel {
     logger->info("Start server : $cmdstr");
     system "$cmdstr &";
 
-    $pid = $svtype eq "main"    ? $scli->get_main_server_response("pid", { ignore_error => 1, maxretry => 10 })
-         : $svtype eq "work"    ? $scli->get_work_server_response("pid", { ignore_error => 1, maxretry => 10 })
+    $pid = $svtype eq "main"    ? $scli->get_main_server_response("pid",    { ignore_error => 1, maxretry => 10 })
+         : $svtype eq "work"    ? $scli->get_work_server_response("pid",    { ignore_error => 1, maxretry => 10 })
          : $svtype eq "resolve" ? $scli->get_resolve_server_response("pid", { ignore_error => 1, maxretry => 10 })
          :                        0;
     if ( ! $pid || ! kill(0, $pid) ) { return 0; }
@@ -491,8 +490,8 @@ sub stop_server_sentinel {
         return 1;
     }
 
-    my $ret = $svtype eq "main"    ? $scli->request_main_server("stop", { ignore_error => 1, maxretry => 15 })
-            : $svtype eq "work"    ? $scli->request_work_server("stop", { ignore_error => 1, maxretry => 15 })
+    my $ret = $svtype eq "main"    ? $scli->request_main_server("stop",    { ignore_error => 1, maxretry => 15 })
+            : $svtype eq "work"    ? $scli->request_work_server("stop",    { ignore_error => 1, maxretry => 15 })
             : $svtype eq "resolve" ? $scli->request_resolve_server("stop", { ignore_error => 1, maxretry => 15 })
             :                        undef;
     if ( $ret ) {
@@ -513,14 +512,14 @@ sub stop_server_sentinel {
 
 
 sub show_server_status {
-    my $mainstat = $scli->get_main_server_response("status", { ignore_error => 1, maxretry => 5 });
-    my $workstat = $scli->get_work_server_response("status", { ignore_error => 1, maxretry => 5 });
+    my $mainstat    = $scli->get_main_server_response("status",    { ignore_error => 1, maxretry => 5 });
+    my $workstat    = $scli->get_work_server_response("status",    { ignore_error => 1, maxretry => 5 });
     my $resolvestat = $scli->get_resolve_server_response("status", { ignore_error => 1, maxretry => 5 });
     chomp $mainstat;
     chomp $workstat;
     chomp $resolvestat;
-    if ( ! $mainstat ) { $mainstat = $pid_of{main} && kill(0, $pid_of{main}) ? "Busy" : "Not running"; }
-    if ( ! $workstat ) { $workstat = $pid_of{work} && kill(0, $pid_of{work}) ? "Busy" : "Not running"; }
+    if ( ! $mainstat )    { $mainstat    = $pid_of{main}    && kill(0, $pid_of{main})    ? "Busy" : "Not running"; }
+    if ( ! $workstat )    { $workstat    = $pid_of{work}    && kill(0, $pid_of{work})    ? "Busy" : "Not running"; }
     if ( ! $resolvestat ) { $resolvestat = $pid_of{resolve} && kill(0, $pid_of{resolve}) ? "Busy" : "Not running"; }
     my $ret = "Main Server is $mainstat.\n";
     $ret .= "Work Server is $workstat.\n";
@@ -558,13 +557,14 @@ sub refresh_server {
     my $currmdlnm = $loc =~ m{ ^ Module: \s+ ([^\n]*?) $ }xms ? $1 : "";
     my $currmtdnm = $loc =~ m{ ^ Sub: \s+ ([^\n]*?) $ }xms ? $1 : "";
 
+    my @reqsvrs;
     SVTYPE:
     foreach my $svtype ( "main", "work", "resolve" ) {
         my $pid = $pid_of{$svtype};
         if ( ! $pid ) {
-            $pid = $svtype eq "main"    ? $scli->get_main_server_response("pid", { maxretry => 20 })
-                 : $svtype eq "work"    ? $scli->get_work_server_response("pid", { maxretry => 20 })
-                 : $svtype eq "resolve" ? $scli->get_resolve_server_response("pid", { maxretry => 20 })
+            $pid = $svtype eq "main"    ? $scli->get_main_server_response("pid",    { maxretry => 10 })
+                 : $svtype eq "work"    ? $scli->get_work_server_response("pid",    { maxretry => 10 })
+                 : $svtype eq "resolve" ? $scli->get_resolve_server_response("pid", { maxretry => 10 })
                  :                        0;
             $pid_of{$svtype} = $pid;
         }
@@ -573,45 +573,22 @@ sub refresh_server {
             next SVTYPE;
         }
         kill 'USR1', $pid;
+        push @reqsvrs, $svtype;
     }
 
     SVTYPE:
-    foreach my $svtype ( "main", "work", "resolve" ) {
-        my $pid = $svtype eq "main"    ? $scli->get_main_server_response("pid", { maxretry => 20 })
-                : $svtype eq "work"    ? $scli->get_work_server_response("pid", { maxretry => 20 })
-                : $svtype eq "resolve" ? $scli->get_resolve_server_response("pid", { maxretry => 20 })
+    foreach my $svtype ( @reqsvrs ) {
+        my $pid = $svtype eq "main"    ? $scli->get_main_server_response("pid",    { ignore_error => 1, maxretry => 100 })
+                : $svtype eq "work"    ? $scli->get_work_server_response("pid",    { ignore_error => 1, maxretry => 100 })
+                : $svtype eq "resolve" ? $scli->get_resolve_server_response("pid", { ignore_error => 1, maxretry => 100 })
                 :                        0;
         if ( ! $pid ) {
-            logger->warn("Can't check $svtype server alive cause failed to get pid");
+            logger->error("Can't check $svtype server alive cause failed to get pid");
         }
         $pid_of{$svtype} = $pid;
     }
 
-    # my $mainpid = $pid_of{main} || $scli->get_main_server_response("pid", { maxretry => 20 });
-    # my $workpid = $pid_of{work} || $scli->get_work_server_response("pid", { maxretry => 20 });
-    # my $resolvepid = $pid_of{resolve} || $scli->get_resolve_server_response("pid", { maxretry => 20 });
-    # if ( ! $mainpid || ! $workpid || ! $resolvepid ) { return "Failed\n"; }
-
-    # kill 'WINCH', $mainpid;
-    # WAIT:
-    # for my $i ( 1..5 ) {
-    #     if ( ! kill(0, $mainpid) ) { last WAIT; }
-    #     sleep 1;
-    # }
-    # my $mainret = start_main_server(1);
-
-    # kill 'HUP', $workpid;
-
-    # kill 'WINCH', $resolvepid;
-    # WAIT:
-    # for my $i ( 1..5 ) {
-    #     if ( ! kill(0, $resolvepid) ) { last WAIT; }
-    #     sleep 1;
-    # }
-    # my $resolveret = start_resolve_server(1);
-
-    # if ( ! $mainret || ! $resolveret ) { return "Failed\n"; }
-
+    if ( ! $pid_of{main} || ! $pid_of{work} ) { return; }
     set_currentfile($currfilepath);
     set_currentmodule($currmdlnm);
     set_currentmethod($currmtdnm);
