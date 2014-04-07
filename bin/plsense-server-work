@@ -131,7 +131,9 @@ sub initialize {
     builtin->reset;
     builtin->setup_without_reload();
     builtin->build;
-    $scli->request_main_server("builtin", { ignore_error => 1, maxretry => 100 }) or return;
+    $scli->request_main_server("builtin", { ignore_error => 1,
+                                            retryinterval => 0.5,
+                                            maxretry => 200 }) or return;
     return 1;
 }
 

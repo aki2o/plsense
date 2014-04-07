@@ -562,9 +562,9 @@ sub refresh_server {
     foreach my $svtype ( "main", "work", "resolve" ) {
         my $pid = $pid_of{$svtype};
         if ( ! $pid ) {
-            $pid = $svtype eq "main"    ? $scli->get_main_server_response("pid",    { maxretry => 10 })
-                 : $svtype eq "work"    ? $scli->get_work_server_response("pid",    { maxretry => 10 })
-                 : $svtype eq "resolve" ? $scli->get_resolve_server_response("pid", { maxretry => 10 })
+            $pid = $svtype eq "main"    ? $scli->get_main_server_response("pid",    { maxretry => 20 })
+                 : $svtype eq "work"    ? $scli->get_work_server_response("pid",    { maxretry => 20 })
+                 : $svtype eq "resolve" ? $scli->get_resolve_server_response("pid", { maxretry => 20 })
                  :                        0;
             $pid_of{$svtype} = $pid;
         }
@@ -576,11 +576,12 @@ sub refresh_server {
         push @reqsvrs, $svtype;
     }
 
+    my $reqopt = { ignore_error => 1, retryinterval => 3, maxretry => 100 };
     SVTYPE:
     foreach my $svtype ( @reqsvrs ) {
-        my $pid = $svtype eq "main"    ? $scli->get_main_server_response("pid",    { ignore_error => 1, maxretry => 100 })
-                : $svtype eq "work"    ? $scli->get_work_server_response("pid",    { ignore_error => 1, maxretry => 100 })
-                : $svtype eq "resolve" ? $scli->get_resolve_server_response("pid", { ignore_error => 1, maxretry => 100 })
+        my $pid = $svtype eq "main"    ? $scli->get_main_server_response("pid", $reqopt)
+                : $svtype eq "work"    ? $scli->get_work_server_response("pid", $reqopt)
+                : $svtype eq "resolve" ? $scli->get_resolve_server_response("pid", $reqopt)
                 :                        0;
         if ( ! $pid ) {
             logger->error("Can't check $svtype server alive cause failed to get pid");
