@@ -4,7 +4,6 @@ use parent qw{ PlSense::Cacheable };
 use strict;
 use warnings;
 use Class::Std;
-use Scalar::Util qw{ weaken };
 use Try::Tiny;
 use PlSense::Logger;
 use PlSense::Configure;
@@ -112,8 +111,6 @@ use PlSense::Symbol::Variable;
         $self->build_builtin_functions();
         my $c = { variable => $variableh_of{ident $self},
                   method   => $methodh_of{ident $self}, };
-        weaken $c->{variable};
-        weaken $c->{method};
         try   { $cache_of{ident $self}->set("perl", $c); }
         catch { $cache_of{ident $self}->set("perl", $c); };
     }
@@ -126,8 +123,6 @@ use PlSense::Symbol::Variable;
         if ( ! exists $c->{variable} || ! exists $c->{method} ) { return; }
         $variableh_of{ident $self} = $c->{variable};
         $methodh_of{ident $self} = $c->{method};
-        weaken $c->{variable};
-        weaken $c->{method};
         return 1;
     }
 

@@ -19,7 +19,7 @@ use PlSense::Logger;
     sub set_belong {
         my ($self, $belong) = @_;
         $belong_of{ident $self} = $belong;
-        # weaken $belong_of{ident $self};
+        weaken $belong_of{ident $self};
         if ( $belong->isa("PlSense::Symbol::Module") ) {
             $belong->set_member($self->get_name(), $self);
         }
