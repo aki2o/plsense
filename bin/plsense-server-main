@@ -19,6 +19,7 @@ use PlSense::AddressRouter;
 use PlSense::AddressFinder;
 use PlSense::CodeAssist;
 use PlSense::Helper;
+use Devel::Leak::Object qw(GLOBAL_bless);
 
 my %opthelp_of = ("-h, --help"     => "Show this message.",
                   "-c, --cachedir" => "Path of directory caching information for Completion/Help.",

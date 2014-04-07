@@ -22,3 +22,4 @@ requires 'PPI::Lexer' => 1.215;
 requires 'Time::Piece' => 1.20_01;
 requires 'Try::Tiny' => 0.11;
 
+requires 'Devel::Leak::Object';
