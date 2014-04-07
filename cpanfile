@@ -11,7 +11,7 @@ on 'test' => sub {
 
 requires 'Cache::FileCache';
 requires 'Class::Std' => 0.011;
-requires 'Class::Std::Storable';
+requires 'Class::Std::Fast::Storable' => 0.0.8;
 requires 'Config::Tiny' => 2.14;
 requires 'List::AllUtils' => 0.03;
 requires 'Log::Handler' => 0.76;

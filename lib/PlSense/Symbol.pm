@@ -2,7 +2,7 @@ package PlSense::Symbol;
 
 use strict;
 use warnings;
-use Class::Std::Storable;
+use Class::Std::Fast::Storable;
 use PlSense::Logger;
 {
     my %name_of :ATTR( :init_arg<name> );

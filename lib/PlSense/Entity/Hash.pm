@@ -3,7 +3,7 @@ package PlSense::Entity::Hash;
 use parent qw{ PlSense::Entity };
 use strict;
 use warnings;
-use Class::Std::Storable;
+use Class::Std::Fast::Storable;
 use PlSense::Logger;
 {
     my %membernm_of :ATTR( :default('') );
