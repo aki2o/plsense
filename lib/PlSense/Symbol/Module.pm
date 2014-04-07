@@ -3,7 +3,7 @@ package PlSense::Symbol::Module;
 use parent qw{ PlSense::Symbol };
 use strict;
 use warnings;
-use Class::Std::Fast::Storable;
+use Class::Std::Storable;
 use List::AllUtils qw{ first uniq firstidx };
 use Scalar::Util qw{ weaken };
 use PlSense::Logger;

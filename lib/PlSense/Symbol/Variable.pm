@@ -3,7 +3,7 @@ package PlSense::Symbol::Variable;
 use parent qw{ PlSense::Symbol };
 use strict;
 use warnings;
-use Class::Std::Fast::Storable;
+use Class::Std::Storable;
 use Scalar::Util qw{ weaken };
 use PlSense::Logger;
 {

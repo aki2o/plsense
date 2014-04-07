@@ -3,7 +3,7 @@ package PlSense::Entity::Array;
 use parent qw{ PlSense::Entity };
 use strict;
 use warnings;
-use Class::Std::Fast::Storable;
+use Class::Std::Storable;
 use PlSense::Logger;
 use PlSense::Entity::Null;
 {

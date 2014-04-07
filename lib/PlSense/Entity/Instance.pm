@@ -3,7 +3,7 @@ package PlSense::Entity::Instance;
 use parent qw{ PlSense::Entity };
 use strict;
 use warnings;
-use Class::Std::Fast::Storable;
+use Class::Std::Storable;
 use PlSense::Logger;
 {
     my %modulenm_of :ATTR( :init_arg<modulenm> :default('') );
