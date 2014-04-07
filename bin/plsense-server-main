@@ -9,6 +9,7 @@ use PPI::Document;
 use PPI::Lexer;
 use PPI::Dumper;
 use Try::Tiny;
+use Class::Std::Fast::Storable;
 use PlSense::Logger;
 use PlSense::Configure;
 use PlSense::SocketClient;

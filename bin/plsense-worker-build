@@ -6,6 +6,7 @@ use Getopt::Long qw{:config posix_default no_ignore_case gnu_compat};
 use IO::Socket;
 use List::AllUtils qw{ uniq };
 use Try::Tiny;
+use Class::Std::Fast::Storable;
 use PlSense::Logger;
 use PlSense::Configure;
 use PlSense::SocketClient;

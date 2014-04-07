@@ -8,6 +8,7 @@ use File::Spec;
 use File::Basename;
 use Time::Piece;
 use Try::Tiny;
+use Class::Std::Fast::Storable;
 use PlSense::Logger;
 use PlSense::Configure;
 use PlSense::SocketClient;
