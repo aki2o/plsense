@@ -20,6 +20,7 @@ use PlSense::ModuleBuilder::XrefBuilder;
 use PlSense::ModuleBuilder::InheritBuilder;
 use PlSense::ModuleBuilder::DocBuilder;
 use PlSense::ModuleBuilder::PPIBuilder;
+use Devel::Leak::Object qw(GLOBAL_bless);
 
 my ($cachedir, $port1, $port2, $port3, $confpath, $mdl_or_file, $recursive, $force, $loglvl, $logfile);
 GetOptions ('cachedir=s'  => \$cachedir,

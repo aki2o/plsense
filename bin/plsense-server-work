@@ -13,7 +13,6 @@ use PlSense::Configure;
 use PlSense::SocketClient;
 use PlSense::Util;
 use PlSense::Builtin;
-use Devel::Leak::Object qw(GLOBAL_bless);
 
 my %opthelp_of = ("-h, --help"     => "Show this message.",
                   "-c, --cachedir" => "Path of directory caching information for Completion/Help.",
