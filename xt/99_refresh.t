@@ -9,13 +9,6 @@ run_plsense_testcmd("svstart > /dev/null");
 ok(is_server_running(), "start server process") or done_mytest();
 wait_fin_task();
 
-my $init_main_mem = get_proc_memory_quantity("plsense-server-main");
-my $init_work_mem = get_proc_memory_quantity("plsense-server-work");
-my $init_resolve_mem = get_proc_memory_quantity("plsense-server-resolve");
-ok($init_main_mem > 0, "consume $init_main_mem mem in main server at start");
-ok($init_work_mem > 0, "consume $init_work_mem mem in work server at start");
-ok($init_resolve_mem > 0, "consume $init_resolve_mem mem in resolve server at start");
-
 my $src = "$FindBin::Bin/sample/01_var.pl";
 run_plsense_testcmd("open '$src' > /dev/null");
 wait_ready($src, 3, 20);
@@ -38,6 +31,10 @@ for ( my $i = 1; $i <= 3; $i++ ) {
     foreach my $f ( glob("$FindBin::Bin/sample/*.pl") ) {
         run_plsense_testcmd("open '$f' > /dev/null");
         wait_ready($f, 3, 20);
+        CODEADD:
+        for my $ii ( 1..100 ) {
+            run_plsense_testcmd("codeadd my \$dummy_var$ii = { hoge => 'hoge$ii', fuga => 'fuga$ii' };");
+        }
     }
     run_plsense_testcmd("open '$src' > /dev/null");
     wait_fin_task();
