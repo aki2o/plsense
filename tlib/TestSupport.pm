@@ -206,9 +206,21 @@ our @EXPORT = qw( get_tmp_dir
     }
 
     sub used_modules {
-        return qw{ File::Spec File::Basename File::Copy FindBin Class::Std Exporter
-                   List::Util List::MoreUtils List::AllUtils IO::File IO::Socket
-                   MtdExport BlessParent BlessChild ClassStdParent ClassStdChild };
+        my $dir = shift || "";
+        if ( $dir eq "sample" ) {
+            return qw{ File::Spec File::Basename File::Copy FindBin Class::Std Exporter
+                       List::Util List::MoreUtils List::AllUtils IO::File IO::Socket
+                       MtdExport BlessParent BlessChild ClassStdParent ClassStdChild };
+        }
+        elsif ( $dir eq "sample2" ) {
+            return qw{ File::Copy };
+        }
+        elsif ( $dir eq "sample3" ) {
+            return qw{ File::Copy };
+        }
+        else {
+            return ();
+        }
     }
 }
 

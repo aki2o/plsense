@@ -19,7 +19,7 @@ wait_ready($projfile, 3, 20);
 wait_fin_task();
 
 my $proj1nm = get_current_project();
-is($proj1nm, "SampleProject", "Project1 name is $proj1nm");
+is($proj1nm, "SampleProj", "Project1 name is $proj1nm");
 
 my @proj1_readys = split m{ \s+ }xms, get_plsense_testcmd_result("ready");
 ok(grep { $_ eq "File::Spec" } @proj1_readys, "$proj1nm readys installed module");
@@ -38,7 +38,7 @@ wait_ready($projfile, 3, 20);
 wait_fin_task();
 
 my $proj2nm = get_current_project();
-is($proj2nm, "OtherProject", "Project2 name is $proj2nm");
+is($proj2nm, "OtherProj", "Project2 name is $proj2nm");
 
 my @proj2_readys = split m{ \s+ }xms, get_plsense_testcmd_result("ready");
 ok(grep { $_ eq "File::Spec" } @proj2_readys, "$proj2nm readys installed module");
@@ -59,7 +59,7 @@ wait_ready($projfile, 3, 20);
 wait_fin_task();
 
 my $proj3nm = get_current_project();
-is($proj3nm, "CartonProject", "Project3 name is $proj3nm");
+is($proj3nm, "CartonProj", "Project3 name is $proj3nm");
 
 my @proj3_readys = split m{ \s+ }xms, get_plsense_testcmd_result("ready");
 ok(! grep { $_ eq "File::Spec" } @proj3_readys, "$proj3nm don't ready installed module");
