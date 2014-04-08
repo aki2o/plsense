@@ -1,0 +1,1 @@
+{"version":"0.26","target":"String::Random","pathname":"S/SH/SHLOMIF/String-Random-0.26.tar.gz","dist":"String-Random-0.26","provides":{"String::Random":{"version":"0.26","file":"lib/String/Random.pm"}},"name":"String::Random"}

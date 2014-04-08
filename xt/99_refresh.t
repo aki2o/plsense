@@ -12,7 +12,8 @@ wait_fin_task();
 my $leeway = 300; # KB
 my @testsrcs = ( "$FindBin::Bin/sample/01_var.pl",
                  "$FindBin::Bin/sample2/01_chgproject.pl",
-                 "$FindBin::Bin/sample3/01_chgproject.pl" );
+                 "$FindBin::Bin/sample3/01_chgproject.pl",
+                 "$FindBin::Bin/sample4/01_chgproject.pl" );
 REFRESH:
 for ( my $i = 1; $i <= $#testsrcs + 1; $i++ ) {
 
@@ -26,7 +27,7 @@ for ( my $i = 1; $i <= $#testsrcs + 1; $i++ ) {
     my $target_work_mem = get_proc_memory_quantity("plsense-server-work");
     my $target_resolve_mem = get_proc_memory_quantity("plsense-server-resolve");
     my @target_readys = split m{ \s+ }xms, get_plsense_testcmd_result("ready");
-    ok($target_main_mem > 0 && $target_work_mem > 0 && $target_resolve_mem > 0 && $#target_readys > 0,
+    ok($target_main_mem > 0 && $target_work_mem > 0 && $target_resolve_mem > 0 && $#target_readys >= 0,
        "[Unit$i] Target location resource :"
        ." MainMem[$target_main_mem]"
        ." WorkMem[$target_work_mem]"
@@ -50,7 +51,7 @@ for ( my $i = 1; $i <= $#testsrcs + 1; $i++ ) {
     ok($before_main_mem > $target_main_mem &&
        $before_work_mem > $target_work_mem &&
        $before_resolve_mem > $target_resolve_mem &&
-       $#before_readys > $#target_readys,
+       $#before_readys >= $#target_readys,
        "[Unit$i] All location resource :"
        ." MainMem[$before_main_mem]"
        ." WorkMem[$before_work_mem]"

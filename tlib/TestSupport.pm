@@ -195,10 +195,19 @@ our @EXPORT = qw( get_tmp_dir
     }
 
     sub get_proc_memory_quantity {
-        my $procnm = shift or return 0;
-        my $mem = qx{ ps alx | grep $procnm | grep -v grep | awk '{printf \$8}' };
-        if ( $mem !~ m{ \A \d+ \z }xms ) { return 0; }
-        return $mem;
+        my @keywords = @_;
+        my $grepcmdstr = join(" | ", map { "grep $_" } @keywords);
+        my $mem = qx{ ps alx | $grepcmdstr | grep -v grep | awk '{printf \$8}' };
+        chomp $mem;
+        return $mem =~ m{ \A \d+ \z }xms ? $mem : 0;
+    }
+
+    sub get_proc_id {
+        my @keywords = @_;
+        my $grepcmdstr = join(" | ", map { "grep $_" } @keywords);
+        my $id = qx{ ps alx | $grepcmdstr | grep -v grep | awk '{printf \$3}' };
+        chomp $id;
+        return $id =~ m{ \A \d+ \z }xms ? $id : 0;
     }
 
     sub get_current_project {

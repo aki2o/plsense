@@ -158,7 +158,7 @@ our @EXPORT = qw( setup_config
         # fix for Carton
         my $carton = get_config("carton", 1);
         if ( $carton ) {
-            $pcnf->{local} = 1;
+            $pcnf->{local} = 1; # I'm not sure that Carton project is a local perl environment.
             my $perl = get_config("perl");
             if ( $perl eq get_default_config("perl") ) { $perl = "carton exec -- perl"; }
             my $perldoc = get_config("perldoc");

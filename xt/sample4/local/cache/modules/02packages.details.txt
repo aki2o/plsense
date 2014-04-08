@@ -1,0 +1,63 @@
+File:         02packages.details.txt
+URL:          http://www.perl.com/CPAN/modules/02packages.details.txt
+Description:  Package names found in cpanfile.snapshot
+Columns:      package name, version, path
+Intended-For: Automated fetch routines, namespace documentation.
+Written-By:   Carton v1.0.12
+Line-Count:   54
+Last-Updated: Tue Apr  8 20:52:18 2014
+
+URI                                    1.60  G/GA/GAAS/URI-1.60.tar.gz
+URI::Escape                            3.31  G/GA/GAAS/URI-1.60.tar.gz
+URI::Find                          20111103  M/MS/MSCHWERN/URI-Find-20111103.tar.gz
+URI::Find::Schemeless              20111103  M/MS/MSCHWERN/URI-Find-20111103.tar.gz
+URI::Heuristic                         4.20  G/GA/GAAS/URI-1.60.tar.gz
+URI::IRI                              undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::QueryParam                       undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::Split                            undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::URL                               5.04  G/GA/GAAS/URI-1.60.tar.gz
+URI::WithBase                          2.20  G/GA/GAAS/URI-1.60.tar.gz
+URI::_foreign                         undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::_generic                         undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::_idna                            undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::_ldap                             1.12  G/GA/GAAS/URI-1.60.tar.gz
+URI::_login                           undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::_punycode                         0.04  G/GA/GAAS/URI-1.60.tar.gz
+URI::_query                           undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::_segment                         undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::_server                          undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::_userpass                        undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::data                             undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::file                              4.21  G/GA/GAAS/URI-1.60.tar.gz
+URI::file::Base                       undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::file::FAT                        undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::file::Mac                        undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::file::OS2                        undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::file::QNX                        undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::file::Unix                       undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::file::Win32                      undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::ftp                              undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::gopher                           undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::http                             undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::https                            undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::ldap                              1.12  G/GA/GAAS/URI-1.60.tar.gz
+URI::ldapi                            undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::ldaps                            undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::mailto                           undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::mms                              undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::news                             undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::nntp                             undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::pop                              undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::rlogin                           undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::rsync                            undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::rtsp                             undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::rtspu                            undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::sip                               0.11  G/GA/GAAS/URI-1.60.tar.gz
+URI::sips                             undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::snews                            undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::ssh                              undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::telnet                           undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::tn3270                           undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::urn                              undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::urn::isbn                        undef  G/GA/GAAS/URI-1.60.tar.gz
+URI::urn::oid                         undef  G/GA/GAAS/URI-1.60.tar.gz

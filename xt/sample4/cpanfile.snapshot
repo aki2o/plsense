@@ -1,0 +1,15 @@
+# carton snapshot format: version 1.0
+DISTRIBUTIONS
+  String-Random-0.26
+    pathname: S/SH/SHLOMIF/String-Random-0.26.tar.gz
+    provides:
+      String::Random 0.26
+    requirements:
+      Carp 0
+      Exporter 0
+      Module::Build 0.36
+      Test::More 0
+      perl 5.006
+      strict 0
+      vars 0
+      warnings 0
