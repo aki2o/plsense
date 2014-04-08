@@ -24,6 +24,7 @@ ok($first_resolve_mem > 0, "consume $first_resolve_mem mem in resolve server aft
 my @first_readys = split m{ \s+ }xms, get_plsense_testcmd_result("ready");
 ok($#first_readys > 0, "ready $#first_readys modules after first action") or done_mytest();
 
+my $leeway = 300; # KB
 REFRESH:
 for ( my $i = 1; $i <= 3; $i++ ) {
 
@@ -32,8 +33,8 @@ for ( my $i = 1; $i <= 3; $i++ ) {
         run_plsense_testcmd("open '$f' > /dev/null");
         wait_ready($f, 3, 20);
         CODEADD:
-        for my $ii ( 1..100 ) {
-            run_plsense_testcmd("codeadd my \$dummy_var$ii = { hoge => 'hoge$ii', fuga => 'fuga$ii' };");
+        for my $ii ( 1..10 ) {
+            run_plsense_testcmd('codeadd my $dummy_var'.$ii.' = { k1 => '.$ii.', k2 => qw/'.$ii.'/ };');
         }
     }
     run_plsense_testcmd("open '$src' > /dev/null");
@@ -54,7 +55,7 @@ for ( my $i = 1; $i <= 3; $i++ ) {
     my $after_work_mem = get_proc_memory_quantity("plsense-server-work");
     my $after_resolve_mem = get_proc_memory_quantity("plsense-server-resolve");
     ok($after_main_mem < $before_main_mem, "refresh[$i] main server. mem:[$before_main_mem]->[$after_main_mem]");
-    ok($after_work_mem < $before_work_mem, "refresh[$i] work server. mem:[$before_work_mem]->[$after_work_mem]");
+    ok($after_work_mem < $before_work_mem + $leeway, "refresh[$i] work server. mem:[$before_work_mem]->[$after_work_mem]");
     ok($after_resolve_mem < $before_resolve_mem, "refresh[$i] resolve server. mem:[$before_resolve_mem]->[$after_resolve_mem]");
 
     my @after_readys = split m{ \s+ }xms, get_plsense_testcmd_result("ready");

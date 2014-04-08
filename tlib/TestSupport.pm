@@ -22,6 +22,7 @@ our @EXPORT = qw( get_tmp_dir
                   wait_fin_timeout
                   wait_ready
                   get_proc_memory_quantity
+                  get_current_project
                   used_modules );
 {
     sub get_tmp_dir {
@@ -197,6 +198,11 @@ our @EXPORT = qw( get_tmp_dir
         my $mem = qx{ ps alx | grep $procnm | grep -v grep | awk '{printf \$8}' };
         if ( $mem !~ m{ \A \d+ \z }xms ) { return 0; }
         return $mem;
+    }
+
+    sub get_current_project {
+        my $loc = get_plsense_testcmd_result("loc");
+        return $loc =~ m{ ^ Project: \s+ ([^\n]*?) $ }xms ? $1 : "";
     }
 
     sub used_modules {

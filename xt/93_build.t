@@ -10,7 +10,7 @@ ok(is_server_running(), "start server process") or done_mytest();
 
 my @testsrc = grep { -f $_ } @ARGV;
 if ( $#testsrc < 0 ) { @testsrc = split m{ : }xms, $ENV{PLSENSE_TEST_SOURCE}; }
-if ( $#testsrc < 0 ) { @testsrc = glob("$FindBin::Bin/sample/*.pl"); }
+if ( $#testsrc < 0 ) { @testsrc = glob("$FindBin::Bin/sample*/*.pl"); }
 
 BUILD:
 foreach my $f ( @testsrc ) {
