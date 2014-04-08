@@ -19,7 +19,7 @@ else {
     PROJ:
     foreach my $projdir ( "sample", "sample2", "sample3" ) {
         @testsrcs = glob("$FindBin::Bin/$projdir/*.pl");
-        my @usingmdls = using_modules($projdir);
+        my @usingmdls = used_modules($projdir);
         do_build_test(\@testsrcs, \@usingmdls, 0, $projdir);
     }
 }
