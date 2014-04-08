@@ -23,6 +23,7 @@ our @EXPORT = qw( get_tmp_dir
                   wait_ready
                   get_proc_memory_quantity
                   get_current_project
+                  get_current_file
                   used_modules );
 {
     sub get_tmp_dir {
@@ -203,6 +204,11 @@ our @EXPORT = qw( get_tmp_dir
     sub get_current_project {
         my $loc = get_plsense_testcmd_result("loc");
         return $loc =~ m{ ^ Project: \s+ ([^\n]*?) $ }xms ? $1 : "";
+    }
+
+    sub get_current_file {
+        my $loc = get_plsense_testcmd_result("loc");
+        return $loc =~ m{ ^ File: \s+ ([^\n]*?) $ }xms ? $1 : "";
     }
 
     sub used_modules {
