@@ -7,6 +7,7 @@ on 'develop' => sub {
 
 on 'test' => sub {
   requires 'Test::More', '>= 0.98, < 2.0';
+  requires 'Carton';
 };
 
 requires 'Cache::FileCache';
