@@ -141,15 +141,15 @@ sub set_signal_handler {
         }, $set_restart, &POSIX::SA_NODEFER);
 
     if ( $never_give_up ) {
-        POSIX::sigprocmask( &POSIX::SIG_UNBLOCK, $set_stop);
-        POSIX::sigprocmask( &POSIX::SIG_UNBLOCK, $set_restart);
+        POSIX::sigprocmask( &POSIX::SIG_UNBLOCK, $set_stop );
+        POSIX::sigprocmask( &POSIX::SIG_UNBLOCK, $set_restart );
     }
 
-    POSIX::sigaction( &POSIX::SIGINT,  $act_stop);
-    POSIX::sigaction( &POSIX::SIGQUIT, $act_stop);
-    POSIX::sigaction( &POSIX::SIGTERM, $act_stop);
-    POSIX::sigaction( &POSIX::SIGUSR1, $act_restart);
-    POSIX::sigaction( &POSIX::SIGHUP,  $act_restart);
+    POSIX::sigaction( &POSIX::SIGINT,  $act_stop );
+    POSIX::sigaction( &POSIX::SIGQUIT, $act_stop );
+    POSIX::sigaction( &POSIX::SIGTERM, $act_stop );
+    POSIX::sigaction( &POSIX::SIGUSR1, $act_restart );
+    POSIX::sigaction( &POSIX::SIGHUP,  $act_restart );
 }
 
 sub initialize {

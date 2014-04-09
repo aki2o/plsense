@@ -500,7 +500,7 @@ sub stop_server_sentinel {
         return 1;
     }
     elsif ( $pid ) {
-        logger->info("Send SIGWINCH to $svtype");
+        logger->info("Send SIGTERM to $svtype");
         kill 'TERM', $pid or logger->error("Failed kill $svtype server");
         $pid_of{$svtype} = undef;
         return 1;
@@ -573,7 +573,8 @@ sub refresh_server {
             logger->error("Can't restart $svtype server cause failed to get pid");
             next SVTYPE;
         }
-        kill 'HUP', $pid or logger->error("Failed kill $svtype server");
+        logger->info("Send SIGUSR1 to $svtype");
+        kill 'USR1', $pid or logger->error("Failed kill $svtype server");
         push @reqsvrs, $svtype;
     }
 

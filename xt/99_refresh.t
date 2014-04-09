@@ -49,7 +49,7 @@ for ( my $i = 1; $i <= $#testsrcs + 1; $i++ ) {
     my $before_resolve_mem = get_proc_memory_quantity("plsense-server-resolve");
     my @before_readys = split m{ \s+ }xms, get_plsense_testcmd_result("ready");
     ok($before_main_mem > $target_main_mem &&
-       $before_work_mem > $target_work_mem &&
+       $before_work_mem >= $target_work_mem &&
        $before_resolve_mem > $target_resolve_mem &&
        $#before_readys >= $#target_readys,
        "[Unit$i] All location resource :"
