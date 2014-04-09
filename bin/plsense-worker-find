@@ -45,7 +45,6 @@ my $nowstoringmdl = undef;
 my (@mdl_or_files, @needbuild, @firstbuild, %found_is, %lastmodified_of);
 
 $SIG{INT}  = sub { logger->notice("Receive SIGINT");  resume_store(); exit 0; };
-$SIG{QUIT} = sub { logger->notice("Receive SIGQUIT"); resume_store(); exit 0; };
 $SIG{TERM} = sub { logger->notice("Receive SIGTERM"); resume_store(); exit 0; };
 
 mdlkeeper->setup_without_reload();

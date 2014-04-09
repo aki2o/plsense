@@ -61,7 +61,6 @@ my $ppibuilder     = PlSense::ModuleBuilder::PPIBuilder->new();
 my (@builtmdls, @builtmdlkeys, @extmdls);
 
 $SIG{INT}  = sub { logger->notice("Receive SIGINT");  interrupt_build(); exit 0; };
-$SIG{QUIT} = sub { logger->notice("Receive SIGQUIT"); interrupt_build(); exit 0; };
 $SIG{TERM} = sub { logger->notice("Receive SIGTERM"); interrupt_build(); exit 0; };
 
 try {

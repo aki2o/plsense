@@ -123,10 +123,10 @@ EOF
 
 sub set_signal_handler {
     logger->debug("Start set signal handler");
-    my $set_stop = POSIX::SigSet->new( &POSIX::SIGINT, &POSIX::SIGQUIT, &POSIX::SIGTERM );
+    my $set_stop = POSIX::SigSet->new( &POSIX::SIGINT, &POSIX::SIGTERM );
     my $act_stop = POSIX::SigAction->new(
         sub {
-            logger->notice("Receive SIGINT/SIGQUIT/SIGTERM");
+            logger->notice("Receive SIGINT/SIGTERM");
             kill_all_task();
             exit 0;
         }, $set_stop, &POSIX::SA_NODEFER);
@@ -140,13 +140,10 @@ sub set_signal_handler {
             exit 0;
         }, $set_restart, &POSIX::SA_NODEFER);
 
-    if ( $never_give_up ) {
-        POSIX::sigprocmask( &POSIX::SIG_UNBLOCK, $set_stop );
-        POSIX::sigprocmask( &POSIX::SIG_UNBLOCK, $set_restart );
-    }
+    POSIX::sigprocmask( &POSIX::SIG_UNBLOCK, $set_stop );
+    POSIX::sigprocmask( &POSIX::SIG_UNBLOCK, $set_restart );
 
     POSIX::sigaction( &POSIX::SIGINT,  $act_stop );
-    POSIX::sigaction( &POSIX::SIGQUIT, $act_stop );
     POSIX::sigaction( &POSIX::SIGTERM, $act_stop );
     POSIX::sigaction( &POSIX::SIGUSR1, $act_restart );
     POSIX::sigaction( &POSIX::SIGHUP,  $act_restart );
