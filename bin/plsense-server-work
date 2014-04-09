@@ -300,7 +300,7 @@ sub kill_all_task {
 sub get_worker_common_option {
     my $is_project = shift || 0;
     my $ret = get_common_option_string();
-    $ret .= " --confpath '".get_config("confpath")."'";
+    $ret .= " --confpath '".( get_config("confpath") || "" )."'";
     if ( $is_project ) { $ret .= " --project"; }
     return $ret;
 }

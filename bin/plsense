@@ -459,7 +459,7 @@ sub start_server_sentinel {
 
     my $cmdnm = "plsense-server-".$svtype;
     my $cmdstr = $cmdnm.get_common_option_string();
-    if ( $svtype eq "work" ) { $cmdstr .= " --maxtasks ".get_config("maxtasks"); }
+    if ( $svtype eq "work" ) { $cmdstr .= " --maxtasks '".( get_config("maxtasks") || "" )."'"; }
     logger->info("Start server : $cmdstr");
     system "$cmdstr &";
 
