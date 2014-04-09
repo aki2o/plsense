@@ -117,6 +117,7 @@ use PlSense::Symbol::Variable;
 
     sub load {
         my ($self) = @_;
+        logger->debug("Start load");
         my $c = {};
         try   { $c = $cache_of{ident $self}->get("perl"); }
         catch { $c = $cache_of{ident $self}->get("perl"); };

@@ -458,10 +458,10 @@ sub start_server_sentinel {
     }
 
     my $cmdnm = "plsense-server-".$svtype;
-    my @opt = get_common_options();
-    if ( $svtype eq "work" ) { push @opt, "--maxtasks", get_config("maxtasks"); }
-    logger->info("Start server : $cmdnm ".join(" ", @opt));
-    system $cmdnm, @opt, "&";
+    my $cmdstr = $cmdnm.get_common_option_string();
+    if ( $svtype eq "work" ) { $cmdstr .= " --maxtasks ".get_config("maxtasks"); }
+    logger->info("Start server : $cmdstr");
+    system "$cmdstr &";
 
     $pid = $svtype eq "main"    ? $scli->get_main_server_response("pid",    { ignore_error => 1, maxretry => 10 })
          : $svtype eq "work"    ? $scli->get_work_server_response("pid",    { ignore_error => 1, maxretry => 10 })

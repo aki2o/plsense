@@ -240,32 +240,37 @@ sub run_task {
 
     # do not run task while doing find task
     my @findtasks = grep { $_ =~ m{ \A find \s+ }xms } keys %taskinfo_of;
-    if ( $#findtasks >= 0 ) { return; }
+    if ( $#findtasks >= 0 ) {
+        logger->notice("Exit run task cause find task is running");
+        return;
+    }
 
     my $limit = $now + 60 * 10;
     RUN_TASK:
     while ( $taskcount < get_config("maxtasks") ) {
-        my $nexttask = shift @taskqueue or return;
+        my $nexttask = shift @taskqueue or last RUN_TASK;
         my $taskkey = $nexttask->{key};
+        logger->debug("Next task : $taskkey");
         if ( is_running($taskkey) ) { next RUN_TASK; }
         my $cmd = $nexttask->{cmd};
-        logger->info("Run task : ".join(" ", @$cmd));
-        system @$cmd, "&";
+        logger->info("Run task : $cmd";
+        system "$cmd &";
         # TODO: get pid of task
         $taskinfo_of{$taskkey} = { pid => undef, limit => $limit };
         $taskcount++;
         if ( $taskkey =~ m{ \A find \s+ }xms ) { last RUN_TASK; }
     }
+    logger->debug("Finish run task");
 }
 
 sub add_task {
-    my ($taskkey, $cmdnm, @cmdargs) = @_;
-    if ( ! $taskkey || ! $cmdnm ) { return; }
+    my ($taskkey, $cmdstr) = @_;
+    if ( ! $taskkey || ! $cmdstr ) { return; }
     QUEUE:
     foreach my $task ( @taskqueue ) {
         if ( $taskkey eq $task->{key} ) { return; }
     }
-    push @taskqueue, { key => $taskkey, cmd => [$cmdnm, @cmdargs] };
+    push @taskqueue, { key => $taskkey, cmd => $cmdstr };
 }
 
 sub finish_task {
@@ -292,24 +297,24 @@ sub kill_all_task {
     }
 }
 
-sub get_worker_common_options {
+sub get_worker_common_option {
     my $is_project = shift || 0;
-    my @ret = get_common_options();
-    push @ret, "--confpath", get_config("confpath");
-    if ( $is_project ) { push @ret, "--project"; }
-    return @ret;
+    my $ret = get_common_option_string();
+    $ret .= " --confpath '".get_config("confpath")."'";
+    if ( $is_project ) { $ret .= " --project"; }
+    return $ret;
 }
 
 sub add_find_task {
     my ($global, $tasknm, @rootdirs) = @_;
     logger->notice("Add task find module of $tasknm");
-    my @opt = get_worker_common_options($global ? 0 : 1);
-    push @opt, "--tasknm", $tasknm;
+    my $cmdstr = "plsense-worker-find".get_worker_common_option($global ? 0 : 1);
+    $cmdstr .= " --tasknm '$tasknm'";
     ROOTDIR:
     foreach my $dir ( @rootdirs ) {
-        push @opt, "--rootdir", $dir;
+        $cmdstr .= " --rootdir '$dir'";
     }
-    add_task("find $tasknm", "plsense-worker-find", @opt);
+    add_task("find $tasknm", $cmdstr);
     return;
 }
 
@@ -368,11 +373,11 @@ sub build_sentinel {
             next ENTRY;
         }
         logger->notice("Add task build '$mdl_or_file'. recursive[$recursive]");
-        my @opt = get_worker_common_options();
-        push @opt, "--target", $target;
-        if ( $recursive ) { push @opt, "--recursive"; }
-        if ( $force ) { push @opt, "--force"; }
-        add_task($taskkey, "plsense-worker-build", @opt);
+        my $cmdstr = "plsense-worker-build".get_worker_common_option();
+        $cmdstr .= " --target '$target'";
+        if ( $recursive ) { $cmdstr .= " --recursive"; }
+        if ( $force ) { $cmdstr .= " --force"; }
+        add_task($taskkey, $cmdstr);
     }
     return;
 }
