@@ -253,7 +253,7 @@ sub run_task {
         logger->debug("Next task : $taskkey");
         if ( is_running($taskkey) ) { next RUN_TASK; }
         my $cmd = $nexttask->{cmd};
-        logger->info("Run task : $cmd";
+        logger->info("Run task : $cmd");
         system "$cmd &";
         # TODO: get pid of task
         $taskinfo_of{$taskkey} = { pid => undef, limit => $limit };

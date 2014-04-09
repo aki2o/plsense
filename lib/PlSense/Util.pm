@@ -34,7 +34,7 @@ our @EXPORT = qw( builtin mdlkeeper addrrouter addrfinder substkeeper substbuild
         my @ret;
         CONF:
         foreach my $confnm ( @confnms ) {
-            push @ret, "--".$confnm, get_config($confnm);
+            push @ret, "--".$confnm, get_config($confnm) || "";
         }
         return @ret;
     }
@@ -43,7 +43,7 @@ our @EXPORT = qw( builtin mdlkeeper addrrouter addrfinder substkeeper substbuild
         my $ret = "";
         CONF:
         foreach my $confnm ( @confnms ) {
-            $ret .= " --".$confnm." '".get_config($confnm)."'";
+            $ret .= " --".$confnm." '".( get_config($confnm) || "" )."'";
         }
         return $ret;
     }
