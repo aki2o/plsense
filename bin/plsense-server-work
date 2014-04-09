@@ -8,6 +8,7 @@ use File::Spec;
 use File::Basename;
 use Time::Piece;
 use Try::Tiny;
+use POSIX ();
 use PlSense::Logger;
 use PlSense::Configure;
 use PlSense::SocketClient;
@@ -91,12 +92,11 @@ if ( ! $sock->listen ) {
     exit 1;
 }
 
-$SIG{WINCH} = sub { logger->notice("Receive SIGWINCH"); kill_all_task(); exit 0; };
-$SIG{TERM}  = sub { logger->notice("Receive SIGTERM");  kill_all_task(); exit 0; };
-$SIG{USR1}  = sub { logger->notice("Receive SIGUSR1");  kill_all_task(); start_myself(); exit 0; };
-$SIG{HUP}   = sub { logger->notice("Receive SIGHUP");   kill_all_task(); start_myself(); exit 0; };
-
-initialize() or exit 1;
+set_signal_handler();
+if ( ! initialize() ) {
+    logger->fatal("Failed initialize");
+    exit 1;
+}
 accept_client();
 exit 0;
 
@@ -121,7 +121,39 @@ EOF
     return;
 }
 
+sub set_signal_handler {
+    logger->debug("Start set signal handler");
+    my $set_stop = POSIX::SigSet->new( &POSIX::SIGINT, &POSIX::SIGQUIT, &POSIX::SIGTERM );
+    my $act_stop = POSIX::SigAction->new(
+        sub {
+            logger->notice("Receive SIGINT/SIGQUIT/SIGTERM");
+            kill_all_task();
+            exit 0;
+        }, $set_stop, &POSIX::SA_NODEFER);
+
+    my $set_restart = POSIX::SigSet->new( &POSIX::SIGUSR1, &POSIX::SIGHUP );
+    my $act_restart = POSIX::SigAction->new(
+        sub {
+            logger->notice("Receive SIGUSR1/SIGHUP");
+            kill_all_task();
+            exec $0, get_common_options(), "--maxtasks", get_config("maxtasks"), "--never-give-up";
+            exit 0;
+        }, $set_restart, &POSIX::SA_NODEFER);
+
+    if ( $never_give_up ) {
+        POSIX::sigprocmask( &POSIX::SIG_UNBLOCK, $set_stop);
+        POSIX::sigprocmask( &POSIX::SIG_UNBLOCK, $set_restart);
+    }
+
+    POSIX::sigaction( &POSIX::SIGINT,  $act_stop);
+    POSIX::sigaction( &POSIX::SIGQUIT, $act_stop);
+    POSIX::sigaction( &POSIX::SIGTERM, $act_stop);
+    POSIX::sigaction( &POSIX::SIGUSR1, $act_restart);
+    POSIX::sigaction( &POSIX::SIGHUP,  $act_restart);
+}
+
 sub initialize {
+    logger->debug("Start initialize");
     setup_config() or return;
     %taskinfo_of = ();
     @taskqueue = ();
@@ -181,6 +213,8 @@ sub accept_client {
 }
 
 sub run_task {
+    logger->notice("Start run task");
+
     my $now = localtime;
     my $taskcount = 0;
     CHK_TIMEOUT:
@@ -214,9 +248,9 @@ sub run_task {
         my $nexttask = shift @taskqueue or return;
         my $taskkey = $nexttask->{key};
         if ( is_running($taskkey) ) { next RUN_TASK; }
-        my $cmdstr = $nexttask->{cmd};
-        logger->info("Run task : $cmdstr");
-        system "$cmdstr &";
+        my $cmd = $nexttask->{cmd};
+        logger->info("Run task : ".join(" ", @$cmd));
+        system @$cmd, "&";
         # TODO: get pid of task
         $taskinfo_of{$taskkey} = { pid => undef, limit => $limit };
         $taskcount++;
@@ -225,13 +259,13 @@ sub run_task {
 }
 
 sub add_task {
-    my ($taskkey, $cmdstr) = @_;
-    if ( ! $taskkey || ! $cmdstr ) { return; }
+    my ($taskkey, $cmdnm, @cmdargs) = @_;
+    if ( ! $taskkey || ! $cmdnm ) { return; }
     QUEUE:
     foreach my $task ( @taskqueue ) {
         if ( $taskkey eq $task->{key} ) { return; }
     }
-    push @taskqueue, { key => $taskkey, cmd => $cmdstr };
+    push @taskqueue, { key => $taskkey, cmd => [$cmdnm, @cmdargs] };
 }
 
 sub finish_task {
@@ -258,23 +292,24 @@ sub kill_all_task {
     }
 }
 
-sub get_worker_common_option {
+sub get_worker_common_options {
     my $is_project = shift || 0;
-    my $ret = get_common_option();
-    $ret .= " --confpath '".(get_config("confpath") || "")."'";
-    if ( $is_project ) { $ret .= " --project" }
-    return $ret;
+    my @ret = get_common_options();
+    push @ret, "--confpath", get_config("confpath");
+    if ( $is_project ) { push @ret, "--project"; }
+    return @ret;
 }
 
 sub add_find_task {
     my ($global, $tasknm, @rootdirs) = @_;
     logger->notice("Add task find module of $tasknm");
-    my $rootdiropt = "";
+    my @opt = get_worker_common_options($global ? 0 : 1);
+    push @opt, "--tasknm", $tasknm;
     ROOTDIR:
     foreach my $dir ( @rootdirs ) {
-        $rootdiropt .= " --rootdir '$dir'";
+        push @opt, "--rootdir", $dir;
     }
-    add_task("find $tasknm", "plsense-worker-find --tasknm '$tasknm' $rootdiropt ".get_worker_common_option($global ? 0 : 1));
+    add_task("find $tasknm", "plsense-worker-find", @opt);
     return;
 }
 
@@ -333,16 +368,13 @@ sub build_sentinel {
             next ENTRY;
         }
         logger->notice("Add task build '$mdl_or_file'. recursive[$recursive]");
-        my $cmd = "plsense-worker-build --target '$target' ".get_worker_common_option();
-        if ( $recursive ) { $cmd .= " --recursive" }
-        if ( $force ) { $cmd .= " --force" }
-        add_task($taskkey, $cmd);
+        my @opt = get_worker_common_options();
+        push @opt, "--target", $target;
+        if ( $recursive ) { push @opt, "--recursive"; }
+        if ( $force ) { push @opt, "--force"; }
+        add_task($taskkey, "plsense-worker-build", @opt);
     }
     return;
-}
-
-sub start_myself {
-    system "plsense-server-work ".get_common_option()." --never-give-up &";
 }
 
 

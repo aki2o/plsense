@@ -6,7 +6,7 @@ use PlSense::Configure;
 use Exporter 'import';
 our @EXPORT = qw( builtin mdlkeeper addrrouter addrfinder substkeeper substbuilder
                   set_builtin set_mdlkeeper set_addrrouter set_addrfinder set_substkeeper set_substbuilder
-                  get_common_option );
+                  get_common_options );
 {
     my $builtin;
     my $mdlkeeper;
@@ -29,14 +29,13 @@ our @EXPORT = qw( builtin mdlkeeper addrrouter addrfinder substkeeper substbuild
     sub set_substkeeper { $substkeeper = shift; }
     sub set_substbuilder { $substbuilder = shift; }
 
-    sub get_common_option {
-        my $ret = "--cachedir '".(get_config("cachedir") || "")."'";
-        $ret .= " --loglevel '".(get_config("loglevel") || "")."'";
-        $ret .= " --logfile '".(get_config("logfile") || "")."'";
-        $ret .= " --port1 ".get_config("port1");
-        $ret .= " --port2 ".get_config("port2");
-        $ret .= " --port3 ".get_config("port3");
-        return $ret;
+    sub get_common_options {
+        return ( "--cachedir", get_config("cachedir"),
+                 "--loglevel", get_config("loglevel"),
+                 "--logfile",  get_config("logfile"),
+                 "--port1",    get_config("port1"),
+                 "--port2",    get_config("port2"),
+                 "--port3",    get_config("port3") );
     }
 }
 

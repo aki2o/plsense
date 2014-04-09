@@ -76,13 +76,13 @@ ok($main_mem > 0 && $work_mem > 0 && $resolve_mem > 0, "Memory consumption is ma
 
 
 # Carton Project
-$projfile = "$FindBin::Bin/sample3/01_chgproject.pl";
+$projfile = "$FindBin::Bin/sample4/01_chgproject.pl";
 run_plsense_testcmd("open '$projfile' > /dev/null");
 wait_ready($projfile, 3, 20);
 wait_fin_task();
 
 my $proj4nm = get_current_project();
-is($proj4nm, "CartonProj", "Project3 name is $proj3nm");
+is($proj4nm, "CartonProj", "Project4 name is $proj4nm");
 
 my @proj4_readys = split m{ \s+ }xms, get_plsense_testcmd_result("ready");
 ok(grep( { $_ eq "String::Random" } @proj4_readys ), "$proj4nm readys carton module");

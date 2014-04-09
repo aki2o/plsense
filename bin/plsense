@@ -458,10 +458,10 @@ sub start_server_sentinel {
     }
 
     my $cmdnm = "plsense-server-".$svtype;
-    my $etcopt = $svtype eq "work" ? " --maxtasks ".get_config("maxtasks") : "";
-    my $cmdstr = "$cmdnm ".get_common_option().$etcopt;
-    logger->info("Start server : $cmdstr");
-    system "$cmdstr &";
+    my @opt = get_common_options();
+    if ( $svtype eq "work" ) { push @opt, "--maxtasks", get_config("maxtasks"); }
+    logger->info("Start server : $cmdnm ".join(" ", @opt));
+    system $cmdnm, @opt, "&";
 
     $pid = $svtype eq "main"    ? $scli->get_main_server_response("pid",    { ignore_error => 1, maxretry => 10 })
          : $svtype eq "work"    ? $scli->get_work_server_response("pid",    { ignore_error => 1, maxretry => 10 })
@@ -501,7 +501,7 @@ sub stop_server_sentinel {
     }
     elsif ( $pid ) {
         logger->info("Send SIGWINCH to $svtype");
-        kill 'WINCH', $pid;
+        kill 'TERM', $pid or logger->error("Failed kill $svtype server");
         $pid_of{$svtype} = undef;
         return 1;
     }
@@ -567,12 +567,13 @@ sub refresh_server {
                  : $svtype eq "resolve" ? $scli->get_resolve_server_response("pid", { maxretry => 20 })
                  :                        0;
             $pid_of{$svtype} = $pid;
+            logger->info("Got pid of $svtype : $pid");
         }
         if ( ! $pid ) {
             logger->error("Can't restart $svtype server cause failed to get pid");
             next SVTYPE;
         }
-        kill 'USR1', $pid;
+        kill 'HUP', $pid or logger->error("Failed kill $svtype server");
         push @reqsvrs, $svtype;
     }
 
@@ -587,6 +588,7 @@ sub refresh_server {
             logger->error("Can't check $svtype server alive cause failed to get pid");
         }
         $pid_of{$svtype} = $pid;
+        logger->info("Got pid of $svtype : $pid");
     }
 
     if ( ! $pid_of{main} || ! $pid_of{work} ) { return; }

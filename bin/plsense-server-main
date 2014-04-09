@@ -9,6 +9,7 @@ use PPI::Document;
 use PPI::Lexer;
 use PPI::Dumper;
 use Try::Tiny;
+use POSIX ();
 use PlSense::Logger;
 use PlSense::Configure;
 use PlSense::SocketClient;
@@ -114,12 +115,11 @@ if ( ! $sock->listen ) {
     exit 1;
 }
 
-$SIG{WINCH} = sub { logger->notice("Receive SIGWINCH"); exit 0; };
-$SIG{TERM}  = sub { logger->notice("Receive SIGTERM");  exit 0; };
-$SIG{USR1}  = sub { logger->notice("Receive SIGUSR1");  start_myself(); exit 0; };
-$SIG{HUP}   = sub { logger->notice("Receive SIGHUP");   start_myself(); exit 0; };
-
-initialize() or exit 1;
+set_signal_handler();
+if ( ! initialize() ) {
+    logger->fatal("Failed initialize");
+    exit 1;
+}
 accept_client();
 exit 0;
 
@@ -144,7 +144,37 @@ EOF
     return;
 }
 
+sub set_signal_handler {
+    logger->debug("Start set signal handler");
+    my $set_stop = POSIX::SigSet->new( &POSIX::SIGINT, &POSIX::SIGQUIT, &POSIX::SIGTERM );
+    my $act_stop = POSIX::SigAction->new(
+        sub {
+            logger->notice("Receive SIGINT/SIGQUIT/SIGTERM");
+            exit 0;
+        }, $set_stop, &POSIX::SA_NODEFER);
+
+    my $set_restart = POSIX::SigSet->new( &POSIX::SIGUSR1, &POSIX::SIGHUP );
+    my $act_restart = POSIX::SigAction->new(
+        sub {
+            logger->notice("Receive SIGUSR1/SIGHUP");
+            exec $0, get_common_options(), "--never-give-up";
+            exit 0;
+        }, $set_restart, &POSIX::SA_NODEFER);
+
+    if ( $never_give_up ) {
+        POSIX::sigprocmask( &POSIX::SIG_UNBLOCK, $set_stop);
+        POSIX::sigprocmask( &POSIX::SIG_UNBLOCK, $set_restart);
+    }
+
+    POSIX::sigaction( &POSIX::SIGINT,  $act_stop);
+    POSIX::sigaction( &POSIX::SIGQUIT, $act_stop);
+    POSIX::sigaction( &POSIX::SIGTERM, $act_stop);
+    POSIX::sigaction( &POSIX::SIGUSR1, $act_restart);
+    POSIX::sigaction( &POSIX::SIGHUP,  $act_restart);
+}
+
 sub initialize {
+    logger->debug("Start initialize");
     setup_config() or return;
     $currfilepath = "";
     $currmdlnm = "";
@@ -162,6 +192,7 @@ sub initialize {
 sub accept_client {
     logger->info("Starting main server");
 
+    local $SIG{HUP} = \&ctrl_signal;
     ACCEPT_CLIENT:
     while ( my $cli = $sock->accept ) {
         logger->debug("Waiting client ...");
@@ -234,10 +265,6 @@ sub update_instance_condition {
         addrfinder->init_currentmethod;
     }
     return 1;
-}
-
-sub start_myself {
-    system "plsense-server-main ".get_common_option()." --never-give-up &";
 }
 
 
