@@ -127,9 +127,19 @@ use PlSense::Util;
         if ( ! $tok->isa("PPI::Token::Word") ) { return; }
         my $word = "".$tok->content."";
         my $pretok = $tok->previous_sibling;
-        if ( $pretok && ! $pretok->isa("PPI::Token::Whitespace") ) { return; }
-        return builtin->exist_method($word) ? builtin->get_method($word)
-             :                                addrfinder->get_currentmodule->get_any_original_method($word);
+        if ( $pretok &&
+             ! $pretok->isa("PPI::Token::Whitespace") &&
+             ! ( $pretok->isa("PPI::Token::Operator") && $pretok->content eq ',' ) ) { return; }
+        if ( $word =~ m{ \A ([a-zA-Z0-9:]+) :: ([a-zA-Z0-9_]+) \z }xms ) {
+            my ($mdlnm, $mtdnm) = ($1, $2);
+            my $mdl = mdlkeeper->get_module($mdlnm) or return;
+            return $mdl->get_any_original_method($mtdnm);
+        }
+        else {
+            my $mdl = addrfinder->get_currentmodule;
+            return builtin->exist_method($word) ? builtin->get_method($word)
+                 :                                $mdl->get_any_original_method($word);
+        }
     }
 
     sub find_arrow_fmt_method : PRIVATE {
