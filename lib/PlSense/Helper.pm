@@ -174,6 +174,7 @@ use PlSense::Util;
     sub find_any_symbol : PRIVATE {
         my ($self, $tok) = @_;
         if ( ! $tok->isa("PPI::Token::Symbol") ) { return; }
+        # Not use AddressFinder because can not detect the symbol type of incomplete code like $hoge[...
         my $symstr = "".$tok->content."";
         if ( $symstr !~ m{ \A (\$|@|%|&|\$\#) (.+ ::)? ([^:]+) \z }xms ) { return; }
         my ($symtype, $mdlnm, $symnm) = ($1, $2, $3);
