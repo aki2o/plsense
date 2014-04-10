@@ -44,17 +44,3 @@ use File::Spec;
 # mend ^ LINE: \s \d+ $
 # mend ^ COL: \s \d+ $
 
-# mstart explicit builtin method
-#&map
-# mend ^ NAME: \s map $
-# mend ^ FILE: \s [^\s]+
-# mend ^ LINE: \s \d+ $
-# mend ^ COL: \s \d+ $
-
-# mstart explicit builtin method reference
-#\&map
-# mend ^ NAME: \s map $
-# mend ^ FILE: \s [^\s]+
-# mend ^ LINE: \s \d+ $
-# mend ^ COL: \s \d+ $
-
