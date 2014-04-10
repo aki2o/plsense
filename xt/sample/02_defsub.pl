@@ -94,6 +94,12 @@ sub fugaga {
 # hend ^ ARG1: \s \$hogevar \s As \s Unknown $
 # hend ^ RETURN: \s Literal \s As \s SCALAR $
 
+# hstart explicit own method
+#&hogege
+# hend ^ hogege \s is \s Method \s of \s main\[ [^\n]+ \]\. $
+# hend ^ ARG1: \s \$hogevar \s As \s Unknown $
+# hend ^ RETURN: \s Literal \s As \s SCALAR $
+
 
 # mstart own main method
 #hogege
