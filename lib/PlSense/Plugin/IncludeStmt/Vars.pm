@@ -36,9 +36,9 @@ use Class::Std;
                     $varnm = "".$tok->literal."";
                 }
                 else {
-                    $varnm = "".$e->content."";
-                    $varnm =~ s{ ^ ("|') }{}xms;
-                    $varnm =~ s{ ("|') $ }{}xms;
+                    $varnm = "".$tok->content."";
+                    $varnm =~ s{ \A ("|') }{}xms;
+                    $varnm =~ s{ ("|') \z }{}xms;
                 }
                 PlSense::Symbol::Variable->new({ name => $varnm, lexical => 0, belong => $mdl, });
             }

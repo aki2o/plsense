@@ -186,7 +186,7 @@ use PlSense::Entity::Reference;
             }
             elsif ( $lastidx > 0 && $i >= $lastidx && $e->isa("PPI::Token::Label") ) {
                 my $currvalue = "".$e->content."";
-                $currvalue =~ s{ \s* : $ }{}xms;
+                $currvalue =~ s{ \s* : \z }{}xms;
                 logger->info("Found ternary operator : ".join(" ", @tokens[$lastidx..($i-1)])." $currvalue");
                 my $doc = $lexer_of{ident $self}->lex_source( $currvalue );
                 if ( ! $doc ) { return; }
@@ -267,8 +267,8 @@ use PlSense::Entity::Reference;
             }
             else {
                 $value = "".$e->content."";
-                $value =~ s{ ^ ("|') }{}xms;
-                $value =~ s{ ("|') $ }{}xms;
+                $value =~ s{ \A ("|') }{}xms;
+                $value =~ s{ ("|') \z }{}xms;
             }
             logger->info("Found literal quote : ".$value);
             return PlSense::Entity::Scalar->new({ value => $value });
@@ -312,7 +312,7 @@ use PlSense::Entity::Reference;
         }
         elsif ( $e->isa("PPI::Structure::Constructor") ) {
             my $value = "".$e->content."";
-            if ( $value =~ m{ ^\{ }xms ) {
+            if ( $value =~ m{ \A \{ }xms ) {
                 logger->info("Found literal hash ref constructor : ".$value);
                 my $entity = PlSense::Entity::Hash->new();
                 my @children = $e->children;
@@ -330,7 +330,7 @@ use PlSense::Entity::Reference;
                 }
                 return PlSense::Entity::Reference->new({ entity => $entity });
             }
-            elsif ( $value =~ m{ ^\[ }xms ) {
+            elsif ( $value =~ m{ \A \[ }xms ) {
                 logger->info("Found literal array ref constructor : ".$value);
                 my $entity = PlSense::Entity::Array->new({ element => PlSense::Entity::Null->new() });
                 return PlSense::Entity::Reference->new({ entity => $entity });
@@ -441,7 +441,7 @@ use PlSense::Entity::Reference;
             return $self->build_address_anything($var->get_fullnm, @tokens);
         }
 
-        if ( $varnm =~ m{ ^ ($|@|%|&) ([a-zA-Z0-9:]+) :: ([a-zA-Z0-9_]+) $ }xms ) {
+        if ( $varnm =~ m{ \A (\$|@|%|&) ([a-zA-Z0-9:]+) :: ([a-zA-Z0-9_]+) \z }xms ) {
             my ($type, $mdlnm, $somenm) = ($1, $2, $3);
             my $m = mdlkeeper->get_module($mdlnm) or return;
             my $addr = $type.$mdlnm."::".$somenm;
@@ -497,7 +497,7 @@ use PlSense::Entity::Reference;
             return $self->build_address_literal_method($m, @tokens);
         }
 
-        if ( $currwd =~ m{ ^ ([a-zA-Z0-9:]+) :: ([a-zA-Z0-9_]+) $ }xms ) {
+        if ( $currwd =~ m{ \A ([a-zA-Z0-9:]+) :: ([a-zA-Z0-9_]+) \z }xms ) {
             my ($mdlnm, $mtdnm) = ($1, $2);
             my $m = mdlkeeper->get_module($mdlnm) or return;
             my $addr = $mdlnm."::".$mtdnm;
@@ -538,7 +538,7 @@ use PlSense::Entity::Reference;
             $e = $e ? $e->previous_sibling : undef;
             $e = $e ? $e->previous_sibling : undef;
             my $objective = $e && $e->isa("PPI::Token::Operator") && $e->content eq '->' ? 1 : 0;
-            my $resolved_addr = $addr =~ m{ ^ .+ \.W: [^.]+ $ }xms ? 0 : 1;
+            my $resolved_addr = $addr =~ m{ \A .+ \.W: [^.]+ \z }xms ? 0 : 1;
             ARGUMENT:
             for my $i ( 0..$#values ) {
                 my $idx = $objective ? $i+2 : $i+1;
@@ -585,11 +585,11 @@ use PlSense::Entity::Reference;
         my $brace_s = $e->start;
         if ( $brace_s eq '{' ) {
             my $membernm = "".$e->content."";
-            $membernm =~ s{ ^ (\{|\[) \s* }{}xms;
-            $membernm =~ s{ \s* (\}|\]) $ }{}xms;
-            $membernm =~ s{ ^ ("|') }{}xms;
-            $membernm =~ s{ ("|') $ }{}xms;
-            if ( $membernm !~ m{ ^ [a-zA-Z0-9_\-]+ $ }xms ) { $membernm = '*'; }
+            $membernm =~ s{ \A (\{|\[) \s* }{}xms;
+            $membernm =~ s{ \s* (\}|\]) \z }{}xms;
+            $membernm =~ s{ \A ("|') }{}xms;
+            $membernm =~ s{ ("|') \z }{}xms;
+            if ( $membernm !~ m{ \A [a-zA-Z0-9_\-]+ \z }xms ) { $membernm = '*'; }
             return $self->build_address_anything("$addr.H:$membernm", @tokens);
         }
         elsif ( $brace_s eq '[' ) {

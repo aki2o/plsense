@@ -114,9 +114,9 @@ use PlSense::Util;
             elsif ( $e->isa("PPI::Structure::Constructor") ) {
                 $is_ref = 1;
                 my $value = "".$e->content."";
-                if    ( $value =~ m{ ^\{ }xms ) { $is_hash = 1; }
-                elsif ( $value =~ m{ ^\[ }xms ) {               }
-                else                            { last NEST;    }
+                if    ( $value =~ m{ \A \{ }xms ) { $is_hash = 1; }
+                elsif ( $value =~ m{ \A \[ }xms ) {               }
+                else                              { last NEST;    }
             }
             else {
                 last NEST;

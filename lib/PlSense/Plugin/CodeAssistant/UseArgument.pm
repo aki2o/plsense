@@ -60,7 +60,7 @@ use PlSense::Util;
                 if ( ! eval { $scalar->isa("PlSense::Entity::Scalar") } ) { next EXPORTVAR; }
                 EXPORTABLE:
                 foreach my $somenm ( split m{ \s+ }xms, $scalar->get_value ) {
-                    $somenm =~ s{ ^& }{}xms;
+                    $somenm =~ s{ \A & }{}xms;
                     my $some = $mdl->get_method($somenm) || $mdl->get_member($somenm) or next EXPORTABLE;
                     if ( $some->isa("PlSense::Symbol::Variable") && $some->is_lexical ) { next EXPORTABLE; }
                     if ( $inputed_is{$some->get_name} ) { next EXPORTABLE; }

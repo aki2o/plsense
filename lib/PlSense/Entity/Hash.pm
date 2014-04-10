@@ -42,11 +42,11 @@ use PlSense::Logger;
     sub resolve_membernm : PRIVATE {
         my $self = shift;
         my $membernm = shift || "";
-        $membernm =~ s{ ^ (\{|\[) \s* }{}xms;
-        $membernm =~ s{ \s* (\}|\]) $ }{}xms;
-        $membernm =~ s{ ^ ("|') }{}xms;
-        $membernm =~ s{ ("|') $ }{}xms;
-        if ( $membernm !~ m{ ^ [a-zA-Z0-9_\-]+ $ }xms ) { $membernm = '*'; }
+        $membernm =~ s{ \A (\{|\[) \s* }{}xms;
+        $membernm =~ s{ \s* (\}|\]) \z }{}xms;
+        $membernm =~ s{ \A ("|') }{}xms;
+        $membernm =~ s{ ("|') \z }{}xms;
+        if ( $membernm !~ m{ \A [a-zA-Z0-9_\-]+ \z }xms ) { $membernm = '*'; }
         return $membernm;
     }
 
