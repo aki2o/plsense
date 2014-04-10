@@ -40,37 +40,10 @@ use PlSense::Util;
         $doc->prune("PPI::Token::Pod");
         # $doc->prune("PPI::Token::Whitespace");
         my $tok = eval { $doc->last_token } or return "";
-        if ( ! $tok->isa("PPI::Token::Word") ) { return ""; }
-        my $word = "".$tok->content."";
-        my $pretok = $tok->previous_sibling;
-
-        my $mtd;
-        if ( ! $pretok || $pretok->isa("PPI::Token::Whitespace") ) {
-            $mtd = addrfinder->get_currentmodule->get_any_original_method($word);
-            if ( ! $mtd && builtin->exist_method($word) ) {
-                $mtd = builtin->get_method($word);
-            }
-        }
-        elsif ( $pretok->isa("PPI::Token::Operator") && $pretok->content eq '->' ) {
-            my @tokens = $self->get_valid_tokens($pretok);
-            my $addr = addrfinder->find_address(@tokens);
-            my $mdl;
-            if ( $addr ) {
-                my $entity = addrrouter->resolve_address($addr) or return "";
-                if ( ! $entity->isa("PlSense::Entity::Instance") ) { return ""; }
-                $mdl = mdlkeeper->get_module($entity->get_modulenm) or return "";
-            }
-            else {
-                $pretok = pop @tokens or return "";
-                if ( ! $pretok->isa("PPI::Token::Word") ) { return ""; }
-                $mdl = mdlkeeper->get_module("".$pretok->content."") or return "";
-            }
-            if ( ! $mdl ) { return ""; }
-            $mtd = $mdl->get_any_original_method($word) or return "";
-        }
-        if ( ! $mtd ) { return ""; }
-
-        logger->info("Found valid method : ".$mtd->get_name);
+        my $mtd = $self->find_implicit_method($tok)
+               || $self->find_explicit_method($tok)
+               || $self->find_arrow_fmt_method($tok) or return "";
+        logger->info("Found valid method : ".$mtd->get_fullnm);
         my $ret = "NAME: ".$mtd->get_name."\n";
         $ret .= $self->get_method_definition($mtd);
         $ret .= "FILE: ".($mtd->get_module ? $mtd->get_module->get_filepath : "")."\n";
@@ -90,69 +63,12 @@ use PlSense::Util;
         $doc->prune("PPI::Token::Pod");
         # $doc->prune("PPI::Token::Whitespace");
         my $tok = eval { $doc->last_token } or return "";
-
-        if ( $tok->isa("PPI::Token::Word") ) {
-            my $word = "".$tok->content."";
-            my $pretok = $tok->previous_sibling;
-            if ( $pretok && $pretok->isa("PPI::Token::Operator") && $pretok->content eq '->' ) {
-                # Word is Instance/Static method
-                my @tokens = $self->get_valid_tokens($pretok);
-                my $addr = addrfinder->find_address(@tokens);
-                my $mdl;
-                if ( $addr ) {
-                    my $entity = addrrouter->resolve_address($addr) or return "";
-                    if ( ! $entity->isa("PlSense::Entity::Instance") ) { return ""; }
-                    $mdl = mdlkeeper->get_module($entity->get_modulenm) or return "";
-                }
-                else {
-                    $pretok = pop @tokens or return "";
-                    if ( ! $pretok->isa("PPI::Token::Word") ) { return ""; }
-                    $mdl = mdlkeeper->get_module("".$pretok->content."") or return "";
-                }
-                if ( ! $mdl ) { return ""; }
-                my $mtd = $mdl->get_any_original_method($word) or return "";
-                return $self->get_symbol_help_text($mtd);
-            }
-            elsif ( my $mdl = mdlkeeper->get_module($word) ) {
-                # Word is Module
-                return $self->get_symbol_help_text($mdl);
-            }
-            elsif ( builtin->exist_method($word) ) {
-                # Word is Builtin method
-                my $mtd = builtin->get_method($word);
-                return $self->get_symbol_help_text($mtd);
-            }
-            else {
-                # Word is Other method
-                my $addr = addrfinder->find_address($tok) or return "";
-                if ( $addr !~ m{ \A & (.+) :: ([^:]+) \z }xms ) { return ""; }
-                my ($mdlkey, $mtdnm) = ($1, $2);
-                my ($mdlnm, $filepath) = $mdlkey =~ m{ \A main \[ (.+) \] \z }xms ? ("main", $1)
-                                       :                                            ($mdlkey, "");
-                my $mdl = mdlkeeper->get_module($mdlnm, $filepath) or return "";
-                if ( ! $mdl->exist_method($mtdnm) ) { return ""; }
-                my $mtd = $mdl->get_any_original_method($mtdnm);
-                return $self->get_symbol_help_text($mtd);
-            }
-        }
-        elsif ( $tok->isa("PPI::Token::Symbol") ) {
-            # Word is Variable
-            my $varnm = "".$tok->symbol."";
-            my $mdl = addrfinder->get_currentmodule;
-            my $mtd = addrfinder->get_currentmethod;
-            my @varnms = $varnm =~ m{ ^\$ }xms ? ($varnm, '@'.substr($varnm, 1), '%'.substr($varnm, 1)) : ($varnm);
-            my $var;
-            SEEK:
-            foreach my $varnm ( @varnms ) {
-                $var = builtin->exist_variable($varnm) ? builtin->get_variable($varnm)
-                     : $mtd && $mtd->exist_variable($varnm)             ? $mtd->get_variable($varnm)
-                     : $mdl->exist_member($varnm)                       ? $mdl->get_member($varnm)
-                     :                                                    first { $_->get_fullnm eq $varnm } $mdl->get_external_any_variables;
-                if ( $var ) { last SEEK; }
-            }
-            if ( ! $var ) { return ""; }
-            return $self->get_symbol_help_text($var);
-        }
+        my $sym = $self->find_any_symbol($tok)
+               || $self->find_implicit_method($tok)
+               || $self->find_arrow_fmt_method($tok)
+               || $self->find_module($tok) or return "";
+        logger->info("Found valid symbol : ".$sym->get_fullnm);
+        return $self->get_symbol_help_text($sym);
     }
 
     sub get_symbol_help_text {
@@ -197,6 +113,86 @@ use PlSense::Util;
         }
 
         return $ret;
+    }
+
+    sub find_module : PRIVATE {
+        my ($self, $tok) = @_;
+        if ( ! $tok->isa("PPI::Token::Word") ) { return; }
+        my $word = "".$tok->content."";
+        return mdlkeeper->get_module($word);
+    }
+
+    sub find_implicit_method : PRIVATE {
+        my ($self, $tok) = @_;
+        if ( ! $tok->isa("PPI::Token::Word") ) { return; }
+        my $word = "".$tok->content."";
+        my $pretok = $tok->previous_sibling;
+        if ( $pretok && ! $pretok->isa("PPI::Token::Whitespace") ) { return; }
+        return builtin->exist_method($word) ? builtin->get_method($word)
+             :                                addrfinder->get_currentmodule->get_any_original_method($word);
+    }
+
+    sub find_arrow_fmt_method : PRIVATE {
+        my ($self, $tok) = @_;
+        if ( ! $tok->isa("PPI::Token::Word") ) { return; }
+        my $word = "".$tok->content."";
+        my $pretok = $tok->previous_sibling or return;
+        if ( ! $pretok->isa("PPI::Token::Operator") || $pretok->content ne '->' ) { return; }
+        my @tokens = $self->get_valid_tokens($pretok);
+        my $addr = addrfinder->find_address(@tokens);
+        my $mdl;
+        if ( $addr ) {
+            my $entity = addrrouter->resolve_address($addr) or return;
+            if ( ! $entity->isa("PlSense::Entity::Instance") ) { return; }
+            $mdl = mdlkeeper->get_module($entity->get_modulenm) or return;
+        }
+        else {
+            $pretok = pop @tokens or return;
+            if ( ! $pretok->isa("PPI::Token::Word") ) { return; }
+            $mdl = mdlkeeper->get_module("".$pretok->content."") or return;
+        }
+        return $mdl->get_any_original_method($word);
+    }
+
+    sub find_explicit_method : PRIVATE {
+        my ($self, $tok) = @_;
+        my $mtd = $self->find_any_symbol($tok) or return;
+        if ( ! $mtd->isa("PlSense::Symbol::Method") ) { return; }
+        return $mtd;
+    }
+
+    sub find_any_symbol : PRIVATE {
+        my ($self, $tok) = @_;
+        if ( ! $tok->isa("PPI::Token::Symbol") ) { return; }
+        my $symstr = "".$tok->content."";
+        if ( $symstr !~ m{ \A (\$|@|%|&|\$\#) (.+ ::)? ([^:]+) \z }xms ) { return; }
+        my ($symtype, $mdlnm, $symnm) = ($1, $2, $3);
+        my ($mdl, $mtd);
+        if ( ! $mdlnm ) {
+            $mdl = addrfinder->get_currentmodule;
+            $mtd = addrfinder->get_currentmethod;
+        }
+        else {
+            $mdlnm =~ s{ :: \z }{}xms;
+            $mdl = mdlkeeper->get_module($mdlnm) or return;
+        }
+        if ( $symtype eq '&' ) {
+            if ( ! $mdl->exist_method($symnm) ) { return; }
+            return $mdl->get_any_original_method($symnm);
+        }
+        else {
+            my @varnms = $symtype eq '$'  ? ('$'.$symnm, '@'.$symnm, '%'.$symnm)
+                       : $symtype eq '$#' ? ('@'.$symnm)
+                       :                    ($symtype.$symnm);
+            SEEK:
+            foreach my $varnm ( @varnms ) {
+                my $var = builtin->exist_variable($varnm)      ? builtin->get_variable($varnm)
+                        : $mtd && $mtd->exist_variable($varnm) ? $mtd->get_variable($varnm)
+                        : $mdl->exist_member($varnm)           ? $mdl->get_member($varnm)
+                        :                                        first { $_->get_fullnm eq $varnm } $mdl->get_external_any_variables;
+                if ( $var ) { return $var; }
+            }
+        }
     }
 
     sub get_valid_tokens : PRIVATE {
