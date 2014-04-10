@@ -114,3 +114,21 @@ sub fugaga {
 # mend ^ LINE: \s 56 $
 # mend ^ COL: \s 1 $
 
+# mstart explicit own main method
+#&hogege
+# mend ^ NAME: \s hogege $
+# mend ^ ARG1: \s \$hogevar \s As \s Unknown $
+# mend ^ RETURN: \s Literal \s As \s SCALAR $
+# mend ^ FILE: \s .+ /02_defsub.pl $
+# mend ^ LINE: \s 45 $
+# mend ^ COL: \s 1 $
+
+# mstart explicit own main method reference
+#\&hogege
+# mend ^ NAME: \s hogege $
+# mend ^ ARG1: \s \$hogevar \s As \s Unknown $
+# mend ^ RETURN: \s Literal \s As \s SCALAR $
+# mend ^ FILE: \s .+ /02_defsub.pl $
+# mend ^ LINE: \s 45 $
+# mend ^ COL: \s 1 $
+
