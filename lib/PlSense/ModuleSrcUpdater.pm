@@ -6,16 +6,8 @@ use Class::Std;
 use PPI::Document;
 use PlSense::Logger;
 use PlSense::Util;
-use PlSense::ModuleBuilder::PPIBuilder::IncludeStmt;
 use PlSense::Symbol::Module;
 {
-    my %includestmtbuilder_of :ATTR();
-
-    sub START {
-        my ($class, $ident, $arg_ref) = @_;
-        $includestmtbuilder_of{$ident} = PlSense::ModuleBuilder::PPIBuilder::IncludeStmt->new();
-    }
-
     sub update_or_create_modules {
         my ($self, $filepath, $projectnm) = @_;
         my %foundmdl_is;
