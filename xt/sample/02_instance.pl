@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 use IO::File;
-use lib "lib";
+use lib "lib/space dir";
 use MtdExport qw{ immtd };
 
 my $scalar1 = IO::File->new();
