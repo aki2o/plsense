@@ -129,8 +129,8 @@ use PlSense::Symbol::Variable;
 
     sub is_loaded {
         my ($self) = @_;
-        my @vars = keys $variableh_of{ident $self};
-        my @mtds = keys $methodh_of{ident $self};
+        my @vars = keys %{$variableh_of{ident $self}};
+        my @mtds = keys %{$methodh_of{ident $self}};
         return $#vars > 0 && $#mtds > 0;
     }
 
