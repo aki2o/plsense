@@ -150,6 +150,8 @@ our @EXPORT = qw( setup_config
 
     sub makeup_config {
         my $prootdir = dirname($pcnf->{confpath});
+        my $perl = get_config("perl");
+        my $perldoc = get_config("perldoc");
         # absolute lib-path
         my $libpath = get_config("lib-path", 1);
         if ( $libpath ) {
@@ -159,13 +161,12 @@ our @EXPORT = qw( setup_config
         my $carton = get_config("carton", 1);
         if ( $carton ) {
             $pcnf->{local} = 1; # I'm not sure that Carton project is a local perl environment.
-            my $perl = get_config("perl");
             if ( $perl eq get_default_config("perl") ) { $perl = "carton exec -- perl"; }
-            my $perldoc = get_config("perldoc");
             if ( $perldoc eq get_default_config("perldoc") ) { $perldoc = "carton exec -- perldoc"; }
-            $pcnf->{perl} = "cd '$prootdir' ; $perl";
-            $pcnf->{perldoc} = "cd '$prootdir' ; $perldoc";
         }
+        # Execute perl/perldoc after moving to the root of project
+        $pcnf->{perl} = "cd '$prootdir' ; $perl";
+        $pcnf->{perldoc} = "cd '$prootdir' ; $perldoc";
     }
 
     sub fix_env {
