@@ -555,8 +555,13 @@ sub explore_package {
     $pkg_regexp =~ s{ \s+$ }{}xms;
     my $ret = "";
     PKG:
-    foreach my $pkg ( grep { ! $pkg_regexp || $_->get_name =~ m{ $pkg_regexp }xms } mdlkeeper->get_packages ) {
-        $ret .= $pkg->get_fullnm." ".$pkg->get_filepath." ".$pkg->get_linenumber.":".$pkg->get_colnumber."\n";
+    foreach my $pkg ( grep { ! $pkg_regexp || $_->get_fullnm =~ m{ $pkg_regexp }xms } mdlkeeper->get_packages(1) ) {
+        $ret .= $pkg->get_name." ".$pkg->get_filepath." ".$pkg->get_linenumber.":".$pkg->get_colnumber."\n";
+        PARENT:
+        for my $i ( 1..$pkg->count_parent ) {
+            my $parent = $pkg->get_parent($i);
+            $ret .= "  -".$parent->get_name."\n";
+        }
         MTD:
         foreach my $mtd ( $pkg->get_own_methods ) {
             $ret .= "  &".$mtd->get_name." ".$mtd->get_linenumber.":".$mtd->get_colnumber."\n";
@@ -565,4 +570,3 @@ sub explore_package {
     }
     return $ret;
 }
-

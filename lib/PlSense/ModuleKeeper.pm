@@ -159,11 +159,12 @@ use PlSense::Configure;
     }
 
     sub get_packages {
-        my ($self) = @_;
+        my ($self, $include_main) = @_;
         my @mdlkeys = uniq ( keys( %{$projmoduleh_of{ident $self}} ),
                              keys( %{$moduleh_of{ident $self}} ) );
         my @mdls = map { $projmoduleh_of{ident $self}->{$_} || $moduleh_of{ident $self}->{$_} } @mdlkeys;
-        return sort { $a->get_name cmp $b->get_name } grep { $_->get_name ne "main" } @mdls;
+        my @tmdls = $include_main ? @mdls : grep { $_->get_name ne "main" } @mdls;
+        return sort { $a->get_name cmp $b->get_name || $a->get_filepath cmp $b->get_filepath } @tmdls;
     }
 
     sub get_built_modules {
