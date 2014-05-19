@@ -559,8 +559,11 @@ sub explore_package {
         $ret .= $pkg->get_name." ".$pkg->get_filepath." ".$pkg->get_linenumber.":".$pkg->get_colnumber."\n";
         PARENT:
         for my $i ( 1..$pkg->count_parent ) {
-            my $parent = $pkg->get_parent($i);
-            $ret .= "  -".$parent->get_name."\n";
+            $ret .= "  > ".$pkg->get_parent($i)->get_name."\n";
+        }
+        USINGMDL:
+        for my $i ( 1..$pkg->count_usingmdl ) {
+            $ret .= "  < ".$pkg->get_usingmdl($i)->get_name."\n";
         }
         MTD:
         foreach my $mtd ( $pkg->get_own_methods ) {
