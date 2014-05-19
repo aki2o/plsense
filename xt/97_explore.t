@@ -22,8 +22,8 @@ for ( my $i = 0; $i <= 50; $i++ ) {
 }
 
 my $expect = 'BlessChild \s .+/BlessChild\.pm \s 11:1\n';
-$expect .= '\s\s > BlessParent\n';
-$expect .= '\s\s < BlessParent\n';
+$expect .= '\s\s > \s BlessParent\n';
+$expect .= '\s\s < \s BlessParent\n';
 $expect .= '\s\s &get_bar \s 32:1\n';
 $expect .= '\s\s &get_foo \s 41:1\n';
 $expect .= '\s\s &new \s 20:1\n';
