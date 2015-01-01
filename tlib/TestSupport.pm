@@ -32,6 +32,7 @@ our @EXPORT = qw( get_tmp_dir
             print STDERR "Can't get tmp path";
             return;
         }
+        $ret =~ s{ /$ }{}xms;
         return $ret."/.plsense";
     }
 
@@ -41,6 +42,7 @@ our @EXPORT = qw( get_tmp_dir
             print STDERR "Can't get work path";
             return;
         }
+        $ret =~ s{ /$ }{}xms;
         return $ret."/.plsense.work";
     }
 
