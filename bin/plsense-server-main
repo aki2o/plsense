@@ -229,8 +229,9 @@ sub accept_client {
 }
 
 sub update_instance_condition {
+    my $force = shift;
     my $currmdl = addrfinder->get_currentmodule;
-    if ( ! $currmdl || $currmdl->get_name ne $currmdlnm || $currmdl->get_filepath ne $currfilepath ) {
+    if ( $force || ! $currmdl || $currmdl->get_name ne $currmdlnm || $currmdl->get_filepath ne $currfilepath ) {
         my $mdl = mdlkeeper->get_module($currmdlnm, $currfilepath);
         if ( ! $mdl ) {
             if ( ! $currmdlnm ) {
@@ -247,7 +248,7 @@ sub update_instance_condition {
     }
     my $currmtd = addrfinder->get_currentmethod;
     if ( $currmtdnm ) {
-        if ( ! $currmtd || $currmtd->get_name ne $currmtdnm ) {
+        if ( $force || ! $currmtd || $currmtd->get_name ne $currmtdnm ) {
             my $mtd = $currmdl->get_method($currmtdnm);
             if ( ! $mtd ) {
                 logger->error("Not found [$currmtdnm] in [$currmdlnm] of [$currfilepath]");
@@ -532,6 +533,7 @@ sub setup_built_module {
         my $mdl = mdlkeeper->load_module($mdlnm, $filepath) or next ENTRY;
         logger->notice("Finished reload module of '$mdl_or_file'");
     }
+    update_instance_condition(1);
     return;
 }
 
