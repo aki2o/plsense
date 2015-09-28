@@ -249,6 +249,13 @@ use PlSense::Util;
         return @{$ret};
     }
 
+    sub get_reverse_route {
+        my ($self, $addr) = @_;
+        if ( ! $addr ) { return (); }
+        my $ret = $rrouteh_of{ident $self}->{$addr} || [];
+        return @{$ret};
+    }
+
     sub resolve_address {
         my ($self, $addr) = @_;
         logger->debug("Start resolve address : $addr");
@@ -287,9 +294,19 @@ use PlSense::Util;
         return keys %{$routeh_of{ident $self}};
     }
 
+    sub get_reverse_route_list {
+        my ($self) = @_;
+        return keys %{$rrouteh_of{ident $self}};
+    }
+
     sub get_matched_route_list {
         my ($self, $regexp) = @_;
         return grep { $_ =~ m{ $regexp }xms } keys %{$routeh_of{ident $self}};
+    }
+
+    sub get_matched_reverse_route_list {
+        my ($self, $regexp) = @_;
+        return grep { $_ =~ m{ $regexp }xms } keys %{$rrouteh_of{ident $self}};
     }
 
     sub to_string_by_regexp {

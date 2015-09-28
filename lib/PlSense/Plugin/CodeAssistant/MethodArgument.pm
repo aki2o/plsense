@@ -4,6 +4,7 @@ use parent qw{ PlSense::Plugin::CodeAssistant };
 use strict;
 use warnings;
 use Class::Std;
+use List::AllUtils qw{ uniq };
 use PlSense::Logger;
 use PlSense::Util;
 {
@@ -46,23 +47,14 @@ use PlSense::Util;
         my $idx = grep { $_->isa("PPI::Token::Operator") && $_->content eq ',' } @tokens;
         $idx = $objective ? $idx+2 : $idx+1;
         $rootaddr .= "[".$idx."]";
+        my @rrootaddrs = addrrouter->get_reverse_route($rootaddr);
+        if ( $#rrootaddrs >= 0 ) { $rootaddr = shift @rrootaddrs; }
 
         my $addr = $self->get_current_address($rootaddr, $rootstmt);
         logger->notice("Found method argument of $addr");
 
-        my $entity = addrrouter->resolve_address($addr);
-        if ( ! $entity || ! $entity->isa("PlSense::Entity::Hash") ) {
-            logger->notice("Not hash entity in current context");
-            return 1;
-        }
-
-        MEMBER:
-        foreach my $key ( $entity->keys_member ) {
-            if ( $key eq '*' ) { next MEMBER; }
-            $entity->set_membernm($key);
-            my $value = $entity->get_member;
-            $self->push_candidate($key, $value);
-        }
+        $self->push_candidate_by_resolve($addr);
+        $self->push_candidate_by_match($addr);
         return 1;
     }
 
@@ -144,6 +136,45 @@ use PlSense::Util;
         if ( ! $pretok || ! $pretok->isa("PPI::Token::Word") ) { return $addr; }
 
         return $addr.".H:".$pretok->content;
+    }
+
+    sub push_candidate_by_resolve : PRIVATE {
+        my ($self, $addr) = @_;
+
+        logger->debug("Try push candidate by resolve : $addr");
+        my $entity = addrrouter->resolve_address($addr);
+        if ( ! $entity || ! $entity->isa("PlSense::Entity::Hash") ) {
+            logger->info("Not hash entity in current context");
+            return;
+        }
+
+        logger->notice("Found hash member in $addr");
+        MEMBER:
+        foreach my $key ( $entity->keys_member ) {
+            if ( $key eq '*' ) { next MEMBER; }
+            $entity->set_membernm($key);
+            my $value = $entity->get_member;
+            $self->push_candidate($key, $value);
+        }
+        return;
+    }
+
+    sub push_candidate_by_match : PRIVATE {
+        my ($self, $addr) = @_;
+        my @values = ($addr, addrrouter->resolve_anything($addr));
+        @values = uniq grep { $_ && ! eval { $_->isa("PlSense::Entity") } } @values;
+        VALUE:
+        foreach my $value ( @values ) {
+            logger->debug("Try push candidate by match : $value");
+            my $regexp = quotemeta($value).'\.H:([a-zA-Z0-9_\-]+)';
+            MATCH:
+            foreach my $key ( addrrouter->get_matched_route_list($regexp),
+                              addrrouter->get_matched_reverse_route_list($regexp) ) {
+                if ( $key !~ m{ $regexp }xms ) { next MATCH; }
+                $self->push_candidate($1);
+            }
+        }
+        return;
     }
 }
 
