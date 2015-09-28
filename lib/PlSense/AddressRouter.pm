@@ -13,9 +13,9 @@ use PlSense::Util;
     my %cache_of :ATTR( :default(undef) );
     my %routeh_of :ATTR();
     my %rrouteh_of :ATTR();
-    my %max_resolve_entry_of :ATTR( :init_arg<max_resolve_entry> :default(5) );
+    my %max_resolve_entry_of :ATTR( :init_arg<max_resolve_entry> :default(3) );
     my %max_address_entry_of :ATTR( :init_arg<max_address_entry> :default(2) );
-    my %max_reverse_address_entry_of :ATTR( :init_arg<max_reverse_address_entry> :default(10) );
+    my %max_reverse_address_entry_of :ATTR( :init_arg<max_reverse_address_entry> :default(5) );
     my %max_try_routing_of :ATTR( :init_arg<max_try_routing> :default(50) );
     my %commonkeyh_of :ATTR();
 
