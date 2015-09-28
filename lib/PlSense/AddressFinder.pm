@@ -590,6 +590,7 @@ use PlSense::Entity::Reference;
             $membernm =~ s{ \A ("|') }{}xms;
             $membernm =~ s{ ("|') \z }{}xms;
             if ( $membernm !~ m{ \A [a-zA-Z0-9_\-]+ \z }xms ) { $membernm = '*'; }
+            if ( $membernm ne "*" ) { addrrouter->add_hash_member($addr, $membernm); }
             return $self->build_address_anything("$addr.H:$membernm", @tokens);
         }
         elsif ( $brace_s eq '[' ) {
