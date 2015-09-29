@@ -260,7 +260,10 @@ use PlSense::Util;
             $ret .= " of $mdlnm.\n";
         }
         elsif ( $etype ne 'Unknown' ) {
-            $ret .= ".\nThe value maybe ...\n".$entity->to_string."\n";
+            my $val = $entity->to_string;
+            $val =~ s{ \A [A-Z]< \s* }{}xms;
+            $val =~ s{ \s* > \z }{}xms;
+            $ret .= ".\nThe value maybe ...\n".$val."\n";
         }
         else {
             $ret .= ".\n";
