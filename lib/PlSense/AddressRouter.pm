@@ -16,7 +16,7 @@ use PlSense::Util;
     my %hmemberh_of :ATTR();
     my %max_resolve_entry_of :ATTR( :init_arg<max_resolve_entry> :default(3) );
     my %max_address_entry_of :ATTR( :init_arg<max_address_entry> :default(2) );
-    my %max_reverse_address_entry_of :ATTR( :init_arg<max_reverse_address_entry> :default(5) );
+    my %max_reverse_address_entry_of :ATTR( :init_arg<max_reverse_address_entry> :default(30) );
     my %max_try_routing_of :ATTR( :init_arg<max_try_routing> :default(50) );
     my %commonkeyh_of :ATTR();
 
@@ -211,9 +211,19 @@ use PlSense::Util;
 
         push @{$resolves}, $value;
         logger->debug("Add routing : $addr -> $vtext");
-        if ( ! $vtype ) { $self->add_reverse_route($value, $addr); }
+
+        # Add reverse route if value is a address and matches the following cases
+        # * argument
+        # * mean a class
+        my $need_reverse = $vtype                       ? 0
+                         : $vtext =~ m{ \[\d+\] \z }xms ? 1
+                         : $vtext =~ m{ ::BLESS \z }xms ? 1
+                         :                                0;
+        if ( $need_reverse ) { $self->add_reverse_route($value, $addr); }
+
         my $commonkey = $self->get_address_common_part($addr);
         if ( $commonkey ) { $commonkeyh_of{ident $self}->{$commonkey} = 1; }
+
         return $ret;
     }
 
@@ -562,11 +572,11 @@ use PlSense::Util;
 
     sub resolve_reverse_address : PRIVATE {
         my ($self, $addr, $allow_addr) = @_;
-
         my (@ret, @follows);
+
+        # do reverse routing only for a reference address
         if ( $addr !~ s{ \. ( R \.? .*? ) \z }{}xms ) { return @ret; }
 
-        # If exist reference in address, try resolve by reverse routing.
         @follows = split m{ \. }xms, $1;
         my $curraddr = $addr;
         FIND:
@@ -576,6 +586,7 @@ use PlSense::Util;
         }
         my $raddrs = $curraddr ? $rrouteh_of{ident $self}->{$curraddr} : [] or return @ret;
 
+        logger->debug("Found reverse route of $curraddr");
         my $fstr = join(".", @follows);
         PUSH_RESOLVED:
         foreach my $raddr ( @{$raddrs} ) {
