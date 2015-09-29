@@ -40,7 +40,9 @@ travis-build:aki2o/plsense#master
 
   本ツールをEmacsで利用した場合に可能になる、コーディングのデモです。  
 
-  http://www.youtube.com/watch?v=Q8XDhxqmaXs
+  [[file:image/demo.gif][demo]]
+
+  長いバージョンはこちら -> https://www.youtube.com/watch?v=qurNSQjOyK4
 
   Emacsでの利用に関して、詳しくは以下を参照して下さい。  
 

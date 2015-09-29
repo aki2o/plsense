@@ -35,7 +35,9 @@ EmacsやVimなどの高機能エディタから利用されることを前提に
 
 本ツールをEmacsで利用した場合に可能になる、コーディングのデモです。  
 
-<http://www.youtube.com/watch?v=Q8XDhxqmaXs>
+![demo](image/demo.gif)
+
+長いバージョンはこちら -> <https://www.youtube.com/watch?v=qurNSQjOyK4>
 
 Emacsでの利用に関して、詳しくは以下を参照して下さい。  
 
@@ -51,11 +53,11 @@ Emacsでの利用に関して、詳しくは以下を参照して下さい。
 
 ### cpanmでインストール
 
-![こちら](https://github.com/aki2o/plsense/releases) から最新のPlSense-\*.tar.gzをダウンロードして、cpanmコマンドに、そのファイルパスを渡して下さい。  
+[こちら](https://github.com/aki2o/plsense/releases) から最新のPlSense-\*.tar.gzをダウンロードして、cpanmコマンドに、そのファイルパスを渡して下さい。  
 
 ### 手動でインストール
 
-![こちら](https://github.com/aki2o/plsense/releases) から最新のPlSense-\*.tar.gzをダウンロードして解凍、できたディレクトリに移動後、以下を実行して下さい。  
+[こちら](https://github.com/aki2o/plsense/releases) から最新のPlSense-\*.tar.gzをダウンロードして解凍、できたディレクトリに移動後、以下を実行して下さい。  
 
 ```
 $ perl Makefile.PL

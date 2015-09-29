@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.org/aki2o/plsense.svg?branch=master)](https://travis-ci.org/aki2o/plsense)
 
-![Japanese](https://github.com/aki2o/plsense/blob/master/README-ja.md)
+[Japanese](https://github.com/aki2o/plsense/blob/master/README-ja.md)
 
 # What's this?
 
@@ -38,7 +38,9 @@ It's Omni completion what is called.
 
 This is a coding demo when this tool is used on Emacs.
 
-<http://www.youtube.com/watch?v=Q8XDhxqmaXs>
+![demo](image/demo.gif)
+
+Here is a long version -> <https://www.youtube.com/watch?v=qurNSQjOyK4>
 
 For using on Emacs, see <https://github.com/aki2o/emacs-plsense/blob/master/README.md>
 
@@ -52,12 +54,12 @@ This tool is a Perl module.
 
 ### Using cpanm
 
-Download latest PlSense-\*.tar.gz from ![here](https://github.com/aki2o/plsense/releases) and
+Download latest PlSense-\*.tar.gz from [here](https://github.com/aki2o/plsense/releases) and
 execute cpanm to the downloaded file path.
 
 ### Manually
 
-Download latest PlSense-\*.tar.gz from ![here](https://github.com/aki2o/plsense/releases) and
+Download latest PlSense-\*.tar.gz from [here](https://github.com/aki2o/plsense/releases) and
 extract the file, move the maked directory, execute the following.
 
 ```

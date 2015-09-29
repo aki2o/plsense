@@ -42,8 +42,10 @@
 * Demo
 
   This is a coding demo when this tool is used on Emacs.
-  
-  http://www.youtube.com/watch?v=Q8XDhxqmaXs
+
+  [[file:image/demo.gif][demo]]
+
+  Here is a long version -> https://www.youtube.com/watch?v=qurNSQjOyK4
   
   For using on Emacs, see https://github.com/aki2o/emacs-plsense/blob/master/README.md
 
