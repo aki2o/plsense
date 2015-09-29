@@ -337,11 +337,6 @@ use PlSense::Util;
         return grep { $_ =~ m{ $regexp }xms } keys %{$routeh_of{ident $self}};
     }
 
-    sub get_matched_reverse_route_list {
-        my ($self, $regexp) = @_;
-        return grep { $_ =~ m{ $regexp }xms } keys %{$rrouteh_of{ident $self}};
-    }
-
     sub to_string_by_regexp {
         my ($self, $regexp) = @_;
         my $ret = "";

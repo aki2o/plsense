@@ -94,13 +94,6 @@ use PlSense::Util;
         VALUE:
         foreach my $value ( @values ) {
             logger->debug("Try push candidate by match : $value");
-            # my $regexp = quotemeta($value).'\.H:([a-zA-Z0-9_\-]+)';
-            # MATCH:
-            # foreach my $key ( addrrouter->get_matched_route_list($regexp),
-            #                   addrrouter->get_matched_reverse_route_list($regexp) ) {
-            #     if ( $key !~ m{ $regexp }xms ) { next MATCH; }
-            #     $self->push_candidate($1);
-            # }
             foreach my $m ( addrrouter->get_hash_members($value) ) {
                 $self->push_candidate($m);
             }
