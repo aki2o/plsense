@@ -8,7 +8,7 @@ use List::AllUtils qw{ uniq };
 use PlSense::Logger;
 use PlSense::Util;
 {
-    sub is_valid_context {
+    sub is_only_valid_context {
         my ($self, $code, $tok) = @_;
 
         my $input = "";
