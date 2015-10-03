@@ -409,7 +409,7 @@ use PlSense::Entity::Array;
                     $self->add_substitute($curraddr, $value);
 
                     # Add reverse route if value is a argument to super method
-                    if ( $value->isa("PlSense::Entity") ) { next VALUE; }
+                    if ( eval { $value->isa("PlSense::Entity") } ) { next VALUE; }
                     if ( $mtdnm !~ m{ \A SUPER:: }xms ) { next VALUE; }
                     addrrouter->add_reverse_route($value, $curraddr);
                 }
