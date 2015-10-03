@@ -213,8 +213,8 @@ use PlSense::Util;
         logger->debug("Add routing : $addr -> $vtext");
 
         # Add reverse route if value is a address and matches the following cases
-        # * argument
-        # * mean a class
+        # * value is a argument
+        # * value means a class
         my $need_reverse = $vtype                       ? 0
                          : $vtext =~ m{ \[\d+\] \z }xms ? 1
                          : $vtext =~ m{ ::BLESS \z }xms ? 1
@@ -225,6 +225,25 @@ use PlSense::Util;
         if ( $commonkey ) { $commonkeyh_of{ident $self}->{$commonkey} = 1; }
 
         return $ret;
+    }
+
+    sub add_reverse_route {
+        my ($self, $addr, $raddr) = @_;
+        if ( ! $addr || ! $raddr ) { return; }
+
+        my $raddrs = $rrouteh_of{ident $self}->{$addr};
+        if ( ! $raddrs ) {
+            $raddrs = [];
+            $rrouteh_of{ident $self}->{$addr} = $raddrs;
+        }
+
+        if ( $#{$raddrs} >= $max_reverse_address_entry_of{ident $self} ) { return; }
+
+        my $idx = firstidx { $_ eq $raddr } @{$raddrs};
+        if ( $idx >= 0 ) { return; }
+
+        push @{$raddrs}, $raddr;
+        logger->debug("Add reverse routing : $addr -> $raddr");
     }
 
     sub remove_hash_member {
@@ -259,6 +278,16 @@ use PlSense::Util;
         if ( ! $vtype ) { $self->remove_reverse_route($value, $addr); }
         my $vtext = $vtype ? $value->to_string : $value;
         logger->debug("Removed routing : $addr -> $vtext");
+    }
+
+    sub remove_reverse_route {
+        my ($self, $addr, $raddr) = @_;
+        if ( ! $addr || ! $raddr ) { return; }
+        my $raddrs = $rrouteh_of{ident $self}->{$addr} or return;
+        my $idx = firstidx { $_ eq $raddr } @{$raddrs};
+        if ( $idx < 0 ) { return; }
+        splice @{$raddrs}, $idx, 1;
+        if ( $#{$raddrs} < 0 ) { delete $rrouteh_of{ident $self}->{$addr}; }
     }
 
     sub exist_route {
@@ -805,34 +834,6 @@ use PlSense::Util;
         }
 
         return $old;
-    }
-
-    sub add_reverse_route : PRIVATE {
-        my ($self, $addr, $raddr) = @_;
-        if ( ! $addr || ! $raddr ) { return; }
-
-        my $raddrs = $rrouteh_of{ident $self}->{$addr};
-        if ( ! $raddrs ) {
-            $raddrs = [];
-            $rrouteh_of{ident $self}->{$addr} = $raddrs;
-        }
-
-        if ( $#{$raddrs} >= $max_reverse_address_entry_of{ident $self} ) { return; }
-
-        my $idx = firstidx { $_ eq $raddr } @{$raddrs};
-        if ( $idx >= 0 ) { return; }
-
-        push @{$raddrs}, $raddr;
-    }
-
-    sub remove_reverse_route : PRIVATE {
-        my ($self, $addr, $raddr) = @_;
-        if ( ! $addr || ! $raddr ) { return; }
-        my $raddrs = $rrouteh_of{ident $self}->{$addr} or return;
-        my $idx = firstidx { $_ eq $raddr } @{$raddrs};
-        if ( $idx < 0 ) { return; }
-        splice @{$raddrs}, $idx, 1;
-        if ( $#{$raddrs} < 0 ) { delete $rrouteh_of{ident $self}->{$addr}; }
     }
 
 }

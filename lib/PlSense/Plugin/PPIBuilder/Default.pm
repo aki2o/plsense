@@ -20,12 +20,6 @@ use PlSense::Symbol::Variable;
         substkeeper->add_substitute($mtd->get_fullnm, $entity, 1);
         my $baddr = '&'.$mdl->get_name.'::BLESS';
         substkeeper->add_substitute($baddr, $entity, 1);
-
-        PARENT:
-        for my $i ( 1..$mdl->count_parent ) {
-            my $parent = $mdl->get_parent($i);
-            substkeeper->add_substitute("&".$mdl->get_fullnm."::new[2]", "&".$parent->get_fullnm."::new[2]", 1);
-        }
     }
 
     sub scheduled_statement {
