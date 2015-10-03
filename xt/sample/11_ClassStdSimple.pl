@@ -27,5 +27,5 @@ my $attr = $c1->get_attr1;
 
 # astart initializer of Class::Std class
 #my $c2 = ClassStdParent->new({ 
-# aend equal: attr1 attr2
+# aend equal: attr1 attr2 cattr1 cattr2
 
