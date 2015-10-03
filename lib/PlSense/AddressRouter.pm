@@ -213,12 +213,12 @@ use PlSense::Util;
         logger->debug("Add routing : $addr -> $vtext");
 
         # Check to need to add reverse route
-        my $need_reverse = $vtype                       ? 0 # not add if value is a entity
-                         : $addr  =~ m{ \[\d+\] \z }xms ? 0 # not add if address is a argument
-                         : $vtext =~ m{ \[\d+\] \z }xms ? 1 # add if value is a argument
-                         : $vtext =~ m{ ::BLESS \z }xms ? 1 # add if value means a class
-                         :                                0;
-        if ( $need_reverse ) { $self->add_reverse_route($value, $addr); }
+        my $need_r = $vtype                                                      ? 0 # no need if value is a entity
+                   : $addr =~ m{ \[\d+\] \z }xms && $vtext =~ m{ \[\d+\] \z }xms ? 0 # special if both are a argument
+                   : $vtext =~ m{ \[\d+\] \z }xms                                ? 1 # need if value only is a argument
+                   : $vtext =~ m{ ::BLESS \z }xms                                ? 1 # need if value means a class
+                   :                                                               0;
+        if ( $need_r ) { $self->add_reverse_route($value, $addr); }
 
         my $commonkey = $self->get_address_common_part($addr);
         if ( $commonkey ) { $commonkeyh_of{ident $self}->{$commonkey} = 1; }
