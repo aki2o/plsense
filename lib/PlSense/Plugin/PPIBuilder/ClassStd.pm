@@ -21,11 +21,14 @@ use PlSense::Entity::Null;
         substkeeper->add_substitute("&".$mdl->get_fullnm."::BUILD[3]", "&".$mdl->get_fullnm."::new[2]", 1);
         substkeeper->add_substitute("&".$mdl->get_fullnm."::START[3]", "&".$mdl->get_fullnm."::new[2]", 1);
 
+        substkeeper->add_substitute("&".$mdl->get_fullnm."::new[2]", "&".$mdl->get_fullnm."::BUILD[3]", 1);
+        substkeeper->add_substitute("&".$mdl->get_fullnm."::new[2]", "&".$mdl->get_fullnm."::START[3]", 1);
+
         PARENT:
         for my $i ( 1..$mdl->count_parent ) {
             my $parent = $mdl->get_parent($i);
-            substkeeper->add_substitute("&".$parent->get_fullnm."::BUILD[3]", "&".$mdl->get_fullnm."::BUILD[3]", 1);
-            substkeeper->add_substitute("&".$parent->get_fullnm."::START[3]", "&".$mdl->get_fullnm."::START[3]", 1);
+            substkeeper->add_substitute("&".$mdl->get_fullnm."::BUILD[3]", "&".$parent->get_fullnm."::BUILD[3]", 1);
+            substkeeper->add_substitute("&".$mdl->get_fullnm."::START[3]", "&".$parent->get_fullnm."::START[3]", 1);
         }
     }
 
