@@ -18,17 +18,22 @@ use PlSense::Entity::Null;
              ! $mdl->exist_usingmdl("Class::Std::Storable") &&
              ! $mdl->exist_usingmdl("Class::Std::Fast::Storable") ) { return; }
 
+        # Class::Std throws a new 2nd argument to a BUILD/START 3rd argument
         substkeeper->add_substitute("&".$mdl->get_fullnm."::BUILD[3]", "&".$mdl->get_fullnm."::new[2]", 1);
         substkeeper->add_substitute("&".$mdl->get_fullnm."::START[3]", "&".$mdl->get_fullnm."::new[2]", 1);
-
+        # add the reverse connect because reverse route is not added when both is a argument
         substkeeper->add_substitute("&".$mdl->get_fullnm."::new[2]", "&".$mdl->get_fullnm."::BUILD[3]", 1);
         substkeeper->add_substitute("&".$mdl->get_fullnm."::new[2]", "&".$mdl->get_fullnm."::START[3]", 1);
 
         PARENT:
         for my $i ( 1..$mdl->count_parent ) {
             my $parent = $mdl->get_parent($i);
+            # for getting parent initializers at BUILD/START in child
             substkeeper->add_substitute("&".$mdl->get_fullnm."::BUILD[3]", "&".$parent->get_fullnm."::BUILD[3]", 1);
             substkeeper->add_substitute("&".$mdl->get_fullnm."::START[3]", "&".$parent->get_fullnm."::START[3]", 1);
+            # for connecting child new arguments to detect parent member type
+            substkeeper->add_substitute("&".$parent->get_fullnm."::new[2]", "&".$mdl->get_fullnm."::new[2]", 1);
+            substkeeper->add_substitute("&".$parent->get_fullnm."::new[2]", "&".$mdl->get_fullnm."::new[2]", 1);
         }
     }
 
@@ -115,19 +120,21 @@ use PlSense::Entity::Null;
             my $mtd = $mdl->get_method("new") or return;
             substkeeper->add_substitute($var->get_fullnm.".H:*", $mtd->get_fullnm."[2].R.H:".$initnm, 1);
 
-            my @routes = addrrouter->get_route($mtd->get_fullnm."[2]");
-            my $ref = first { eval { $_->isa("PlSense::Entity::Reference") } } @routes;
-            if ( ! $ref ) {
-                $ref = PlSense::Entity::Reference->new();
-                substkeeper->add_substitute($mtd->get_fullnm."[2]", $ref, 1);
-            }
-            my $hash = $ref->get_entity;
-            if ( ! eval { $hash->isa("PlSense::Entity::Hash") } ) {
-                $hash = PlSense::Entity::Hash->new();
-                $ref->set_entity($hash);
-            }
-            $hash->set_membernm($initnm);
-            $hash->set_member(PlSense::Entity::Null->new());
+            # Turn to not make entity but just add hash member
+            # my @routes = addrrouter->get_route($mtd->get_fullnm."[2]");
+            # my $ref = first { eval { $_->isa("PlSense::Entity::Reference") } } @routes;
+            # if ( ! $ref ) {
+            #     $ref = PlSense::Entity::Reference->new();
+            #     substkeeper->add_substitute($mtd->get_fullnm."[2]", $ref, 1);
+            # }
+            # my $hash = $ref->get_entity;
+            # if ( ! eval { $hash->isa("PlSense::Entity::Hash") } ) {
+            #     $hash = PlSense::Entity::Hash->new();
+            #     $ref->set_entity($hash);
+            # }
+            # $hash->set_membernm($initnm);
+            # $hash->set_member(PlSense::Entity::Null->new());
+            addrrouter->add_hash_member($mtd->get_fullnm."[2].R", $initnm);
         }
     }
 
