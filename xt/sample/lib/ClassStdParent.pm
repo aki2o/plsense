@@ -19,7 +19,7 @@ use File::Basename;
 
         # astart own initializer of BUILD in Class::Std
         #$arg_ref->{
-        # aend equal: attr1 attr2 cattr1 cattr2
+        # aend equal: attr1 attr2
     }
 
     sub START {
@@ -31,7 +31,7 @@ use File::Basename;
 
         # astart own initializer of START in Class::Std
         #$arg_ref->{
-        # aend equal: attr1 attr2 cattr1 cattr2
+        # aend equal: attr1 attr2
 
         # astart own scalar of START in Class::Std
         #$
