@@ -12,7 +12,7 @@ my $scalar1 = \%hash1;
 
 # astart hash key has word
 #$hash1{k
-# aend include: key1 key2 kill keys
+# aend equal: key1 key2
 
 # astart hash key of reference
 #$scalar1->{
@@ -20,5 +20,5 @@ my $scalar1 = \%hash1;
 
 # astart hash key of reference has word
 #$scalar1->{k
-# aend include: key1 key2 kill keys
+# aend equal: key1 key2
 
